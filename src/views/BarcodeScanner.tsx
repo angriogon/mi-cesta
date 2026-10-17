@@ -174,14 +174,14 @@ export function BarcodeScanner({
 
   return (
     <div
-      className="fixed inset-0 z-[80] overflow-y-auto bg-[#102018]/90 px-4 py-[calc(1rem+env(safe-area-inset-top))] backdrop-blur-sm"
+      className="fixed inset-0 z-[80] overflow-y-auto bg-primary/90 px-4 py-[calc(1rem+env(safe-area-inset-top))] backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label="Escanear producto"
     >
-      <section className="mx-auto max-w-[420px] overflow-hidden rounded-[24px] bg-background shadow-2xl">
+      <section className="mx-auto max-w-[420px] overflow-hidden rounded-xl bg-background">
         <div className="flex items-center justify-between p-3">
-          <div className="flex items-center gap-2 text-sm font-bold">
+          <div className="flex items-center gap-2 text-sm font-semibold">
             <ScanLine className="size-4 text-primary" /> Escanear producto
           </div>
           <button
@@ -196,15 +196,15 @@ export function BarcodeScanner({
         {!product && !unknownCode && (
           <div className="relative aspect-[4/3] overflow-hidden bg-black">
             <video key={attempt} ref={video} muted playsInline className="size-full object-cover" />
-            <div className="pointer-events-none absolute inset-[27%_7%] rounded-xl border-2 border-white/90 shadow-[0_0_0_999px_rgba(0,0,0,.25)]">
-              <span className="absolute inset-x-4 top-1/2 h-px bg-red-400/90 shadow-[0_0_8px_#ef7777]" />
+            <div className="pointer-events-none absolute inset-[27%_7%] rounded-xl border-2 border-white/90 shadow-float">
+              <span className="absolute inset-x-4 top-1/2 h-px bg-red-400/90 shadow-float" />
             </div>
             {torchAvailable && (
               <button
                 type="button"
                 onClick={() => void toggleTorch()}
                 aria-label={torch ? "Apagar linterna" : "Encender linterna"}
-                className={`absolute bottom-3 right-3 flex size-11 items-center justify-center rounded-full border border-white/30 ${torch ? "bg-white text-[#183020]" : "bg-black/45 text-white"}`}
+                className={`absolute bottom-3 right-3 flex size-11 items-center justify-center rounded-full border border-white/30 ${torch ? "bg-white text-primary" : "bg-black/45 text-white"}`}
               >
                 <Flashlight className="size-4" />
               </button>
@@ -223,17 +223,15 @@ export function BarcodeScanner({
                   </div>
                 )}
                 <div className="min-w-0">
-                  <h2 className="text-base font-bold">{product.name}</h2>
+                  <h2 className="text-base font-semibold">{product.name}</h2>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {[product.brand, product.quantity].filter(Boolean).join(" · ")}
                   </p>
                   {product.source && (
-                    <p className="mt-1 text-[10px] font-semibold text-muted-foreground">{product.source}</p>
+                    <p className="mt-1 text-xs font-semibold text-muted-foreground">{product.source}</p>
                   )}
                   {product.allergens.length > 0 && (
-                    <p className="mt-1 text-[11px] font-bold text-[#9b3f38]">
-                      Alérgenos: {product.allergens.join(", ")}
-                    </p>
+                    <p className="mt-1 text-xs font-semibold text-danger">Alérgenos: {product.allergens.join(", ")}</p>
                   )}
                 </div>
               </div>
@@ -249,14 +247,14 @@ export function BarcodeScanner({
                     ] as const
                   ).map(([label, value]) => (
                     <div key={label}>
-                      <p className="text-[11px] font-bold">{Math.round(Number(value))}</p>
-                      <p className="text-[8px] uppercase text-muted-foreground">{label}</p>
+                      <p className="text-xs font-semibold">{Math.round(Number(value))}</p>
+                      <p className="text-xs uppercase text-muted-foreground">{label}</p>
                     </div>
                   ))}
                 </div>
               )}
               <div className="mt-4 grid grid-cols-[1fr_2fr] gap-2">
-                <Button variant="outline" onClick={reset} className="h-12 rounded-2xl">
+                <Button variant="outline" onClick={reset} className="h-12 rounded-xl">
                   <RotateCcw className="size-4" /> Otro
                 </Button>
                 <Button
@@ -264,7 +262,7 @@ export function BarcodeScanner({
                     onUse(product);
                     if (continuous) reset();
                   }}
-                  className="h-12 rounded-2xl"
+                  className="h-12 rounded-xl"
                 >
                   {continuous ? "Añadir y seguir" : "Usar este producto"}
                 </Button>
@@ -277,14 +275,8 @@ export function BarcodeScanner({
                 {status}
               </p>
               {unknownCode ? (
-                <form
-                  onSubmit={saveUnknown}
-                  className="mt-3 rounded-xl border border-[#ead9c8] bg-[#fbf6ef] p-3 dark:border-border dark:bg-card"
-                >
-                  <label
-                    htmlFor="unknown-product-name"
-                    className="text-[11px] font-bold text-[#825d38] dark:text-foreground"
-                  >
+                <form onSubmit={saveUnknown} className="mt-3 rounded-xl bg-warning-soft p-3">
+                  <label htmlFor="unknown-product-name" className="text-xs font-semibold text-warning">
                     ¿Qué producto es? · {unknownCode}
                   </label>
                   <Input
@@ -295,7 +287,7 @@ export function BarcodeScanner({
                     // Al no reconocer el código, el siguiente paso es escribir el nombre: abrir el teclado ahorra un toque.
                     // eslint-disable-next-line jsx-a11y/no-autofocus
                     autoFocus
-                    className="mt-1.5 h-11 rounded-xl bg-white text-sm dark:bg-muted"
+                    className="mt-1.5 h-11 rounded-lg text-[17px]"
                   />
                   <Button
                     type="submit"

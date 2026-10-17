@@ -35,7 +35,7 @@ function LinesEditor({ items, onChange }: { items: TicketItem[]; onChange: (item
           key={index}
           className="grid grid-cols-[1fr_3.6rem_4.9rem_2rem] items-end gap-1.5 rounded-xl bg-muted/65 p-2"
         >
-          <label className="min-w-0 text-[10px] font-bold text-muted-foreground">
+          <label className="min-w-0 text-xs font-semibold text-muted-foreground">
             Producto
             <Input
               value={item.description}
@@ -43,7 +43,7 @@ function LinesEditor({ items, onChange }: { items: TicketItem[]; onChange: (item
               className="mt-1 h-9 rounded-lg bg-card px-2 text-sm"
             />
           </label>
-          <label className="text-[10px] font-bold text-muted-foreground">
+          <label className="text-xs font-semibold text-muted-foreground">
             Cant.
             <Input
               type="number"
@@ -55,7 +55,7 @@ function LinesEditor({ items, onChange }: { items: TicketItem[]; onChange: (item
               className="mt-1 h-9 rounded-lg bg-card px-1 text-center text-sm"
             />
           </label>
-          <label className="text-[10px] font-bold text-muted-foreground">
+          <label className="text-xs font-semibold text-muted-foreground">
             Importe
             <MoneyInput
               cents={item.lineTotalCents}
@@ -67,7 +67,7 @@ function LinesEditor({ items, onChange }: { items: TicketItem[]; onChange: (item
             type="button"
             onClick={() => onChange(items.filter((_, i) => i !== index))}
             aria-label={`Eliminar línea ${item.description}`}
-            className="mb-0.5 flex size-8 items-center justify-center rounded-lg text-[#a34141] active:bg-red-50"
+            className="mb-0.5 flex size-8 items-center justify-center rounded-lg text-danger active:bg-red-50"
           >
             <Trash2 className="size-3.5" />
           </button>
@@ -338,28 +338,28 @@ export function TicketsView({
             setEditing(null);
           }}
           aria-pressed={control}
-          className={`flex h-10 items-center gap-1.5 rounded-xl px-3 text-[11px] font-bold transition-colors ${control ? "bg-primary text-primary-foreground" : "border border-border bg-card text-primary"}`}
+          className={`flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-colors ${control ? "bg-primary text-primary-foreground" : " bg-card text-primary"}`}
         >
           <Wrench className="size-3.5" /> {control ? "Listo" : "Control"}
         </button>
       </div>
 
       {reviews.length > 0 && (
-        <section className="mb-4 rounded-[18px] border border-[#e6dfcf] bg-[#faf7ef] p-3 dark:border-border dark:bg-card">
-          <div className="flex items-center gap-2 text-[#76582b] dark:text-foreground">
+        <section className="mb-4 rounded-xl bg-warning-soft p-3">
+          <div className="flex items-center gap-2 text-warning">
             <TriangleAlert className="size-4" />
             <div className="min-w-0 flex-1">
-              <h2 className="text-xs font-bold">Solo hay que revisar {reviews.length}</h2>
-              <p className="text-[10px] opacity-70">El resto del ticket ya se procesó automáticamente.</p>
+              <h2 className="text-xs font-semibold">Solo hay que revisar {reviews.length}</h2>
+              <p className="text-xs opacity-70">El resto del ticket ya se procesó automáticamente.</p>
             </div>
           </div>
           <div className="mt-2 space-y-2">
             {reviews.slice(0, 8).map((review) => (
-              <div key={review.id} className="rounded-xl bg-card p-2 dark:bg-muted">
+              <div key={review.id} className="rounded-xl bg-card p-2">
                 <div className="flex items-center gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-bold">{review.description}</p>
-                    <p className="text-[9px] text-muted-foreground">
+                    <p className="truncate text-xs font-semibold">{review.description}</p>
+                    <p className="text-xs text-muted-foreground">
                       {review.issueType === "unidentified"
                         ? "Producto sin identificar · escribe cómo se llama"
                         : review.issueType === "possible_duplicate"
@@ -381,7 +381,7 @@ export function TicketsView({
                     type="button"
                     disabled={busy}
                     onClick={() => void resolve(review)}
-                    className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#eaf3eb] text-primary dark:bg-secondary"
+                    className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-primary"
                     aria-label="Confirmar revisión"
                   >
                     <CircleCheck className="size-4" />
@@ -393,13 +393,10 @@ export function TicketsView({
         </section>
       )}
 
-      <section
-        className="mb-5 rounded-[22px] border border-border bg-card p-4 shadow-[0_12px_38px_rgba(32,47,38,.06)]"
-        aria-labelledby="monthly-spend-title"
-      >
+      <section className="mb-5 rounded-xl bg-card p-4" aria-labelledby="monthly-spend-title">
         <div className="flex items-center gap-2">
           <CalendarDays className="size-4 text-primary" />
-          <h2 id="monthly-spend-title" className="text-sm font-bold">
+          <h2 id="monthly-spend-title" className="text-sm font-semibold">
             Gasto por meses
           </h2>
         </div>
@@ -412,7 +409,7 @@ export function TicketsView({
                     new Date(`${month}-01T00:00:00Z`),
                   )}
                 </span>
-                <span className="text-sm font-bold text-primary">{formatCents(cents)}</span>
+                <span className="text-sm font-semibold text-primary">{formatCents(cents)}</span>
               </div>
             ))}
           </div>
@@ -423,18 +420,15 @@ export function TicketsView({
         )}
       </section>
 
-      <form
-        onSubmit={save}
-        className="rounded-[22px] border border-border bg-card p-4 shadow-[0_12px_38px_rgba(32,47,38,.06)]"
-      >
-        <h2 className="text-base font-bold">Añadir ticket</h2>
-        <label className="mt-3 flex min-h-32 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed border-primary/35 bg-[#f3f7f3] text-center text-primary dark:bg-muted">
+      <form onSubmit={save} className="rounded-xl bg-card p-4">
+        <h2 className="text-base font-semibold">Añadir ticket</h2>
+        <label className="mt-3 flex min-h-32 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed border-primary/35 bg-card text-center text-primary">
           {preview ? (
             <img src={preview} alt="Vista previa del ticket" className="max-h-64 w-full object-contain" />
           ) : (
             <>
               <Camera className="size-7" />
-              <span className="mt-2 text-sm font-bold">Fotografiar o elegir ticket</span>
+              <span className="mt-2 text-sm font-semibold">Fotografiar o elegir ticket</span>
               <span className="mt-1 text-xs text-muted-foreground">JPG, PNG o HEIC · máximo 10 MB</span>
             </>
           )}
@@ -455,7 +449,7 @@ export function TicketsView({
               setFile(new Blob());
               setStatus("Introduce los datos del ticket a mano.");
             }}
-            className="mt-2 w-full py-1.5 text-center text-[11px] font-bold text-primary"
+            className="mt-2 w-full py-1.5 text-center text-xs font-semibold text-primary"
           >
             Añadir ticket sin foto
           </button>
@@ -485,7 +479,7 @@ export function TicketsView({
         )}
         {file && (
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <label className="col-span-2 text-xs font-bold text-muted-foreground">
+            <label className="col-span-2 text-xs font-semibold text-muted-foreground">
               Supermercado
               <Input
                 value={merchant}
@@ -494,7 +488,7 @@ export function TicketsView({
                 className="mt-1.5 h-11 rounded-xl bg-background text-sm"
               />
             </label>
-            <label className="text-xs font-bold text-muted-foreground">
+            <label className="text-xs font-semibold text-muted-foreground">
               Fecha
               <Input
                 type="date"
@@ -504,7 +498,7 @@ export function TicketsView({
                 className="mt-1.5 h-11 rounded-xl bg-background text-sm"
               />
             </label>
-            <label className="text-xs font-bold text-muted-foreground">
+            <label className="text-xs font-semibold text-muted-foreground">
               Total
               <div className="relative mt-1.5">
                 <Euro className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -519,22 +513,22 @@ export function TicketsView({
             </label>
             <div className="col-span-2">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-bold">
+                <p className="text-xs font-semibold">
                   {lines.length} {lines.length === 1 ? "línea" : "líneas"}
                 </p>
                 {!control && (
                   <button
                     type="button"
                     onClick={() => setControl(true)}
-                    className="flex items-center gap-1 py-1 text-[11px] font-bold text-primary"
+                    className="flex items-center gap-1 py-1 text-xs font-semibold text-primary"
                   >
                     <Pencil className="size-3" /> Revisar textos y cantidades
                   </button>
                 )}
               </div>
               {(smartReview.duplicates.length > 0 || smartReview.unexpected.length > 0) && (
-                <div className="mb-2 rounded-xl border border-[#ead8d1] bg-[#fbf4f1] p-2 text-[10px] text-[#854936] dark:border-border dark:bg-muted dark:text-foreground">
-                  <p className="font-bold">Revisión inteligente</p>
+                <div className="mb-2 rounded-xl bg-warning-soft p-2 text-xs text-danger">
+                  <p className="font-semibold">Revisión inteligente</p>
                   {smartReview.duplicates.length > 0 && (
                     <p className="mt-1">
                       Posibles duplicados: {smartReview.duplicates.map((item) => item.description).join(", ")}
@@ -549,24 +543,24 @@ export function TicketsView({
                 </div>
               )}
               {plan && (
-                <div className="mb-2 grid grid-cols-3 gap-1 rounded-xl bg-[#eaf3eb] p-2 text-center text-primary dark:bg-secondary">
+                <div className="mb-2 grid grid-cols-3 gap-1 rounded-xl bg-muted p-2 text-center text-primary">
                   <div>
                     <b className="block text-sm">{plan.planned}</b>
-                    <span className="text-[9px]">Planeados</span>
+                    <span className="text-xs">Planeados</span>
                   </div>
                   <div>
                     <b className="block text-sm">{plan.found}</b>
-                    <span className="text-[9px]">Verificados</span>
+                    <span className="text-xs">Verificados</span>
                   </div>
                   <div>
                     <b className="block text-sm">{plan.missing}</b>
-                    <span className="text-[9px]">No vistos</span>
+                    <span className="text-xs">No vistos</span>
                   </div>
                 </div>
               )}
               {control && <LinesEditor items={lines} onChange={setLines} />}
             </div>
-            <p className="col-span-2 text-[11px] leading-5 text-muted-foreground">
+            <p className="col-span-2 text-xs leading-5 text-muted-foreground">
               La lectura automática puede cometer errores: confirma siempre la fecha y el total antes de guardar.
             </p>
             <div className="col-span-2 grid grid-cols-[1fr_2fr] gap-2">
@@ -577,11 +571,11 @@ export function TicketsView({
                   setStatus("");
                 }}
                 disabled={busy}
-                className="h-12 rounded-2xl"
+                className="h-12 rounded-xl"
               >
                 Descartar
               </Button>
-              <Button type="submit" disabled={busy || !total} className="h-12 rounded-2xl">
+              <Button type="submit" disabled={busy || !total} className="h-12 rounded-xl">
                 <FileCheck2 className="size-4" /> Guardar ticket
               </Button>
             </div>
@@ -593,13 +587,13 @@ export function TicketsView({
         <section className="mt-6" aria-labelledby="ticket-history-title">
           <h2
             id="ticket-history-title"
-            className="mb-2.5 px-1 text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground"
+            className="mb-2.5 px-1 text-[12px] font-semibold uppercase text-muted-foreground"
           >
             Historial
           </h2>
-          <div className="overflow-hidden rounded-[20px] border border-border bg-card">
+          <div className="overflow-hidden rounded-xl bg-card">
             {tickets.slice(0, 30).map((ticket, index) => (
-              <div key={ticket.id} className={index ? "border-t border-border/80" : ""}>
+              <div key={ticket.id} className={index ? "border-t-[0.5px] border-separator" : ""}>
                 <div className="flex items-center gap-3 px-3 py-3">
                   <button
                     type="button"
@@ -611,13 +605,13 @@ export function TicketsView({
                     {ticket.imagePath ? <Image className="size-4" /> : <ReceiptText className="size-4" />}
                   </button>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold">{ticket.merchant}</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    <p className="truncate text-sm font-semibold">{ticket.merchant}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
                       {ticket.purchasedAt.split("-").reverse().join("/")} · {ticket.items.length}{" "}
                       {ticket.items.length === 1 ? "línea" : "líneas"}
                     </p>
                   </div>
-                  <span className="text-sm font-bold tabular-nums">{formatCents(ticket.totalCents)}</span>
+                  <span className="text-sm font-semibold tabular-nums">{formatCents(ticket.totalCents)}</span>
                   {control && (
                     <>
                       <button
@@ -636,7 +630,7 @@ export function TicketsView({
                             ? `Confirmar eliminar ticket de ${ticket.merchant}`
                             : `Eliminar ticket de ${ticket.merchant}`
                         }
-                        className={`flex size-9 items-center justify-center rounded-lg ${confirmDelete === ticket.id ? "bg-[#a34141] text-white" : "bg-[#fbefeb] text-[#a34141]"}`}
+                        className={`flex size-9 items-center justify-center rounded-lg ${confirmDelete === ticket.id ? "bg-danger text-white" : "bg-danger-soft text-danger"}`}
                       >
                         <Trash2 className="size-3.5" />
                       </button>
@@ -651,9 +645,9 @@ export function TicketsView({
                   />
                 )}
                 {editing?.id === ticket.id && (
-                  <form onSubmit={saveEdit} className="border-t border-border/70 bg-[#f5f8f5] p-3 dark:bg-muted">
+                  <form onSubmit={saveEdit} className="border-t-[0.5px] border-separator bg-card p-3">
                     <div className="grid grid-cols-2 gap-2">
-                      <label className="col-span-2 text-[10px] font-bold text-muted-foreground">
+                      <label className="col-span-2 text-xs font-semibold text-muted-foreground">
                         Supermercado
                         <Input
                           value={editing.merchant}
@@ -661,7 +655,7 @@ export function TicketsView({
                           className="mt-1 h-10 rounded-lg bg-card text-sm"
                         />
                       </label>
-                      <label className="text-[10px] font-bold text-muted-foreground">
+                      <label className="text-xs font-semibold text-muted-foreground">
                         Fecha
                         <Input
                           type="date"
@@ -670,7 +664,7 @@ export function TicketsView({
                           className="mt-1 h-10 rounded-lg bg-card text-sm"
                         />
                       </label>
-                      <label className="text-[10px] font-bold text-muted-foreground">
+                      <label className="text-xs font-semibold text-muted-foreground">
                         Total
                         <MoneyInput
                           cents={editing.totalCents}

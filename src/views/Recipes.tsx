@@ -41,20 +41,20 @@ function NutrientBars({ nutrients }: { nutrients: Nutrients }) {
   return (
     <div className="mt-3 rounded-xl bg-muted/60 p-3">
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-[10px] font-bold uppercase tracking-[.08em] text-muted-foreground">Estimación por ración</p>
-        <span className="text-xs font-bold text-primary">{Math.round(nutrients.kcal)} kcal</span>
+        <p className="text-xs font-semibold uppercase text-muted-foreground">Estimación por ración</p>
+        <span className="text-xs font-semibold text-primary">{Math.round(nutrients.kcal)} kcal</span>
       </div>
       <div className="space-y-2">
         {rows.map(([label, value, daily, color]) => (
           <div key={label} className="grid grid-cols-[4.2rem_1fr_2.7rem] items-center gap-2">
-            <span className="text-[10px] font-semibold text-muted-foreground">{label}</span>
+            <span className="text-xs font-semibold text-muted-foreground">{label}</span>
             <div className="h-1.5 overflow-hidden rounded-full bg-card" role="presentation">
               <div
                 className="h-full rounded-full"
                 style={{ width: `${Math.min(100, (value / daily) * 100)}%`, backgroundColor: color }}
               />
             </div>
-            <span className="text-right text-[11px] font-bold tabular-nums">{Math.round(value)} g</span>
+            <span className="text-right text-xs font-semibold tabular-nums">{Math.round(value)} g</span>
           </div>
         ))}
       </div>
@@ -125,13 +125,13 @@ export function RecipesView({
 
   return (
     <>
-      <section className="mb-3 flex items-center gap-3 rounded-[18px] border border-[#d8e5d9] bg-[#eaf3eb] p-3 text-[#20462f] dark:border-border dark:bg-secondary dark:text-secondary-foreground">
+      <section className="mb-3 flex items-center gap-3 rounded-xl bg-primary-soft p-3 text-primary">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
           <Utensils className="size-4.5" />
         </div>
         <div>
-          <p className="text-sm font-bold">Recetas para decidir</p>
-          <p className="text-[11px] opacity-70">
+          <p className="text-sm font-semibold">Recetas para decidir</p>
+          <p className="text-xs opacity-70">
             {scored.length} recetas · {ready} {ready === 1 ? "lista" : "listas"} con tu stock
           </p>
         </div>
@@ -155,14 +155,14 @@ export function RecipesView({
       </NativeSelect>
 
       {plan && (
-        <section className="mb-2 rounded-[16px] border border-[#e6dfcf] bg-[#faf7ef] p-3 dark:border-border dark:bg-card">
-          <div className="flex items-center gap-2 text-[#76582b] dark:text-foreground">
+        <section className="mb-2 rounded-lg bg-warning-soft p-3">
+          <div className="flex items-center gap-2 text-warning">
             <Link2 className="size-3.5" />
-            <p className="text-[10px] font-bold uppercase tracking-[.08em]">Dos comidas, un mismo ingrediente</p>
+            <p className="text-xs font-semibold uppercase">Dos comidas, un mismo ingrediente</p>
           </div>
           <p className="mt-1.5 text-[12px] font-semibold">Hoy · {plan.first.title}</p>
           <p className="mt-1 text-[12px] font-semibold">Mañana · {plan.second.title}</p>
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             Abres {plan.shared.join(", ")} hoy y lo terminas mañana.
             {plan.missing.length ? ` Solo comprar: ${plan.missing.join(", ")}.` : " No necesitas comprar nada."}
           </p>
@@ -171,7 +171,7 @@ export function RecipesView({
               <button
                 type="button"
                 onClick={() => onAddMissing(plan.missing)}
-                className="flex items-center gap-1 py-1 text-[10px] font-bold text-primary"
+                className="flex items-center gap-1 py-1 text-xs font-semibold text-primary"
               >
                 <ListPlus className="size-3" /> Añadir lo que falta
               </button>
@@ -179,7 +179,7 @@ export function RecipesView({
             <button
               type="button"
               onClick={() => skip(plan.first.id)}
-              className="flex items-center gap-1 py-1 text-[10px] font-bold text-[#76582b] dark:text-muted-foreground"
+              className="flex items-center gap-1 py-1 text-xs font-semibold text-warning"
             >
               <ThumbsDown className="size-3" /> No me apetece
             </button>
@@ -198,7 +198,7 @@ export function RecipesView({
           className="h-11 rounded-xl bg-card pl-9 text-[15px]"
         />
       </div>
-      <div className="mb-3 grid grid-cols-4 gap-1 rounded-xl bg-muted p-1" role="tablist" aria-label="Filtrar recetas">
+      <div className="mb-3 grid grid-cols-4 rounded-[9px] bg-fill p-0.5" role="tablist" aria-label="Filtrar recetas">
         {(
           [
             ["all", "Todas"],
@@ -213,25 +213,22 @@ export function RecipesView({
             role="tab"
             aria-selected={filter === value}
             onClick={() => setFilter(value)}
-            className={`h-9 rounded-lg px-1 text-[10px] font-bold ${filter === value ? "bg-card text-primary shadow-sm" : "text-muted-foreground"}`}
+            className={`h-8 rounded-[7px] px-1 text-[13px] ${filter === value ? "bg-thumb font-semibold text-foreground shadow-thumb" : "font-medium text-foreground"}`}
           >
             {label}
           </button>
         ))}
       </div>
       {message && (
-        <p
-          className="mb-2 rounded-xl bg-[#eaf3eb] px-3 py-2 text-[10px] font-bold text-primary dark:bg-secondary"
-          role="status"
-        >
+        <p className="mb-2 rounded-xl bg-muted px-3 py-2 text-xs font-semibold text-primary" role="status">
           {message}
         </p>
       )}
 
       {visible.length === 0 ? (
-        <section className="rounded-[18px] border border-border bg-card p-7 text-center">
+        <section className="rounded-xl bg-card p-7 text-center">
           <CookingPot className="mx-auto size-7 text-primary" />
-          <p className="mt-3 text-sm font-bold">No hay coincidencias</p>
+          <p className="mt-3 text-sm font-semibold">No hay coincidencias</p>
           <p className="mt-1 text-xs text-muted-foreground">Prueba con otro filtro o añade productos a tu almacén.</p>
         </section>
       ) : (
@@ -240,7 +237,7 @@ export function RecipesView({
             const expanded = open === recipe.id;
             const conflicts = dietConflicts(recipe.ingredients, preferences);
             return (
-              <section key={recipe.id} className="overflow-hidden rounded-[17px] border border-border bg-card">
+              <section key={recipe.id} className="overflow-hidden rounded-lg bg-card">
                 <button
                   type="button"
                   onClick={() => setOpen(expanded ? null : recipe.id)}
@@ -248,7 +245,7 @@ export function RecipesView({
                   className="flex w-full items-center gap-2.5 p-3 text-left"
                 >
                   <div
-                    className={`flex size-8 shrink-0 items-center justify-center rounded-full ${recipe.missing.length ? (recipe.score >= 50 ? "bg-[#f5ead6] text-[#94642b]" : "bg-[#f7dfdb] text-[#9b3f38]") : "bg-[#dcebdd] text-[#285a3d]"}`}
+                    className={`flex size-8 shrink-0 items-center justify-center rounded-full ${recipe.missing.length ? (recipe.score >= 50 ? "bg-warning-soft text-warning" : "bg-danger-soft text-danger") : "bg-primary-soft text-primary"}`}
                   >
                     {recipe.missing.length ? (
                       recipe.score >= 50 ? (
@@ -261,28 +258,25 @@ export function RecipesView({
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-bold">{recipe.title}</p>
-                    <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <p className="truncate text-[13px] font-semibold">{recipe.title}</p>
+                    <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                       {recipe.meal} · {recipe.missing.length ? `Faltan ${recipe.missing.length}` : "Lista para cocinar"}{" "}
                       · <Clock className="size-2.5" /> {recipe.minutes} min
                     </p>
                   </div>
                   {conflicts.length > 0 && (
-                    <TriangleAlert
-                      className="size-3.5 text-[#a34141]"
-                      aria-label="Contiene ingredientes de tu perfil"
-                    />
+                    <TriangleAlert className="size-3.5 text-danger" aria-label="Contiene ingredientes de tu perfil" />
                   )}
                   <ChevronDown className={`size-4 text-muted-foreground ${expanded ? "rotate-180" : ""}`} />
                 </button>
                 {expanded && (
-                  <div className="border-t border-border px-3 pb-3">
-                    <p className="mt-3 flex items-center gap-1.5 rounded-lg bg-[#faf7ef] px-2 py-1.5 text-[10px] font-semibold text-[#76582b] dark:bg-muted dark:text-muted-foreground">
+                  <div className="border-t-[0.5px] border-separator px-3 pb-3">
+                    <p className="mt-3 flex items-center gap-1.5 rounded-lg bg-warning-soft px-2 py-1.5 text-xs font-semibold text-warning">
                       <Leaf className="size-3" />
                       {goalReason(goal, recipe)}
                     </p>
                     {conflicts.length > 0 && (
-                      <p className="mt-2 rounded-lg bg-[#fbefeb] px-2 py-1.5 text-[10px] font-bold text-[#9b3f38]">
+                      <p className="mt-2 rounded-lg bg-danger-soft px-2 py-1.5 text-xs font-semibold text-danger">
                         Revisa tu perfil: {conflicts.join(", ")}
                       </p>
                     )}
@@ -292,7 +286,7 @@ export function RecipesView({
                         return (
                           <span
                             key={ingredient}
-                            className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-semibold ${present ? "bg-[#e7f1e8] text-primary dark:bg-secondary" : "bg-[#fbefeb] text-[#9c493b]"}`}
+                            className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold ${present ? "bg-primary-soft text-primary " : "bg-danger-soft text-danger"}`}
                           >
                             {present ? <Check className="size-2.5" /> : <X className="size-2.5" />}
                             {ingredient}
@@ -304,7 +298,7 @@ export function RecipesView({
                       <Button
                         variant="outline"
                         onClick={() => onAddMissing(recipe.missing)}
-                        className="mt-3 h-10 w-full rounded-xl text-[11px]"
+                        className="mt-3 h-10 w-full rounded-xl text-xs"
                       >
                         <ListPlus className="size-3.5" /> Añadir ingredientes a la lista
                       </Button>
@@ -312,8 +306,8 @@ export function RecipesView({
                     <NutrientBars nutrients={recipe.nutrients} />
                     <ol className="mt-3 space-y-1.5">
                       {recipeSteps(recipe).map((step, index) => (
-                        <li key={step} className="flex gap-2 text-[11px] leading-4">
-                          <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                        <li key={step} className="flex gap-2 text-xs leading-4">
+                          <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                             {index + 1}
                           </span>
                           {step}
@@ -325,7 +319,7 @@ export function RecipesView({
                         value={String(servings)}
                         onChange={(event) => setServings(Number(event.target.value))}
                         aria-label="Raciones"
-                        className="w-full [&_select]:h-10 [&_select]:rounded-xl [&_select]:text-[11px]"
+                        className="w-full [&_select]:h-10 [&_select]:rounded-xl [&_select]:text-xs"
                       >
                         {[1, 2, 3, 4].map((value) => (
                           <option key={value} value={value}>
@@ -336,7 +330,7 @@ export function RecipesView({
                       <Button
                         disabled={cooking === recipe.id || recipe.present.length === 0}
                         onClick={() => void cook(recipe)}
-                        className="h-10 rounded-xl text-[11px]"
+                        className="h-10 rounded-xl text-xs"
                       >
                         <PackageCheck className="size-3.5" />{" "}
                         {cooking === recipe.id ? "Actualizando…" : "Ya la he cocinado"}
@@ -345,11 +339,11 @@ export function RecipesView({
                     <button
                       type="button"
                       onClick={() => skip(recipe.id)}
-                      className="mt-2 flex items-center gap-1 py-1 text-[10px] font-bold text-muted-foreground"
+                      className="mt-2 flex items-center gap-1 py-1 text-xs font-semibold text-muted-foreground"
                     >
                       <ThumbsDown className="size-3" /> No me apetece
                     </button>
-                    <p className="mt-2 text-[9px] text-muted-foreground">
+                    <p className="mt-2 text-xs text-muted-foreground">
                       Se descuenta una unidad de cada ingrediente usado y las raciones sobrantes pasan al almacén.
                     </p>
                   </div>

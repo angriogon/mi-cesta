@@ -210,7 +210,7 @@ export function DogView({
           type="button"
           onClick={toggleMaintenance}
           aria-pressed={maintenance}
-          className={`flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-[11px] font-bold ${maintenance ? "bg-primary text-primary-foreground" : "border border-border bg-card text-primary"}`}
+          className={`flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-xs font-semibold ${maintenance ? "bg-primary text-primary-foreground" : " bg-card text-primary"}`}
         >
           {adminUnlocked || maintenance ? <Wrench className="size-3.5" /> : <Lock className="size-3.5" />}{" "}
           {maintenance ? "Listo" : "Mantenimiento"}
@@ -229,11 +229,9 @@ export function DogView({
 
       {maintenance ? (
         <>
-          <section className="mb-3 rounded-[16px] border border-[#d8e5d9] bg-[#edf4ee] p-3 dark:border-border dark:bg-card">
-            <p className="text-xs font-bold text-[#20462f] dark:text-foreground">Mantenimiento de {petName}</p>
-            <p className="mt-0.5 text-[11px] text-[#20462f]/70 dark:text-muted-foreground">
-              Edita su nombre y añade comidas, snacks u otros artículos.
-            </p>
+          <section className="mb-3 rounded-lg bg-primary-soft p-3">
+            <p className="text-xs font-semibold text-primary">Mantenimiento de {petName}</p>
+            <p className="mt-0.5 text-xs text-primary/70">Edita su nombre y añade comidas, snacks u otros artículos.</p>
             <form onSubmit={rename} className="mt-3 grid grid-cols-[1fr_auto] gap-2">
               <Input
                 value={nameDraft}
@@ -266,10 +264,10 @@ export function DogView({
               </Button>
             </form>
           </section>
-          <section className="mb-3 rounded-[16px] border border-border bg-card p-3">
+          <section className="mb-3 rounded-lg bg-card p-3">
             <div className="flex items-center gap-2">
               <Bell className="size-4 text-primary" />
-              <p className="text-xs font-bold">Programar avisos</p>
+              <p className="text-xs font-semibold">Programar avisos</p>
             </div>
             <form onSubmit={addReminder} className="mt-3 grid grid-cols-[1fr_5.6rem] gap-2">
               <Input
@@ -344,8 +342,8 @@ export function DogView({
                         className={`size-3 rounded-full ${reminder.enabled ? "bg-primary" : "bg-muted-foreground/35"}`}
                       />
                     </button>
-                    <span className="w-10 shrink-0 text-[11px] font-bold tabular-nums">{reminder.reminderTime}</span>
-                    <span className="min-w-0 flex-1 truncate text-[11px] font-semibold">{reminder.title}</span>
+                    <span className="w-10 shrink-0 text-xs font-semibold tabular-nums">{reminder.reminderTime}</span>
+                    <span className="min-w-0 flex-1 truncate text-xs font-semibold">{reminder.title}</span>
                     <button
                       type="button"
                       onClick={() => {
@@ -362,7 +360,7 @@ export function DogView({
                       type="button"
                       onClick={() => void deleteReminder(reminder)}
                       aria-label={`Eliminar ${reminder.title}`}
-                      className="flex size-8 items-center justify-center rounded-lg bg-[#fbefeb] text-[#a34141]"
+                      className="flex size-8 items-center justify-center rounded-lg bg-danger-soft text-danger"
                     >
                       <Trash2 className="size-3" />
                     </button>
@@ -374,27 +372,25 @@ export function DogView({
         </>
       ) : (
         <>
-          <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
-            Control de {petName}
-          </p>
+          <p className="mb-2 px-1 text-xs font-semibold uppercase text-muted-foreground">Control de {petName}</p>
           <section className="mb-3 grid grid-cols-2 gap-2">
-            <div className="rounded-[16px] border border-border bg-card px-3 py-2.5">
-              <p className="text-[10px] font-semibold text-muted-foreground">Artículos</p>
-              <p className="mt-0.5 text-xl font-bold">{items.length}</p>
+            <div className="rounded-lg bg-card px-3 py-2.5">
+              <p className="text-xs font-semibold text-muted-foreground">Artículos</p>
+              <p className="mt-0.5 text-xl font-semibold">{items.length}</p>
             </div>
-            <div className="rounded-[16px] border border-[#d8e5d9] bg-[#eaf3eb] px-3 py-2.5 text-[#20462f] dark:border-border dark:bg-secondary dark:text-secondary-foreground">
-              <p className="text-[10px] font-semibold opacity-70">Por reponer</p>
-              <p className="mt-0.5 text-xl font-bold">{low}</p>
+            <div className="rounded-lg bg-primary-soft px-3 py-2.5 text-primary">
+              <p className="text-xs font-semibold opacity-70">Por reponer</p>
+              <p className="mt-0.5 text-xl font-semibold">{low}</p>
             </div>
           </section>
-          <section className="mb-3 rounded-[16px] border border-border bg-card p-2.5">
+          <section className="mb-3 rounded-lg bg-card p-2.5">
             <div className="flex items-center gap-2">
               <div className="flex size-8 items-center justify-center rounded-lg bg-muted text-primary">
                 <Bell className="size-3.5" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold">Avisos</p>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-xs font-semibold">Avisos</p>
+                <p className="text-xs text-muted-foreground">
                   {reminders.filter((reminder) => reminder.enabled).length} activos · edítalos en Mantenimiento
                 </p>
               </div>
@@ -406,8 +402,8 @@ export function DogView({
                     key={reminder.id}
                     className={`flex items-center gap-2 rounded-lg px-2 py-1.5 ${reminder.enabled ? "bg-muted/60" : "opacity-45"}`}
                   >
-                    <span className="text-[11px] font-bold tabular-nums">{reminder.reminderTime}</span>
-                    <span className="min-w-0 flex-1 truncate text-[11px] font-semibold">{reminder.title}</span>
+                    <span className="text-xs font-semibold tabular-nums">{reminder.reminderTime}</span>
+                    <span className="min-w-0 flex-1 truncate text-xs font-semibold">{reminder.title}</span>
                   </div>
                 ))}
               </div>
@@ -421,7 +417,7 @@ export function DogView({
           <LoaderCircle className="size-5 animate-spin text-primary" />
         </div>
       ) : items.length === 0 ? (
-        <div className="rounded-[18px] border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+        <div className="rounded-xl bg-card p-6 text-center text-sm text-muted-foreground">
           No hay artículos. Añade el primero desde Mantenimiento.
         </div>
       ) : (
@@ -431,13 +427,13 @@ export function DogView({
             return (
               <section
                 key={item.id}
-                className={`rounded-[16px] border px-2.5 py-2 ${lowStock ? "border-[#ead8d1] bg-[#fbf4f1] dark:border-border dark:bg-card" : "border-border bg-card"}`}
+                className={`rounded-lg border px-2.5 py-2 ${lowStock ? "border-danger-line bg-warning-soft " : " bg-card"}`}
               >
                 <div className="flex min-h-10 items-center gap-1.5">
                   <Dog className="size-4 shrink-0 text-primary" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[13px] font-semibold">{item.name}</p>
-                    <p className={`text-[10px] font-semibold ${lowStock ? "text-[#a25631]" : "text-muted-foreground"}`}>
+                    <p className={`text-xs font-semibold ${lowStock ? "text-warning" : "text-muted-foreground"}`}>
                       {lowStock ? `Reponer · mínimo ${item.minimumStock}` : `Mínimo ${item.minimumStock}`}
                     </p>
                   </div>
@@ -466,14 +462,14 @@ export function DogView({
                         type="button"
                         onClick={() => void deleteItem(item)}
                         aria-label={`Eliminar ${item.name}`}
-                        className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${confirmDelete === item.id ? "bg-[#a34141] text-white" : "bg-[#fbefeb] text-[#a34141]"}`}
+                        className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${confirmDelete === item.id ? "bg-danger text-white" : "bg-danger-soft text-danger"}`}
                       >
                         <Trash2 className="size-3.5" />
                       </button>
                     </>
                   ) : (
                     <>
-                      <span className="rounded-lg bg-muted px-2.5 py-1.5 text-xs font-bold tabular-nums">
+                      <span className="rounded-lg bg-muted px-2.5 py-1.5 text-xs font-semibold tabular-nums">
                         {item.currentStock}
                       </span>
                       <Button
@@ -485,7 +481,7 @@ export function DogView({
                             `1 unidad de ${item.name} descontada.`,
                           )
                         }
-                        className="h-10 rounded-xl px-3 text-[11px]"
+                        className="h-10 rounded-xl px-3 text-xs"
                       >
                         Dar 1
                       </Button>
@@ -494,7 +490,7 @@ export function DogView({
                 </div>
                 {maintenance && (
                   <div className="mt-1.5 flex items-center justify-end gap-1 rounded-lg bg-muted/70 px-2 py-1">
-                    <span className="mr-auto text-[10px] font-medium text-muted-foreground">Stock mínimo</span>
+                    <span className="mr-auto text-xs font-medium text-muted-foreground">Stock mínimo</span>
                     <button
                       type="button"
                       aria-label={`Reducir mínimo de ${item.name}`}
@@ -510,7 +506,7 @@ export function DogView({
                     >
                       <Minus className="size-2.5" />
                     </button>
-                    <span className="w-5 text-center text-xs font-bold">{item.minimumStock}</span>
+                    <span className="w-5 text-center text-xs font-semibold">{item.minimumStock}</span>
                     <button
                       type="button"
                       aria-label={`Aumentar mínimo de ${item.name}`}

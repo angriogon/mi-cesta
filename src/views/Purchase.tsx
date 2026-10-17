@@ -34,8 +34,8 @@ export function priceFor(item: ListItem, prices: PriceRef[]): PriceRef | undefin
 
 function merchantTone(price: PriceRef): string {
   const merchant = normalize(price.merchant);
-  if (merchant.includes("carrefour")) return "text-[#1769aa]";
-  if (merchant.includes("mercadona") || merchant.includes("hacendado")) return "text-[#c46718]";
+  if (merchant.includes("carrefour")) return "text-info";
+  if (merchant.includes("mercadona") || merchant.includes("hacendado")) return "text-warning";
   return "text-primary";
 }
 
@@ -48,8 +48,8 @@ function merchantBadge(price: PriceRef): string {
 
 function PriceTag({ price, quantity }: { price: PriceRef; quantity: number }) {
   return (
-    <span className={`ml-1 text-[9px] font-bold ${merchantTone(price)}`} title={`Último precio en ${price.merchant}`}>
-      <b className="mr-0.5 rounded bg-current/10 px-1 text-[7px]">{merchantBadge(price)}</b>≈{" "}
+    <span className={`ml-1 text-xs font-semibold ${merchantTone(price)}`} title={`Último precio en ${price.merchant}`}>
+      <b className="mr-0.5 rounded bg-current/10 px-1 text-xs">{merchantBadge(price)}</b>≈{" "}
       {formatCents(price.priceCents * quantity)}
     </span>
   );
@@ -75,7 +75,7 @@ export function PurchaseShell({
   return (
     <>
       <div
-        className="purchase-stage-switch grid grid-cols-2 rounded-[13px] border border-border bg-muted p-1 shadow-[0_1px_2px_rgba(32,47,38,.06)]"
+        className="purchase-stage-switch grid grid-cols-2 rounded-[9px] bg-fill p-0.5"
         role="tablist"
         aria-label="Estado de Compra"
       >
@@ -84,7 +84,7 @@ export function PurchaseShell({
           role="tab"
           onClick={() => onStageChange("prepare")}
           aria-selected={stage === "prepare"}
-          className={`h-8 rounded-lg text-[11px] font-bold ${stage === "prepare" ? "bg-card text-primary shadow-sm" : "text-muted-foreground"}`}
+          className={`${stage === "prepare" ? "h-8 rounded-[7px] bg-thumb text-[13px] font-semibold text-foreground shadow-thumb" : "h-8 rounded-[7px] text-[13px] font-medium text-foreground"}`}
         >
           Preparar · {preparingCount}
         </button>
@@ -93,15 +93,15 @@ export function PurchaseShell({
           role="tab"
           onClick={() => onStageChange("store")}
           aria-selected={stage === "store"}
-          className={`h-8 rounded-lg text-[11px] font-bold ${stage === "store" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"}`}
+          className={`${stage === "store" ? "h-8 rounded-[7px] bg-thumb text-[13px] font-semibold text-foreground shadow-thumb" : "h-8 rounded-[7px] text-[13px] font-medium text-foreground"}`}
         >
           En tienda · {storeCount}
         </button>
       </div>
       {stage === "store" && activity.length > 0 && (
-        <div className="mb-2 flex items-center gap-2 overflow-hidden rounded-xl border border-[#d8e5d9] bg-[#eaf3eb] px-3 py-2 text-[#20462f] dark:border-border dark:bg-secondary dark:text-secondary-foreground">
+        <div className="mb-2 flex items-center gap-2 overflow-hidden rounded-xl bg-primary-soft px-3 py-2 text-primary">
           <Users className="size-3.5 shrink-0" />
-          <p className="truncate text-[10px] font-semibold">
+          <p className="truncate text-xs font-semibold">
             {activity[0].deviceName} también está comprando · {activity[0].detail}
           </p>
         </div>
@@ -208,33 +208,25 @@ export function Prepare(props: {
     <>
       {props.duplicateCount > 0 && (
         <div className="mb-3 flex justify-end">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={props.mergeDuplicates}
-            className="h-9 rounded-xl px-2.5 text-[10px]"
-          >
+          <Button variant="outline" size="sm" onClick={props.mergeDuplicates} className="h-9 rounded-xl px-2.5 text-xs">
             Unir repetidos · {props.duplicateCount}
           </Button>
         </div>
       )}
 
       {(props.suggestions.length > 0 || props.pendingSuggestions.length > 0) && (
-        <section className="mb-3 rounded-[16px] border border-[#d8e5d9] bg-[#eef4ef] p-2.5 dark:border-border dark:bg-card">
+        <section className="mb-3 rounded-lg bg-primary-soft p-2.5">
           <div className="flex items-center gap-2">
             <Sparkles className="size-3.5 text-primary" />
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-bold">Sugeridos por AutoCesta</p>
-              <p className="text-[9px] text-muted-foreground">Preparados en segundo plano; tú decides qué añadir.</p>
+              <p className="text-xs font-semibold">Sugeridos por AutoCesta</p>
+              <p className="text-xs text-muted-foreground">Preparados en segundo plano; tú decides qué añadir.</p>
             </div>
           </div>
           {props.suggestions.length > 0 && (
             <div className="mt-2 space-y-1">
               {props.suggestions.map((suggestion) => (
-                <div
-                  key={suggestion.productId}
-                  className="flex items-center gap-2 rounded-xl bg-card px-2 py-1.5 dark:bg-muted"
-                >
+                <div key={suggestion.productId} className="flex items-center gap-2 rounded-xl bg-card px-2 py-1.5">
                   <button
                     type="button"
                     role="checkbox"
@@ -257,15 +249,15 @@ export function Prepare(props: {
                     </span>
                   </button>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-bold">
+                    <p className="truncate text-xs font-semibold">
                       {suggestion.quantity} × {suggestion.productName}
                     </p>
-                    <p className="truncate text-[9px] text-muted-foreground">{suggestion.reason}</p>
+                    <p className="truncate text-xs text-muted-foreground">{suggestion.reason}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => props.suppressSuggestion(suggestion.productId)}
-                    className="px-1 py-2 text-[9px] font-bold text-muted-foreground"
+                    className="px-1 py-2 text-xs font-semibold text-muted-foreground"
                   >
                     No sugerir
                   </button>
@@ -275,29 +267,29 @@ export function Prepare(props: {
           )}
           {props.pendingSuggestions.length > 0 && (
             <details className="mt-2">
-              <summary className="cursor-pointer py-1 text-[9px] font-bold text-[#8b672f]">
+              <summary className="cursor-pointer py-1 text-xs font-semibold text-warning">
                 {props.pendingSuggestions.length} pendientes por stock dudoso
               </summary>
               <div className="mt-1 space-y-1">
                 {props.pendingSuggestions.map((suggestion) => (
                   <div
                     key={suggestion.productId}
-                    className="flex items-center gap-2 rounded-lg bg-[#faf7ef] px-2 py-1 dark:bg-muted"
+                    className="flex items-center gap-2 rounded-lg bg-warning-soft px-2 py-1"
                   >
-                    <span className="min-w-0 flex-1 truncate text-[9px]">
+                    <span className="min-w-0 flex-1 truncate text-xs">
                       {suggestion.productName} · {Math.round(suggestion.confidence * 100)} % certeza
                     </span>
                     <button
                       type="button"
                       onClick={() => props.acceptSuggestions([suggestion])}
-                      className="px-1 py-1.5 text-[9px] font-bold text-primary"
+                      className="px-1 py-1.5 text-xs font-semibold text-primary"
                     >
                       Añadir
                     </button>
                     <button
                       type="button"
                       onClick={() => props.suppressSuggestion(suggestion.productId)}
-                      className="px-1 py-1.5 text-[9px] font-bold"
+                      className="px-1 py-1.5 text-xs font-semibold"
                     >
                       No sugerir
                     </button>
@@ -310,7 +302,7 @@ export function Prepare(props: {
             <Button
               disabled={!selected.size}
               onClick={() => props.acceptSuggestions(props.suggestions.filter((item) => selected.has(item.productId)))}
-              className="mt-2 h-10 w-full rounded-xl text-[11px]"
+              className="mt-2 h-10 w-full rounded-xl text-xs"
             >
               <Plus className="size-3.5" /> Añadir seleccionados
             </Button>
@@ -339,7 +331,7 @@ export function Prepare(props: {
             autoCorrect="on"
             enterKeyHint="done"
             maxLength={80}
-            className="h-12 rounded-xl border-border bg-card pl-3.5 pr-10 text-[16px] shadow-[0_1px_2px_rgba(32,47,38,.05)] focus-visible:ring-primary/20"
+            className="h-12 rounded-xl bg-card pl-3.5 pr-10 text-[16px] focus-visible:ring-primary/20"
           />
           {props.name && (
             <button
@@ -352,17 +344,17 @@ export function Prepare(props: {
             </button>
           )}
           {query && (
-            <div className="absolute inset-x-0 top-[calc(100%+.35rem)] overflow-hidden rounded-xl border border-border bg-card shadow-[0_14px_34px_rgba(32,47,38,.14)]">
+            <div className="absolute inset-x-0 top-[calc(100%+.35rem)] overflow-hidden rounded-xl bg-card shadow-float">
               {matches.map((item) => (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => props.addNamedItem(item.name)}
-                  className="flex w-full items-center gap-2 border-b border-border/70 px-3 py-2.5 text-left last:border-0"
+                  className="flex w-full items-center gap-2 border-b-[0.5px] border-separator px-3 py-2.5 text-left last:border-0"
                 >
                   <Archive className="size-3.5 text-primary" />
                   <span className="min-w-0 flex-1 truncate text-sm font-semibold">{item.name}</span>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     {item.quantity > 0 ? `En casa · ${item.quantity}` : "En catálogo"}
                   </span>
                 </button>
@@ -371,13 +363,11 @@ export function Prepare(props: {
                 <button
                   type="button"
                   onClick={() => props.addNamedItem(props.name)}
-                  className="flex w-full items-center gap-2 bg-[#f4f7f4] px-3 py-2.5 text-left dark:bg-muted"
+                  className="flex w-full items-center gap-2 bg-card px-3 py-2.5 text-left"
                 >
                   <Plus className="size-3.5 text-primary" />
                   <span className="min-w-0 flex-1 truncate text-sm font-semibold">Añadir “{props.name.trim()}”</span>
-                  <span className="rounded-full bg-[#efe5dc] px-2 py-0.5 text-[9px] font-bold text-[#8f4b2f]">
-                    NUEVO
-                  </span>
+                  <span className="rounded-full bg-info-soft px-2 py-0.5 text-xs font-semibold text-info">NUEVO</span>
                 </button>
               )}
             </div>
@@ -397,14 +387,14 @@ export function Prepare(props: {
           size="icon-lg"
           disabled={!props.name.trim()}
           aria-label="Añadir a la lista"
-          className="size-12 rounded-xl shadow-[0_1px_2px_rgba(41,91,63,.18)]"
+          className="size-12 rounded-xl"
         >
           <Plus className="size-4.5" />
         </Button>
       </form>
 
       {props.items.length > 0 && (
-        <div className="mb-4 grid grid-cols-2 gap-1 overflow-hidden rounded-xl border border-border bg-card p-1">
+        <div className="mb-4 grid grid-cols-2 gap-1 overflow-hidden rounded-xl bg-card p-1">
           <Button
             variant="ghost"
             disabled={sharing}
@@ -416,11 +406,11 @@ export function Prepare(props: {
                 setSharing(false);
               }
             }}
-            className="h-11 rounded-lg px-2 text-[11px]"
+            className="h-11 rounded-lg px-2 text-xs"
           >
             <FileDown className="size-3.5" /> {sharing ? "Preparando…" : "Compartir PDF"}
           </Button>
-          <Button onClick={props.generateChecklist} className="h-11 rounded-lg px-2 text-[11px]">
+          <Button onClick={props.generateChecklist} className="h-11 rounded-lg px-2 text-xs">
             <ListChecks className="size-3.5" /> Generar lista
           </Button>
         </div>
@@ -442,10 +432,7 @@ export function Prepare(props: {
                 aria-expanded={!collapsed.has(group.category)}
                 className="mb-1.5 flex w-full items-center justify-between px-1 py-1"
               >
-                <h2
-                  id={`shopping-${group.category}`}
-                  className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground"
-                >
+                <h2 id={`shopping-${group.category}`} className="text-xs font-semibold uppercase text-muted-foreground">
                   {group.category} · {group.items.length}
                 </h2>
                 <ChevronDown
@@ -454,7 +441,7 @@ export function Prepare(props: {
                 />
               </button>
               {!collapsed.has(group.category) && (
-                <div className="overflow-hidden rounded-[16px] border border-border bg-card shadow-[0_8px_24px_rgba(32,47,38,.045)]">
+                <div className="overflow-hidden rounded-lg bg-card">
                   {group.items.map((item, index) => {
                     const price = priceFor(item, props.prices);
                     const inStock = props.stock.find((product) => normalize(product.name) === normalize(item.name));
@@ -466,7 +453,7 @@ export function Prepare(props: {
                     return (
                       <div
                         key={item.id}
-                        className={`group flex min-h-[52px] items-center gap-1.5 px-2 ${index ? "border-t border-border/75" : ""}`}
+                        className={`group flex min-h-[52px] items-center gap-1.5 px-2 ${index ? "relative before:absolute before:inset-x-0 before:left-4 before:top-0 before:h-[0.5px] before:bg-separator" : ""}`}
                       >
                         <div className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5">
                           <span className="min-w-0 flex-1 text-left text-[13px] font-semibold">
@@ -474,7 +461,7 @@ export function Prepare(props: {
                             <span className="flex flex-wrap items-center gap-1">
                               {price?.priceCents ? <PriceTag price={price} quantity={item.quantity} /> : null}
                               {inStock && inStock.quantity > 0 && (
-                                <span className="rounded bg-[#f8e2de] px-1 py-0.5 text-[8px] font-bold text-[#9b3f38]">
+                                <span className="rounded bg-danger-soft px-1 py-0.5 text-xs font-semibold text-danger">
                                   EN CASA · {inStock.quantity}
                                 </span>
                               )}
@@ -483,13 +470,13 @@ export function Prepare(props: {
                                   type="button"
                                   onClick={() => props.onPlanned(inStock.id)}
                                   aria-label={`${item.name}: tendrás más del doble del mínimo. Toca si es una compra planificada.`}
-                                  className="rounded bg-[#f4ead8] px-1 py-0.5 text-[8px] font-bold text-[#8b672f]"
+                                  className="rounded bg-warning-soft px-1 py-0.5 text-xs font-semibold text-warning"
                                 >
                                   ¿DE MÁS?
                                 </button>
                               )}
                               {item.isNew && (
-                                <span className="rounded-full bg-[#efe5dc] px-1.5 py-0.5 text-[8px] font-bold text-[#8f4b2f]">
+                                <span className="rounded-full bg-info-soft px-1.5 py-0.5 text-xs font-semibold text-info">
                                   NUEVO
                                 </span>
                               )}
@@ -527,7 +514,7 @@ export function Prepare(props: {
                             props.removeItem(item.id);
                           }}
                           aria-label={`Eliminar ${item.name}`}
-                          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[#a34141] active:bg-red-50"
+                          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-danger active:bg-red-50"
                         >
                           <Trash2 className="size-3.5" />
                         </button>
@@ -575,7 +562,7 @@ export function StoreList(props: {
     <>
       <div className="mb-3 flex items-center justify-end gap-2">
         {budget > 0 && (
-          <span className="mr-auto rounded-xl bg-[#eaf3eb] px-3 py-2 text-[10px] font-bold text-primary dark:bg-secondary">
+          <span className="mr-auto rounded-xl bg-muted px-3 py-2 text-xs font-semibold text-primary">
             Presupuesto · {formatCents(budget)}
           </span>
         )}
@@ -583,7 +570,7 @@ export function StoreList(props: {
           type="button"
           onClick={props.openScanner}
           aria-label="Escanear código de barras"
-          className="flex size-10 items-center justify-center rounded-xl border border-border bg-card text-primary"
+          className="flex size-10 items-center justify-center rounded-xl bg-card text-primary"
         >
           <ScanLine className="size-3.5" />
         </button>
@@ -596,7 +583,7 @@ export function StoreList(props: {
                 props.clearItems();
               } else setConfirmClear(true);
             }}
-            className="flex h-10 items-center gap-1.5 rounded-xl border border-[#edd8d3] bg-[#fbf3f1] px-3 text-[10px] font-bold text-[#a34141] dark:border-border dark:bg-card"
+            className="flex h-10 items-center gap-1.5 rounded-xl bg-danger-soft px-3 text-xs font-semibold text-danger"
           >
             <Trash2 className="size-3.5" /> {confirmClear ? "¿Vaciar? Toca otra vez" : "Vaciar"}
           </button>
@@ -613,10 +600,10 @@ export function StoreList(props: {
         <div className="space-y-4">
           {props.grouped.map((group) => (
             <section key={group.category}>
-              <h2 className="mb-1.5 px-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+              <h2 className="mb-1.5 px-1 text-xs font-semibold uppercase text-muted-foreground">
                 {group.category} · {group.items.length}
               </h2>
-              <div className="overflow-hidden rounded-[16px] border border-border bg-card shadow-[0_8px_24px_rgba(32,47,38,.045)]">
+              <div className="overflow-hidden rounded-lg bg-card">
                 {group.items.map((item, index) => {
                   const price = priceFor(item, props.prices);
                   const alternative = props.stock.find(
@@ -632,7 +619,14 @@ export function StoreList(props: {
                   );
                   const toggle = () => props.updateItem(item.id, (entry) => ({ ...entry, done: !entry.done }));
                   return (
-                    <div key={item.id} className={index ? "border-t border-border/75" : ""}>
+                    <div
+                      key={item.id}
+                      className={
+                        index
+                          ? "relative before:absolute before:inset-x-0 before:left-4 before:top-0 before:h-[0.5px] before:bg-separator"
+                          : ""
+                      }
+                    >
                       <div className="flex min-h-[52px] items-center gap-1.5 px-2">
                         <button
                           type="button"
@@ -642,7 +636,7 @@ export function StoreList(props: {
                           className="-m-1 flex size-9 shrink-0 items-center justify-center"
                         >
                           <span
-                            className={`flex size-7 items-center justify-center rounded-full border-2 transition-all ${item.done ? "border-primary bg-primary text-primary-foreground" : "border-[#c9d4cc] bg-white dark:bg-card"}`}
+                            className={`flex size-7 items-center justify-center rounded-full border-[1.5px] transition-colors ${item.done ? "border-primary bg-primary text-primary-foreground" : "border-separator"}`}
                           >
                             {item.done && <Check className="size-4" strokeWidth={3} />}
                           </span>
@@ -687,13 +681,13 @@ export function StoreList(props: {
                           type="button"
                           onClick={() => props.removeItem(item.id)}
                           aria-label={`Eliminar ${item.name} de la lista`}
-                          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[#a34141] active:bg-red-50"
+                          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-danger active:bg-red-50"
                         >
                           <Trash2 className="size-3.5" />
                         </button>
                       </div>
                       {alternativeFor === item.id && (
-                        <div className="flex items-center gap-2 bg-[#faf7ef] px-3 py-2 text-[10px] text-[#76582b] dark:bg-muted dark:text-muted-foreground">
+                        <div className="flex items-center gap-2 bg-warning-soft px-3 py-2 text-xs text-warning">
                           <Sparkles className="size-3 shrink-0" />
                           <span className="min-w-0 flex-1">
                             {alternative
@@ -709,7 +703,7 @@ export function StoreList(props: {
                                   props.removeItem(item.id);
                                   setAlternativeFor(null);
                                 }}
-                                className="px-1 py-1.5 font-bold"
+                                className="px-1 py-1.5 font-semibold"
                               >
                                 No comprar
                               </button>
@@ -748,7 +742,7 @@ export function StoreList(props: {
               setSaving(false);
             }
           }}
-          className="mt-5 h-12 w-full rounded-2xl text-sm shadow-[0_10px_24px_rgba(41,91,63,.16)]"
+          className="mt-5 h-12 w-full rounded-xl text-sm"
         >
           <PackageCheck className="size-4" />{" "}
           {saving
