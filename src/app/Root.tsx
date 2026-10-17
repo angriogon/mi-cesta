@@ -15,7 +15,20 @@ import { HouseholdScreen } from "./auth/HouseholdScreen";
 const HOUSEHOLD_KEY = "cesta-household-id";
 
 export function Root() {
-  return backendMode === "local" ? <LocalRoot /> : <SupabaseRoot />;
+  if (backendMode === "local") return <LocalRoot />;
+  if (backendMode === "unconfigured") return <Unconfigured />;
+  return <SupabaseRoot />;
+}
+
+function Unconfigured() {
+  return (
+    <main className="flex min-h-[100dvh] flex-col items-center justify-center bg-background px-6 text-center text-foreground">
+      <h1 className="text-lg font-semibold">Cesta no está disponible</h1>
+      <p className="mt-2 max-w-72 text-sm leading-6 text-muted-foreground">
+        Esta versión no tiene configurado el servidor de cuentas. Vuelve a intentarlo más tarde.
+      </p>
+    </main>
+  );
 }
 
 function LocalRoot() {

@@ -1,5 +1,6 @@
 import { Component, StrictMode, type ErrorInfo, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
+import { UpdatePrompt } from "./app/chrome/UpdatePrompt";
 import { Root } from "./app/Root";
 import "./index.css";
 import { applyTheme, storedTheme } from "./lib/theme";
@@ -42,6 +43,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ErrorBoundary>
       <Root />
+      <UpdatePrompt />
     </ErrorBoundary>
   </StrictMode>,
 );
