@@ -30,8 +30,7 @@ import { readText, writeText } from "../lib/storage";
 import { Button, CategorySelect, EmptyState, Input, NativeSelect, Stepper } from "../ui/primitives";
 import type { Notify } from "../ui/Toast";
 import type { AdminState } from "./AdminAccess";
-import { LOAD_FAILED, reportError } from "../lib/errors";
-import { inventoryChanged, useChannel } from "../app/events";
+import { useLots } from "../app/useLots";
 
 export const STATE_LABEL: Record<LotState, string> = {
   closed: "Cerrado",
@@ -59,29 +58,11 @@ function StateIcon({ state }: { state: LotState }) {
 
 /** Lotes con caducidad y estado; se puede cambiar el estado, poner fecha o retirarlos. */
 function ExpiryStates({ api, notify, products }: { api: CestaApi; notify: Notify; products: Product[] }) {
-  const [lots, setLots] = useState<InventoryLot[]>([]);
+  const { lots, setState, setExpiry: saveExpiry, remove, restore } = useLots(api);
   const [open, setOpen] = useState(true);
   const [status, setStatus] = useState("");
   const [help, setHelp] = useState(() => !readText("cesta-longpress-help-v1"));
   const [editing, setEditing] = useState<string | null>(null);
-
-  async function load() {
-    try {
-      setLots(await api.lots());
-    } catch (error) {
-      // Se reintenta con el siguiente refresco.
-      reportError(error, "cargar existencias", LOAD_FAILED);
-    }
-  }
-
-  useChannel(inventoryChanged, () => void load());
-  useEffect(() => {
-    void load();
-    return api.db.subscribe((table) => {
-      if (table === "inventory_lots") void load();
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api]);
 
   // Fecha real o, si no hay, la estimada por categoría (la misma que usa Inicio).
   const estimates = useMemo(() => new Map(expiringLots(lots, products).map((lot) => [lot.id, lot])), [lots, products]);
@@ -102,32 +83,21 @@ function ExpiryStates({ api, notify, products }: { api: CestaApi; notify: Notify
 
   async function cycle(lot: InventoryLot) {
     const next = STATES[(STATES.indexOf(lot.state) + 1) % STATES.length];
-    setLots((items) => items.map((item) => (item.id === lot.id ? { ...item, state: next } : item)));
     setStatus(`${lot.productName}: ${STATE_LABEL[next]}`);
-    await api.setLotState(lot.id, next).catch(() => notify("No se ha podido guardar el estado."));
+    await setState(lot, next);
   }
 
   async function setExpiry(lot: InventoryLot, date: string) {
-    setLots((items) => items.map((item) => (item.id === lot.id ? { ...item, expiryDate: date || null } : item)));
-    await api.setLotExpiry(lot.id, date || null).catch(() => notify("No se ha podido guardar la fecha."));
+    await saveExpiry(lot, date || null);
   }
 
   async function retire(lot: InventoryLot) {
-    setLots((items) => items.filter((item) => item.id !== lot.id));
     setEditing(null);
-    try {
-      await api.removeLot(lot.id);
+    if (await remove(lot))
       notify(`${lot.productName} retirado de caducidades.`, {
         label: "Deshacer",
-        onClick: () => {
-          void api.addLot(lot).then(() => load());
-        },
+        onClick: () => void restore(lot),
       });
-    } catch (error) {
-      reportError(error, "despensa");
-      notify("No se ha podido retirar.");
-      void load();
-    }
   }
 
   if (!visible.length) return null;
