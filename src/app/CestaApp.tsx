@@ -25,6 +25,7 @@ import { APP_VERSION } from "./config";
 import { inventoryChanged } from "./events";
 import { errorMessage } from "./errorMessage";
 import { useLists } from "./useLists";
+import { usePet } from "./usePet";
 import { useProducts } from "./useProducts";
 import { AdminAccess, useAdmin } from "../views/AdminAccess";
 import { BarcodeScanner } from "../views/BarcodeScanner";
@@ -55,6 +56,8 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
   const [newName, setNewName] = useState("");
   const [ready, setReady] = useState(false);
   const { shopping, checklist, setShopping, setChecklist, pullLists, shoppingRef } = useLists(api, ready);
+  const pet = usePet(api, ready);
+  const { reminders, petName } = pet;
   const [splash, setSplash] = useState(true);
   const [splashFading, setSplashFading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -63,7 +66,6 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
   const [pullStart, setPullStart] = useState<number | null>(null);
   const [pull, setPull] = useState(0);
   const [dogAlert, setDogAlert] = useState<DogReminder | null>(null);
-  const [reminders, setReminders] = useState<DogReminder[]>([]);
   const [prices, setPrices] = useState<PriceRef[]>([]);
   const [priceMeta, setPriceMeta] = useState<PriceMeta>({
     postalCode: "",
@@ -75,7 +77,6 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
   const [scanner, setScanner] = useState<ScannerTarget | null>(null);
   const [expiryItems, setExpiryItems] = useState<ExpiryItem[]>([]);
   const [overview, setOverview] = useState<Overview | null>(null);
-  const [petName, setPetName] = useState("Mascota");
   const [rejected, setRejected] = useState<{ requestedName: string; productId: string }[]>([]);
   const admin = useAdmin(householdId);
   const toast = useToast();
@@ -134,14 +135,9 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
   useEffect(() => {
     if (!ready) return;
     const timer = window.setTimeout(() => {
-      api.reminders().then(setReminders).catch(notifyError("cargar avisos", LOAD_FAILED));
       refreshPrices().catch(notifyError("cargar precios", LOAD_FAILED));
       api.insights().then(setPredictions).catch(notifyError("cargar previsiones", LOAD_FAILED));
       api.rejectedSubstitutions().then(setRejected).catch(notifyError("cargar sustituciones", LOAD_FAILED));
-      api
-        .household()
-        .then((household) => setPetName(household.petName || "Mascota"))
-        .catch(notifyError("cargar hogar", LOAD_FAILED));
     }, 450);
     return () => window.clearTimeout(timer);
   }, [ready, api, refreshPrices]);
@@ -181,8 +177,6 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
         if (tables.has("lists")) void pullLists();
         if (tables.has("products") || tables.has("inventory_lots") || tables.has("tickets") || tables.has("activity"))
           void refreshProducts();
-        if (tables.has("dog_reminders"))
-          api.reminders().then(setReminders).catch(notifyError("cargar avisos", LOAD_FAILED));
         if (tables.has("prices")) refreshPrices().catch(notifyError("cargar precios", LOAD_FAILED));
       }, 400);
     });
@@ -435,7 +429,7 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
         refreshProducts(),
         refreshPrices().catch(notifyError("cargar precios", LOAD_FAILED)),
       ]);
-      api.reminders().then(setReminders).catch(notifyError("cargar avisos", LOAD_FAILED));
+      void pet.reload();
       inventoryChanged.emit();
     }
     setPull(0);
@@ -700,17 +694,15 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
           />
         ) : view === "tickets" ? (
           <Suspense fallback={<Loading />}>
-            <TicketsView api={api} onStockChanged={() => void refreshProducts()} notify={toast.show} />
+            <TicketsView api={api} prices={prices} onStockChanged={() => void refreshProducts()} notify={toast.show} />
           </Suspense>
         ) : view === "dog" ? (
           <Suspense fallback={<Loading />}>
             <DogView
-              api={api}
+              pet={pet}
               adminUnlocked={admin.unlocked}
               requestMaintenance={admin.request}
               lockAdmin={admin.lock}
-              onRemindersChange={setReminders}
-              onPetNameChange={setPetName}
             />
           </Suspense>
         ) : view === "recipes" ? (

@@ -1,9 +1,9 @@
 import { Bell, Dog, LoaderCircle, Lock, LogOut, Minus, Pencil, Plus, Trash2, Wrench } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
-import { ApiError, type CestaApi } from "../data/api";
 import type { DogItem, DogReminder } from "../data/types";
 import { Button, Input, Stepper } from "../ui/primitives";
-import { reportError } from "../lib/errors";
+import type { PetState } from "../app/usePet";
+import { errorMessage } from "../app/errorMessage";
 
 async function askNotifications(): Promise<NotificationPermission | "unavailable"> {
   if (!("Notification" in window)) return "unavailable";
@@ -23,59 +23,31 @@ function isStandalone(): boolean {
 }
 
 export function DogView({
-  api,
+  pet,
   adminUnlocked,
   requestMaintenance,
   lockAdmin,
-  onRemindersChange,
-  onPetNameChange,
 }: {
-  api: CestaApi;
+  pet: PetState;
   adminUnlocked: boolean;
   requestMaintenance: () => void;
   lockAdmin: () => void;
-  onRemindersChange: (reminders: DogReminder[]) => void;
-  onPetNameChange: (name: string) => void;
 }) {
-  const [items, setItems] = useState<DogItem[]>([]);
-  const [petName, setPetName] = useState("Mascota");
-  const [nameDraft, setNameDraft] = useState("Mascota");
-  const [reminders, setReminders] = useState<DogReminder[]>([]);
+  const { items, reminders, petName, loading } = pet;
+  const [nameDraft, setNameDraft] = useState(petName);
   const [title, setTitle] = useState("");
   const [time, setTime] = useState("21:00");
   const [editing, setEditing] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editTime, setEditTime] = useState("21:00");
-  const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
   const [maintenance, setMaintenance] = useState(false);
   const [pending, setPending] = useState(false);
   const [newItem, setNewItem] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  async function load() {
-    try {
-      const [dog, list] = await Promise.all([api.dogItems(), api.reminders()]);
-      setItems(dog.items);
-      setPetName(dog.petName);
-      setNameDraft(dog.petName);
-      setReminders(list);
-    } catch (error) {
-      reportError(error, "mascota");
-      setStatus("No se han podido cargar todos los datos.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void load();
-    const unsubscribe = api.db.subscribe((table) => {
-      if (table === "dog_items" || table === "dog_reminders") void load();
-    });
-    return unsubscribe;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api]);
+  // El nombre puede cambiar desde otro dispositivo: el borrador lo sigue mientras no se esté editando.
+  useEffect(() => setNameDraft(petName), [petName]);
 
   useEffect(() => {
     if (!adminUnlocked) {
@@ -99,19 +71,11 @@ export function DogView({
     setMaintenance(true);
   }
 
-  function publish(next: DogReminder[]) {
-    setReminders(next);
-    onRemindersChange(next);
-  }
-
   async function saveItem(previous: DogItem, next: DogItem, message: string) {
-    setItems((list) => list.map((item) => (item.id === previous.id ? next : item)));
     setStatus(message);
     try {
-      await api.updateDogItem(next);
-    } catch (error) {
-      reportError(error, "mascota");
-      setItems((list) => list.map((item) => (item.id === previous.id ? previous : item)));
+      await pet.updateItem(previous, next);
+    } catch {
       setStatus("No se ha podido guardar. Comprueba la conexión.");
     }
   }
@@ -121,26 +85,21 @@ export function DogView({
     if (!newItem.trim()) return;
     setStatus("Agregando artículo…");
     try {
-      const item = await api.addDogItem(newItem);
-      setItems((list) => [...list, item].sort((a, b) => a.name.localeCompare(b.name, "es")));
+      await pet.addItem(newItem);
       setNewItem("");
       setStatus("Artículo agregado.");
     } catch (error) {
-      setStatus(error instanceof ApiError ? error.message : "No se ha podido agregar.");
+      setStatus(errorMessage(error, "No se ha podido agregar."));
     }
   }
 
   async function rename(event: FormEvent) {
     event.preventDefault();
     try {
-      const name = await api.setPetName(nameDraft);
-      setPetName(name);
-      setNameDraft(name);
-      onPetNameChange(name);
+      setNameDraft(await pet.rename(nameDraft));
       setStatus("Nombre de la mascota actualizado.");
     } catch (error) {
-      reportError(error, "mascota");
-      setStatus("No se ha podido actualizar el nombre.");
+      setStatus(errorMessage(error, "No se ha podido actualizar el nombre."));
     }
   }
 
@@ -149,7 +108,7 @@ export function DogView({
     if (!title.trim()) return;
     const permission = await askNotifications();
     try {
-      publish(await api.addReminder(title, time));
+      await pet.addReminder(title, time);
       setTitle("");
       setStatus(
         permission === "granted"
@@ -159,27 +118,26 @@ export function DogView({
             : "Aviso programado dentro de Cesta. Añade Cesta a la pantalla de inicio para recibir notificaciones en iPhone.",
       );
     } catch (error) {
-      setStatus(error instanceof ApiError ? error.message : "No se ha podido programar el aviso.");
+      setStatus(errorMessage(error, "No se ha podido programar el aviso."));
     }
   }
 
   async function updateReminder(reminder: DogReminder, patch: Partial<DogReminder>, message: string) {
     if (patch.enabled) await askNotifications();
     try {
-      publish(await api.updateReminder(reminder.id, patch));
+      await pet.updateReminder(reminder.id, patch);
       setEditing(null);
       setStatus(message);
     } catch (error) {
-      setStatus(error instanceof ApiError ? error.message : "No se ha podido actualizar el aviso.");
+      setStatus(errorMessage(error, "No se ha podido actualizar el aviso."));
     }
   }
 
   async function deleteReminder(reminder: DogReminder) {
     try {
-      publish(await api.deleteReminder(reminder.id));
+      await pet.deleteReminder(reminder.id);
       setStatus("Aviso eliminado.");
-    } catch (error) {
-      reportError(error, "mascota");
+    } catch {
       setStatus("No se ha podido eliminar el aviso.");
     }
   }
@@ -192,11 +150,9 @@ export function DogView({
     }
     setConfirmDelete(null);
     try {
-      await api.deleteDogItem(item.id);
-      setItems((list) => list.filter((entry) => entry.id !== item.id));
+      await pet.deleteItem(item.id);
       setStatus(`${item.name} eliminado.`);
-    } catch (error) {
-      reportError(error, "mascota");
+    } catch {
       setStatus("No se ha podido eliminar.");
     }
   }
