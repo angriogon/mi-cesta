@@ -3,6 +3,8 @@ import type { Database } from "../data/database.types";
 import type { ExternalPrices } from "../data/api";
 
 export const APP_VERSION = "5.0.0";
+/** Fecha y hora de esta compilación, para distinguir versiones publicadas el mismo día. */
+export const BUILD_TIME = typeof __BUILD_TIME__ === "string" ? __BUILD_TIME__ : "";
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 /** Clave pública del proyecto: la nueva «publishable» (sb_publishable_…) o, si no hay, la antigua «anon». */
