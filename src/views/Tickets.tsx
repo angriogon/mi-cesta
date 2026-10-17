@@ -307,7 +307,7 @@ export function TicketsView({
             <TriangleAlert className="size-4" />
             <div className="min-w-0 flex-1">
               <h2 className="text-xs font-semibold">Solo hay que revisar {reviews.length}</h2>
-              <p className="text-xs opacity-70">El resto del ticket ya se procesó automáticamente.</p>
+              <p className="text-xs">El resto del ticket ya se procesó automáticamente.</p>
             </div>
           </div>
           <div className="mt-2 space-y-2">

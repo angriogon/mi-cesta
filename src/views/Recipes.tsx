@@ -131,7 +131,7 @@ export function RecipesView({
         </div>
         <div>
           <p className="text-sm font-semibold">Recetas para decidir</p>
-          <p className="text-xs opacity-70">
+          <p className="text-xs">
             {scored.length} recetas · {ready} {ready === 1 ? "lista" : "listas"} con tu stock
           </p>
         </div>

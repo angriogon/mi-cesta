@@ -23,7 +23,12 @@ export async function compressImage(file: File, maxSide = 1800, quality = 0.82):
 /** Reconoce texto en español con Tesseract (en el propio dispositivo). */
 export async function recognizeText(image: Blob, onProgress?: (percent: number) => void): Promise<string> {
   const { createWorker } = await import("tesseract.js");
+  // Motor e idioma servidos por la propia app (ver vite.config.ts): sin CDN de terceros.
+  const ocr = new URL(`${import.meta.env.BASE_URL}ocr/`, window.location.href).href;
   const worker = await createWorker("spa", 1, {
+    workerPath: `${ocr}worker.min.js`,
+    corePath: ocr,
+    langPath: ocr.replace(/\/$/, ""),
     logger: (message: { status: string; progress: number }) => {
       if (message.status === "recognizing text") onProgress?.(Math.max(5, Math.round(message.progress * 100)));
     },

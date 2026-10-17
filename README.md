@@ -33,6 +33,9 @@ npm run test:all     # tipos + unitarias + base de datos + extremo a extremo en 
 - `npm run check` = tipos (TypeScript 7) + ESLint + Prettier. Se ejecuta en CI antes de las pruebas.
 - **TypeScript 6 y 7 conviven a propósito**: la app se compila con TypeScript 7 (paquete `typescript-7`), pero typescript-eslint aún necesita la API de TypeScript 6 (paquete `typescript`). Cuando typescript-eslint admita la 7, sobra el alias.
 - **Errores**: ningún `catch` se queda vacío. Usa `src/lib/errors.ts`: `notifyError` para lo que el usuario espera ver (cargar, guardar) y `logError` para tareas opcionales. Los avisos repetidos se agrupan en uno.
+- **Carga y caché**: Inicio va en el arranque; Compra, Despensa y Menú se descargan al abrirlas (y se precargan en segundo plano). React y Supabase van en bloques propios que el iPhone conserva entre versiones. Los bloques `ondemand-*` (PDF, escáner, OCR) no entran en la caché inicial de la PWA: se guardan al usarse.
+- **OCR sin CDN**: el motor de Tesseract y el español se sirven desde `/ocr/` (los copia `vite.config.ts` desde `node_modules`). La e2e del OCR falla si la app pide algo fuera de su dominio.
+- **Accesibilidad**: `e2e/a11y.spec.ts` audita cada pantalla con axe (WCAG 2.1 AA) en claro y en oscuro.
 - **Operaciones atómicas**: las acciones de varios pasos (guardar compra, deshacer, cocinar, guardar ticket, resolver revisión, borrar producto o ticket) acumulan sus escrituras en un `BatchDb` y las aplican juntas con la función `apply_batch` de Supabase: o todas o ninguna. Para leer una fila usa `db.get` o `db.listBy` en lugar de leer la tabla entera.
 - **Tipos de Supabase**: `src/data/database.types.ts` se genera con `npm run gen:types` (requiere la CLI de Supabase). `src/data/schema.ts` hace fallar la compilación si los tipos de la app y las columnas reales dejan de coincidir.
 
