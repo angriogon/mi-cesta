@@ -58,7 +58,7 @@ export function PurchaseShell({
   return (
     <>
       <div
-        className="purchase-stage-switch grid grid-cols-2 rounded-[13px] border border-border bg-muted/95 p-1 shadow-[0_8px_24px_rgba(32,47,38,.08)] backdrop-blur"
+        className="purchase-stage-switch grid grid-cols-2 rounded-[13px] border border-border bg-muted p-1 shadow-[0_1px_2px_rgba(32,47,38,.06)]"
         role="tablist"
         aria-label="Estado de Compra"
       >
@@ -67,7 +67,7 @@ export function PurchaseShell({
           role="tab"
           onClick={() => onStageChange("prepare")}
           aria-selected={stage === "prepare"}
-          className={`h-8 rounded-lg text-[10px] font-bold ${stage === "prepare" ? "bg-card text-primary shadow-sm" : "text-muted-foreground"}`}
+          className={`h-8 rounded-lg text-[11px] font-bold ${stage === "prepare" ? "bg-card text-primary shadow-sm" : "text-muted-foreground"}`}
         >
           Preparar · {preparingCount}
         </button>
@@ -76,7 +76,7 @@ export function PurchaseShell({
           role="tab"
           onClick={() => onStageChange("store")}
           aria-selected={stage === "store"}
-          className={`h-8 rounded-lg text-[10px] font-bold ${stage === "store" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"}`}
+          className={`h-8 rounded-lg text-[11px] font-bold ${stage === "store" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"}`}
         >
           En tienda · {storeCount}
         </button>
@@ -287,7 +287,7 @@ export function Prepare(props: {
           event.preventDefault();
           props.addNamedItem(props.name);
         }}
-        className="relative z-10 mb-4 flex gap-2"
+        className="relative z-10 mb-4 mt-2 flex gap-2"
       >
         <label htmlFor="new-item" className="sr-only">
           Añadir producto
@@ -303,7 +303,7 @@ export function Prepare(props: {
             autoCorrect="on"
             enterKeyHint="done"
             maxLength={80}
-            className="h-12 rounded-xl border-border bg-card pl-3.5 pr-10 text-[16px] shadow-[0_8px_24px_rgba(32,47,38,.045)] focus-visible:ring-primary/20"
+            className="h-12 rounded-xl border-border bg-card pl-3.5 pr-10 text-[16px] shadow-[0_1px_2px_rgba(32,47,38,.05)] focus-visible:ring-primary/20"
           />
           {props.name && (
             <button
@@ -351,7 +351,7 @@ export function Prepare(props: {
           size="icon-lg"
           disabled={!props.name.trim()}
           aria-label="Añadir a la lista"
-          className="size-12 rounded-xl shadow-[0_8px_20px_rgba(41,91,63,.16)]"
+          className="size-12 rounded-xl shadow-[0_1px_2px_rgba(41,91,63,.18)]"
         >
           <Plus className="size-4.5" />
         </Button>

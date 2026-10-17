@@ -544,17 +544,19 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
         </div>
       )}
 
+      {/* Franja opaca detrás de la cabecera: el contenido no se transparenta al desplazarse. */}
+      <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 top-0 z-[19] h-[calc(3.6rem+env(safe-area-inset-top))] border-b border-border/60 bg-background" />
       <button
         type="button"
         onClick={() => setMenuOpen(true)}
         disabled={!ready}
         aria-label="Abrir menú"
-        className="fixed left-4 top-[calc(.8rem+env(safe-area-inset-top))] z-20 flex size-10 items-center justify-center rounded-xl border border-border bg-card/95 text-primary shadow-[0_8px_24px_rgba(32,47,38,.08)] backdrop-blur disabled:opacity-50"
+        className="fixed left-4 top-[calc(.8rem+env(safe-area-inset-top))] z-20 flex size-10 items-center justify-center rounded-xl border border-border bg-card text-primary shadow-[0_1px_2px_rgba(32,47,38,.06)] disabled:opacity-50"
       >
         <MenuIcon />
       </button>
       {sectionTitle && (
-        <div className="fixed left-[4.1rem] top-[calc(.8rem+env(safe-area-inset-top))] z-20 flex h-10 items-center rounded-xl border border-border bg-card/92 px-3 text-[10px] font-bold text-primary shadow-[0_8px_24px_rgba(32,47,38,.06)] backdrop-blur">
+        <div className="fixed left-[4.1rem] top-[calc(.8rem+env(safe-area-inset-top))] z-20 flex h-10 items-center rounded-xl border border-border bg-card px-3.5 text-[12px] font-bold text-primary shadow-[0_1px_2px_rgba(32,47,38,.06)]">
           {view === "dog" ? petName : sectionTitle}
         </div>
       )}
