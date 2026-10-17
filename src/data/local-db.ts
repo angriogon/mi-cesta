@@ -1,4 +1,4 @@
-import type { CasResult, Db } from "./db";
+import type { BatchOp, CasResult, Db } from "./db";
 import type { Household, ListItem, Lists, TableName, Tables } from "./types";
 
 type Snapshot = {
@@ -99,36 +99,81 @@ export class LocalDb implements Db {
     return clone(this.rows(table));
   }
 
-  async insert<T extends TableName>(table: T, rows: Tables[T][]): Promise<void> {
-    if (!rows.length) return;
-    const existing = this.rows(table);
-    for (const row of rows) {
-      const id = (row as { id: string }).id;
-      const index = existing.findIndex((item) => (item as { id: string }).id === id);
-      if (index >= 0) existing[index] = clone(row);
-      else existing.push(clone(row));
+  async get<T extends TableName>(table: T, id: string): Promise<Tables[T] | null> {
+    const row = this.rows(table).find((item) => (item as { id: string }).id === id);
+    return row ? clone(row) : null;
+  }
+
+  async listBy<T extends TableName, K extends keyof Tables[T] & string>(
+    table: T,
+    column: K,
+    value: Tables[T][K],
+  ): Promise<Tables[T][]> {
+    return clone(this.rows(table).filter((item) => item[column] === value));
+  }
+
+  /** Aplica una escritura en memoria, sin guardar ni avisar; devuelve si cambió algo. */
+  private apply(op: BatchOp): boolean {
+    if (op.kind === "insert") {
+      if (!op.rows.length) return false;
+      const existing = this.rows(op.table) as object[];
+      for (const row of op.rows) {
+        const id = (row as { id: string }).id;
+        const index = existing.findIndex((item) => (item as { id: string }).id === id);
+        if (index >= 0) existing[index] = clone(row);
+        else existing.push(clone(row));
+      }
+      return true;
     }
-    this.persist(table);
+    if (op.kind === "update") {
+      const rows = this.rows(op.table) as object[];
+      const index = rows.findIndex((item) => (item as { id: string }).id === op.id);
+      if (index < 0) return false;
+      rows[index] = { ...rows[index], ...clone(op.patch) };
+      return true;
+    }
+    if (op.kind === "remove") {
+      if (!op.ids.length) return false;
+      const ids = new Set(op.ids);
+      this.data.tables[op.table] = this.rows(op.table).filter((item) => !ids.has((item as { id: string }).id)) as never;
+      return true;
+    }
+    if (op.kind === "removeAll") {
+      this.data.tables[op.table] = [] as never;
+      return true;
+    }
+    throw new Error(`Operación desconocida: ${(op as { kind: string }).kind}`);
+  }
+
+  async insert<T extends TableName>(table: T, rows: Tables[T][]): Promise<void> {
+    if (this.apply({ kind: "insert", table, rows })) this.persist(table);
   }
 
   async update<T extends TableName>(table: T, id: string, patch: Partial<Tables[T]>): Promise<void> {
-    const rows = this.rows(table);
-    const index = rows.findIndex((item) => (item as { id: string }).id === id);
-    if (index < 0) return;
-    rows[index] = { ...rows[index], ...clone(patch) };
-    this.persist(table);
+    if (this.apply({ kind: "update", table, id, patch })) this.persist(table);
   }
 
   async remove(table: TableName, ids: string[]): Promise<void> {
-    if (!ids.length) return;
-    const set = new Set(ids);
-    this.data.tables[table] = this.rows(table).filter((item) => !set.has((item as { id: string }).id)) as never;
-    this.persist(table);
+    if (this.apply({ kind: "remove", table, ids })) this.persist(table);
   }
 
   async removeAll(table: TableName): Promise<void> {
-    this.data.tables[table] = [] as never;
-    this.persist(table);
+    if (this.apply({ kind: "removeAll", table })) this.persist(table);
+  }
+
+  async applyBatch(ops: BatchOp[]): Promise<void> {
+    // Se trabaja sobre una copia: si algo falla, los datos quedan como estaban.
+    const before = clone(this.data.tables);
+    const touched = new Set<TableName>();
+    try {
+      for (const op of ops) if (this.apply(op)) touched.add(op.table);
+    } catch (error) {
+      this.data.tables = before;
+      throw error;
+    }
+    if (!touched.size) return;
+    this.persistence.save(this.key, JSON.stringify(this.data));
+    for (const table of touched) for (const listener of this.listeners) listener(table);
   }
 
   async getHousehold(): Promise<Household> {

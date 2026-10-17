@@ -4,6 +4,7 @@ import { cleanProductName, findProduct, similarNames } from "../domain/matching"
 import { productForIngredient } from "../domain/recipes";
 import { addDaysIso, normalize, todayIso, uid } from "../lib/text";
 import type { Db } from "./db";
+import { BatchDb } from "./batch-db";
 import { lookupOpenFoodFacts } from "./openfoodfacts";
 import type {
   BarcodeProduct,
@@ -62,6 +63,18 @@ export class CestaApi {
     private readonly externalPrices?: ExternalPrices,
   ) {}
 
+  /**
+   * Ejecuta una operación de varios pasos como una sola transacción: sus escrituras se acumulan
+   * y se aplican juntas al final, o ninguna si algo falla. Usa una copia de la API para que las
+   * escrituras de otras acciones simultáneas no se mezclen en el lote.
+   */
+  private async atomically<T>(work: (tx: CestaApi) => Promise<T>): Promise<T> {
+    const batch = new BatchDb(this.db);
+    const result = await work(new CestaApi(batch, this.externalPrices));
+    await batch.commit();
+    return result;
+  }
+
   // ---------- Productos y existencias ----------
 
   async products(): Promise<Product[]> {
@@ -113,7 +126,7 @@ export class CestaApi {
     patch: Partial<Pick<Product, "category" | "currentStock" | "minimumStock" | "name">>,
     reason: StockReason = "adjust",
   ): Promise<void> {
-    const product = (await this.db.list("products")).find((item) => item.id === id);
+    const product = await this.db.get("products", id);
     if (!product) throw new ApiError("Ese producto ya no existe.", 404);
     const next: Partial<Product> = { ...patch, updatedAt: now() };
     if (patch.currentStock !== undefined) {
@@ -128,12 +141,14 @@ export class CestaApi {
   }
 
   async deleteProduct(id: string): Promise<void> {
-    await this.db.remove("products", [id]);
-    const lots = (await this.db.list("inventory_lots")).filter((lot) => lot.productId === id);
-    await this.db.remove(
-      "inventory_lots",
-      lots.map((lot) => lot.id),
-    );
+    const lots = await this.db.listBy("inventory_lots", "productId", id);
+    await this.atomically(async (tx) => {
+      await tx.db.remove("products", [id]);
+      await tx.db.remove(
+        "inventory_lots",
+        lots.map((lot) => lot.id),
+      );
+    });
   }
 
   private async logStock(productId: string, delta: number, reason: StockReason) {
@@ -204,8 +219,8 @@ export class CestaApi {
   /** Consume unidades de los lotes de un producto, empezando por los que antes caducan. */
   private async consumeLots(productId: string, units: number, inverse: InverseStep[]) {
     let left = units;
-    const lots = (await this.db.list("inventory_lots"))
-      .filter((lot) => lot.productId === productId && lot.quantity > 0)
+    const lots = (await this.db.listBy("inventory_lots", "productId", productId))
+      .filter((lot) => lot.quantity > 0)
       .sort((a, b) => (a.expiryDate ?? "9999").localeCompare(b.expiryDate ?? "9999"));
     for (const lot of lots) {
       if (left <= 0) break;
@@ -259,6 +274,13 @@ export class CestaApi {
     products: Product[];
     stored: { productId: string; name: string; quantity: number; category: Category }[];
   }> {
+    const stored = await this.atomically((tx) => tx.storePurchasedSteps(items));
+    return { products: await this.products(), stored };
+  }
+
+  private async storePurchasedSteps(
+    items: ListItem[],
+  ): Promise<{ productId: string; name: string; quantity: number; category: Category }[]> {
     const products = await this.db.list("products");
     const inverse: InverseStep[] = [];
     const stored: { productId: string; name: string; quantity: number; category: Category }[] = [];
@@ -286,7 +308,7 @@ export class CestaApi {
       `Compra · ${stored.length} ${stored.length === 1 ? "producto" : "productos"}`,
       inverse,
     );
-    return { products: await this.products(), stored };
+    return stored;
   }
 
   // ---------- AutoCesta ----------
@@ -327,7 +349,7 @@ export class CestaApi {
   }
 
   async answer(productId: string, answer: "yes" | "little" | "no" | "unknown"): Promise<void> {
-    const product = (await this.db.list("products")).find((item) => item.id === productId);
+    const product = await this.db.get("products", productId);
     if (!product) return;
     if (answer === "unknown") {
       await this.logEvent("question-skip", productId, {});
@@ -417,6 +439,15 @@ export class CestaApi {
 
   /** Deshace la última operación reversible (ticket, compra, cocinado, respuesta o inventario). */
   async undo(): Promise<string | null> {
+    const result = await this.atomically((tx) => tx.undoSteps());
+    if (!result) return null;
+    // Las fotos de los tickets deshechos se borran solo cuando el deshacer ya está guardado.
+    if (result.images.length) await this.db.removeTicketImages(result.images).catch(logError("borrar foto de ticket"));
+    return result.summary;
+  }
+
+  private async undoSteps(): Promise<{ summary: string; images: string[] } | null> {
+    const images: string[] = [];
     const operations = await this.db.list("operations");
     const last = operations
       .filter((operation) => !operation.undone)
@@ -433,11 +464,10 @@ export class CestaApi {
       } else if (step.kind === "deleteLot") await this.db.remove("inventory_lots", [step.lotId]);
       else if (step.kind === "restoreLot") await this.db.insert("inventory_lots", [step.lot]);
       else if (step.kind === "deleteTicket") {
-        const ticket = (await this.db.list("tickets")).find((item) => item.id === step.ticketId);
-        if (ticket?.imagePath)
-          await this.db.removeTicketImages([ticket.imagePath]).catch(logError("borrar foto de ticket"));
+        const ticket = await this.db.get("tickets", step.ticketId);
+        if (ticket?.imagePath) images.push(ticket.imagePath);
         await this.db.remove("tickets", [step.ticketId]);
-        const reviews = (await this.db.list("ticket_reviews")).filter((review) => review.ticketId === step.ticketId);
+        const reviews = await this.db.listBy("ticket_reviews", "ticketId", step.ticketId);
         await this.db.remove(
           "ticket_reviews",
           reviews.map((review) => review.id),
@@ -453,13 +483,17 @@ export class CestaApi {
         await this.db.update("products", step.productId, { ...step.patch, updatedAt: now() });
     }
     await this.db.update("operations", last.id, { undone: true });
-    return last.summary;
+    return { summary: last.summary, images };
   }
 
   // ---------- Recetas ----------
 
   /** Descuenta una unidad de cada ingrediente usado y guarda las raciones sobrantes como cocinadas. */
   async cook(recipeTitle: string, ingredients: string[], servings: number): Promise<void> {
+    await this.atomically((tx) => tx.cookSteps(recipeTitle, ingredients, servings));
+  }
+
+  private async cookSteps(recipeTitle: string, ingredients: string[], servings: number): Promise<void> {
     const products = (await this.db.list("products")).filter((product) => product.currentStock > 0);
     const inverse: InverseStep[] = [];
     const used = new Set<string>();
@@ -586,6 +620,21 @@ export class CestaApi {
     if (!Number.isFinite(input.totalCents) || input.totalCents <= 0) throw new ApiError("Indica el total del ticket.");
     const ticketId = uid();
     const imagePath = input.image ? await this.db.uploadTicketImage(ticketId, input.image) : null;
+    try {
+      return await this.atomically((tx) => tx.saveTicketSteps(input, merchant, ticketId, imagePath));
+    } catch (error) {
+      // La foto se subió antes de la transacción: si el ticket no se guarda, no debe quedar huérfana.
+      if (imagePath) await this.db.removeTicketImages([imagePath]).catch(logError("borrar foto huérfana"));
+      throw error;
+    }
+  }
+
+  private async saveTicketSteps(
+    input: { purchasedAt: string; totalCents: number; rawText: string; items: TicketItem[] },
+    merchant: string,
+    ticketId: string,
+    imagePath: string | null,
+  ): Promise<{ ticket: Ticket; reviews: number; added: number }> {
     const [products, aliases, prices, provisional] = await Promise.all([
       this.db.list("products"),
       this.db.list("name_aliases"),
@@ -724,20 +773,29 @@ export class CestaApi {
   }
 
   async deleteTicket(id: string): Promise<void> {
-    const ticket = (await this.db.list("tickets")).find((item) => item.id === id);
+    const [ticket, reviews] = await Promise.all([
+      this.db.get("tickets", id),
+      this.db.listBy("ticket_reviews", "ticketId", id),
+    ]);
+    await this.atomically(async (tx) => {
+      await tx.db.remove("tickets", [id]);
+      await tx.db.remove(
+        "ticket_reviews",
+        reviews.map((review) => review.id),
+      );
+    });
+    // La foto se borra después: si el borrado del ticket fallara, la foto seguiría siendo suya.
     if (ticket?.imagePath)
       await this.db.removeTicketImages([ticket.imagePath]).catch(logError("borrar foto de ticket"));
-    await this.db.remove("tickets", [id]);
-    const reviews = (await this.db.list("ticket_reviews")).filter((review) => review.ticketId === id);
-    await this.db.remove(
-      "ticket_reviews",
-      reviews.map((review) => review.id),
-    );
   }
 
   /** Resuelve una línea dudosa. Si se corrige el nombre, se recuerda para los próximos tickets. */
   async resolveReview(reviewId: string, correctedName: string): Promise<void> {
-    const review = (await this.db.list("ticket_reviews")).find((item) => item.id === reviewId);
+    await this.atomically((tx) => tx.resolveReviewSteps(reviewId, correctedName));
+  }
+
+  private async resolveReviewSteps(reviewId: string, correctedName: string): Promise<void> {
+    const review = await this.db.get("ticket_reviews", reviewId);
     if (!review) return;
     if (review.issueType === "unidentified") {
       const name = correctedName.trim() || review.description;
@@ -756,7 +814,7 @@ export class CestaApi {
       const inverse: InverseStep[] = [];
       await this.changeStock(product, units, "ticket", inverse);
       if (review.quantity && review.lineTotalCents) {
-        const ticket = (await this.db.list("tickets")).find((item) => item.id === review.ticketId);
+        const ticket = await this.db.get("tickets", review.ticketId);
         await this.db.insert("prices", [
           {
             id: `${review.ticketId}:${product.id}`,
@@ -860,7 +918,7 @@ export class CestaApi {
   async lookupBarcode(code: string): Promise<BarcodeProduct | null> {
     const clean = code.replace(/\D/g, "").slice(0, 18);
     if (clean.length < 8) throw new ApiError("El código debe tener al menos 8 números.");
-    const saved = (await this.db.list("barcodes")).find((item) => item.code === clean);
+    const [saved] = await this.db.listBy("barcodes", "code", clean);
     if (saved) return saved;
     return lookupOpenFoodFacts(clean);
   }
@@ -882,12 +940,14 @@ export class CestaApi {
       source: "Guardado por tu hogar",
       createdAt: now(),
     };
-    const existing = (await this.db.list("barcodes")).filter((item) => item.code === clean);
-    await this.db.remove(
-      "barcodes",
-      existing.map((item) => item.id),
-    );
-    await this.db.insert("barcodes", [product]);
+    const existing = await this.db.listBy("barcodes", "code", clean);
+    await this.atomically(async (tx) => {
+      await tx.db.remove(
+        "barcodes",
+        existing.map((item) => item.id),
+      );
+      await tx.db.insert("barcodes", [product]);
+    });
     return product;
   }
 
