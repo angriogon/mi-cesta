@@ -1,17 +1,7 @@
 import { Archive, Bell, Dog, House, LoaderCircle, PackageCheck, ReceiptText, ShoppingBasket, X } from "lucide-react";
-import {
-  lazy,
-  startTransition,
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type TouchEvent,
-} from "react";
-import { ApiError, type CestaApi } from "../data/api";
-import type { DogReminder, PriceMeta, PriceRef, Product } from "../data/types";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
+import type { CestaApi } from "../data/api";
+import type { DogReminder, PriceMeta, PriceRef } from "../data/types";
 import type { Overview, Prediction } from "../domain/autocesta";
 import type { Category } from "../domain/categories";
 import { PERISHABLE, guessCategory } from "../domain/categories";
@@ -33,7 +23,9 @@ import type { BarcodeProduct } from "../data/types";
 import type { Account } from "./account";
 import { APP_VERSION } from "./config";
 import { inventoryChanged } from "./events";
+import { errorMessage } from "./errorMessage";
 import { useLists } from "./useLists";
+import { useProducts } from "./useProducts";
 import { AdminAccess, useAdmin } from "../views/AdminAccess";
 import { BarcodeScanner } from "../views/BarcodeScanner";
 import { ExpiryDialog, type ExpiryItem } from "../views/ExpiryDialog";
@@ -54,26 +46,11 @@ const QuickInventory = lazy(() =>
 export type View = "home" | "purchase" | "stock" | "dog" | "tickets" | "recipes" | "inventory-quick";
 type ScannerTarget = "shopping" | "checklist" | "stock";
 
-const toStock = (product: Product): StockLike => ({
-  id: product.id,
-  name: product.name,
-  category: product.category,
-  quantity: product.currentStock,
-  minimum: product.minimumStock,
-});
-
-function errorMessage(error: unknown, fallback: string): string {
-  if (error instanceof ApiError) return error.message;
-  if (!navigator.onLine) return "Sin conexión. Los cambios se guardarán cuando vuelva internet.";
-  return fallback;
-}
-
 export function CestaApp({ api, account }: { api: CestaApi; account: Account }) {
   const householdId = api.db.householdId;
   const memoryKey = `cesta-category-memory-v1:${householdId}`;
   const [view, setView] = useState<View>("home");
   const [stage, setStage] = useState<"prepare" | "store">("prepare");
-  const [products, setProducts] = useState<Product[]>([]);
   const [memory, setMemory] = useState<Record<string, string>>(() => readJson(memoryKey, {}));
   const [newName, setNewName] = useState("");
   const [ready, setReady] = useState(false);
@@ -105,9 +82,6 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
   const showToast = toast.show;
   useEffect(() => setErrorNotifier((message) => showToast(message)), [showToast]);
   const inputRef = useRef<HTMLInputElement>(null);
-  const productsRef = useRef<Product[]>([]);
-  productsRef.current = products;
-  const writes = useRef(new Map<string, Promise<unknown>>());
   const device = useMemo(() => deviceId(), []);
 
   // ---- Carga de datos ----
@@ -120,16 +94,18 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
     }
   }, [api, shoppingRef]);
 
-  const refreshProducts = useCallback(async () => {
-    try {
-      const next = await api.products();
-      startTransition(() => setProducts(next));
-    } catch (error) {
-      // Se reintenta en el siguiente refresco.
-      reportError(error, "cargar productos", LOAD_FAILED);
-    }
-    await refreshOverview();
-  }, [api, refreshOverview]);
+  const {
+    products,
+    setProducts,
+    stock,
+    needs,
+    stockUnits,
+    refreshProducts,
+    updateStock,
+    setCategory,
+    removeProduct,
+    createProduct,
+  } = useProducts(api, () => void refreshOverview());
 
   const refreshPrices = useCallback(async () => {
     const result = await api.prices();
@@ -304,9 +280,6 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
   }, [savedCount, expiryOpen]);
 
   // ---- Derivados ----
-  const stock = useMemo(() => products.map(toStock), [products]);
-  const needs = useMemo(() => stock.filter((item) => item.quantity < item.minimum), [stock]);
-  const stockUnits = useMemo(() => stock.reduce((sum, item) => sum + item.quantity, 0), [stock]);
   const preparing = shopping.filter((item) => !item.done).length;
   const storeUnits = checklist.reduce((sum, item) => sum + item.quantity, 0);
   const completedUnits = checklist.filter((item) => item.done).reduce((sum, item) => sum + item.quantity, 0);
@@ -366,63 +339,12 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
     }
   }
 
-  /** Toques rápidos en +/−: se parte siempre del último valor y se guardan en orden. */
-  async function updateStock(id: string, change: (item: StockLike) => StockLike) {
-    const product = productsRef.current.find((item) => item.id === id);
-    if (!product) return;
-    const next = change(toStock(product));
-    productsRef.current = productsRef.current.map((item) =>
-      item.id === id ? { ...item, currentStock: next.quantity, minimumStock: next.minimum } : item,
-    );
-    setProducts(productsRef.current);
-    const previous = writes.current.get(id) ?? Promise.resolve();
-    const write = previous.then(() =>
-      api.updateProduct(id, { currentStock: next.quantity, minimumStock: next.minimum }),
-    );
-    // La cadena sigue aunque falle una escritura; el error se muestra justo debajo.
-    writes.current.set(
-      id,
-      write.catch(() => undefined),
-    );
-    try {
-      await write;
-      void refreshOverview();
-    } catch (error) {
-      toast.show(errorMessage(error, "No se ha podido guardar el cambio."));
-      void refreshProducts();
-    }
-  }
-
   async function changeStockCategory(item: StockLike, category: Category) {
-    setProducts((items) => items.map((product) => (product.id === item.id ? { ...product, category } : product)));
     setShopping((items) =>
       items.map((entry) => (normalize(entry.name) === normalize(item.name) ? { ...entry, category } : entry)),
     );
     remember(item.name, category);
-    await api
-      .updateProduct(item.id, { category })
-      .catch((error) => toast.show(errorMessage(error, "No se ha podido cambiar la categoría.")));
-  }
-
-  async function removeStock(item: StockLike): Promise<boolean> {
-    try {
-      await api.deleteProduct(item.id);
-      setProducts((items) => items.filter((product) => product.id !== item.id));
-      return true;
-    } catch (error) {
-      reportError(error, "borrar producto");
-      return false;
-    }
-  }
-
-  async function addStockProduct(name: string, category: Category): Promise<{ ok: boolean; error?: string }> {
-    try {
-      const product = await api.createProduct({ name, category });
-      setProducts((items) => [...items, product].sort((a, b) => a.name.localeCompare(b.name, "es")));
-      return { ok: true };
-    } catch (error) {
-      return { ok: false, error: errorMessage(error, "Comprueba la conexión e inténtalo de nuevo.") };
-    }
+    await setCategory(item.id, category);
   }
 
   function addNeedsToChecklist() {
@@ -467,7 +389,7 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
       const existing = stock.find((item) => normalize(item.name) === normalize(product.name));
       if (existing) await updateStock(existing.id, (item) => ({ ...item, quantity: item.quantity + 1 }));
       else {
-        const result = await addStockProduct(product.name, guessCategory(product.name, memory));
+        const result = await createProduct(product.name, guessCategory(product.name, memory));
         if (result.ok) {
           const created = (await api.products()).find((item) => normalize(item.name) === normalize(product.name));
           if (created) await updateStock(created.id, (item) => ({ ...item, quantity: 1 }));
@@ -830,8 +752,8 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
             stockUnits={stockUnits}
             updateStock={(id, change) => void updateStock(id, change)}
             changeCategory={(item, category) => void changeStockCategory(item, category)}
-            removeStock={removeStock}
-            addStockProduct={addStockProduct}
+            removeStock={(item) => removeProduct(item.id)}
+            addStockProduct={createProduct}
             addNeedsToChecklist={addNeedsToChecklist}
             admin={admin}
             predictions={predictions}
