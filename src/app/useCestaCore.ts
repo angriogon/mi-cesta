@@ -23,7 +23,19 @@ export function useCestaCore(api: CestaApi, account: Account) {
   const householdId = api.db.householdId;
   const memoryKey = `cesta-category-memory-v1:${householdId}`;
   const [ready, setReady] = useState(false);
-  const [view, setView] = useState<View>("home");
+  // Un aviso de la mascota abre Cesta con ?view=dog.
+  const [view, setView] = useState<View>(() =>
+    new URLSearchParams(window.location.search).get("view") === "dog" ? "dog" : "home",
+  );
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("view"))
+      window.history.replaceState(null, "", window.location.pathname);
+    const onMessage = (event: MessageEvent<{ type?: string; url?: string }>) => {
+      if (event.data?.type === "cesta-open" && event.data.url?.includes("view=dog")) setView("dog");
+    };
+    navigator.serviceWorker?.addEventListener("message", onMessage);
+    return () => navigator.serviceWorker?.removeEventListener("message", onMessage);
+  }, []);
   const [stage, setStage] = useState<"prepare" | "store">("prepare");
   const [memory, setMemory] = useState<Record<string, string>>(() => readJson(memoryKey, {}));
   const [newName, setNewName] = useState("");

@@ -5,6 +5,7 @@ import { Button, Input, StatCard } from "../ui/primitives";
 import type { PetState } from "../app/usePet";
 import { errorMessage } from "../app/errorMessage";
 import { PetItemRow } from "./dog/PetItemRow";
+import { PushCard } from "./dog/PushCard";
 import { ReminderEditor } from "./dog/ReminderEditor";
 
 async function askNotifications(): Promise<NotificationPermission | "unavailable"> {
@@ -29,11 +30,14 @@ export function DogView({
   adminUnlocked,
   requestMaintenance,
   lockAdmin,
+  pushHouseholdId,
 }: {
   pet: PetState;
   adminUnlocked: boolean;
   requestMaintenance: () => void;
   lockAdmin: () => void;
+  /** Hogar para los avisos push (solo con cuenta; en modo local no hay servidor que avise). */
+  pushHouseholdId: string | null;
 }) {
   const { items, reminders, petName, loading } = pet;
   const [nameDraft, setNameDraft] = useState(petName);
@@ -257,6 +261,7 @@ export function DogView({
               </div>
             )}
           </section>
+          {pushHouseholdId && <PushCard householdId={pushHouseholdId} />}
         </>
       )}
 

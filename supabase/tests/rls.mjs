@@ -1,7 +1,12 @@
 import { PGlite } from "@electric-sql/pglite";
 // Comprueba la migración en un Postgres embebido (PGlite) que imita lo mínimo de Supabase: usuarios, almacenamiento y permisos.
 import { readFileSync } from "node:fs";
-const migration = ["20261017000000_cesta.sql", "20261018000000_apply_batch.sql", "20261019000000_prune_history.sql"]
+const migration = [
+  "20261017000000_cesta.sql",
+  "20261018000000_apply_batch.sql",
+  "20261019000000_prune_history.sql",
+  "20261021000000_pet_push.sql",
+]
   .map((file) => readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8"))
   .join("\n");
 const db = new PGlite();
@@ -218,6 +223,56 @@ const kept = (
   )
 ).rows.map((r) => r.id);
 ok(kept.join() === "op-new,se-new", `prune_history borra solo lo antiguo (${kept.join()})`);
+
+// ---- avisos push de la mascota ----
+const subscribe = (user, endpoint, household) =>
+  as(user, `insert into push_subscriptions (endpoint, household_id, p256dh, auth) values ($1, $2, 'k', 'a')`, [
+    endpoint,
+    household,
+  ]);
+await subscribe(ANA, "https://push.example/ana", hid);
+ok(
+  (await as(ANA, `select count(*)::int n from push_subscriptions`)).rows[0].n === 1,
+  "Ana activa los avisos en su dispositivo",
+);
+ok(
+  (await as(LUIS, `select count(*)::int n from push_subscriptions`)).rows[0].n === 0,
+  "nadie más ve los dispositivos de Ana",
+);
+let foreignPush = false;
+try {
+  await subscribe(EVA, "https://push.example/eva", hid);
+} catch {
+  foreignPush = true;
+}
+ok(foreignPush, "Eva no puede recibir avisos de un hogar que no es suyo");
+const localNow = `(now() at time zone 'Europe/Madrid')`;
+await db.query(
+  `insert into dog_reminders (household_id, id, title, reminder_time) values
+   ($1, 'r-ya', 'Paseo', to_char(${localNow} - interval '5 minutes', 'HH24:MI')),
+   ($1, 'r-luego', 'Pienso', to_char(${localNow} + interval '30 minutes', 'HH24:MI'))`,
+  [hid],
+);
+const due = (await db.query(`select reminder_id from public.due_pet_reminders()`)).rows.map((r) => r.reminder_id);
+// Cerca de medianoche los recordatorios de prueba cambian de día; no se comprueba en ese rato.
+const nearMidnight = (
+  await db.query(`select extract(hour from ${localNow}) = 0 and extract(minute from ${localNow}) < 6 as x`)
+).rows[0].x;
+ok(nearMidnight || due.join() === "r-ya", `solo avisa de lo que ya toca (${due.join()})`);
+await db.query(
+  `insert into push_sent (endpoint, reminder_id, day) values ('https://push.example/ana', 'r-ya', (${localNow})::date)`,
+);
+ok(
+  (await db.query(`select count(*)::int n from public.due_pet_reminders()`)).rows[0].n === 0,
+  "cada aviso se envía una sola vez al día",
+);
+let dueBlocked = false;
+try {
+  await as(ANA, `select * from public.due_pet_reminders()`);
+} catch {
+  dueBlocked = true;
+}
+ok(dueBlocked, "solo el servidor puede consultar los avisos pendientes");
 
 await as(ANA, `select public.leave_household($1)`, [hid]);
 ok(

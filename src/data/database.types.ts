@@ -570,6 +570,50 @@ export type Database = {
           },
         ]
       }
+      push_config: {
+        Row: { id: boolean; public_key: string }
+        Insert: { id?: boolean; public_key: string }
+        Update: { id?: boolean; public_key?: string }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          household_id: string
+          p256dh: string
+          time_zone: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          household_id: string
+          p256dh: string
+          time_zone?: string
+          user_id?: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          household_id?: string
+          p256dh?: string
+          time_zone?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       purchase_sessions: {
         Row: {
           created_at: string

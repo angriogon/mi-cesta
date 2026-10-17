@@ -99,6 +99,7 @@ export function CurrentScreen() {
           adminUnlocked={store.admin.unlocked}
           requestMaintenance={store.admin.request}
           lockAdmin={store.admin.lock}
+          pushHouseholdId={store.account.mode === "supabase" ? store.api.db.householdId : null}
         />
       ) : store.view === "recipes" ? (
         <RecipesScreen />
