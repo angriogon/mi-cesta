@@ -1,3 +1,4 @@
+import { copy } from "../../copy/es";
 import {
   Archive,
   Bookmark,
@@ -82,7 +83,7 @@ export function ExpiryStates({ api, notify, products }: { api: CestaApi; notify:
     setEditing(null);
     if (await remove(lot))
       notify(`${lot.productName} retirado de caducidades.`, {
-        label: "Deshacer",
+        label: copy.common.undo,
         onClick: () => void restore(lot),
       });
   }
@@ -139,7 +140,7 @@ export function ExpiryStates({ api, notify, products }: { api: CestaApi; notify:
               <div key={lot.id} className={index ? "border-t-[0.5px] border-separator" : ""}>
                 <div className="flex w-full items-center gap-2 px-2.5 py-2.5">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[12px] font-semibold">{lot.productName}</p>
+                    <p className="truncate text-[0.75rem] font-semibold">{lot.productName}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {lot.quantity} {lot.quantity === 1 ? "unidad" : "unidades"}
                       {lot.location ? ` · ${lot.location}` : ""}
@@ -178,7 +179,7 @@ export function ExpiryStates({ api, notify, products }: { api: CestaApi; notify:
                         type="date"
                         value={lot.expiryDate ?? ""}
                         onChange={(event) => void setExpiry(lot, event.target.value)}
-                        className="h-9 min-w-0 flex-1 rounded-lg bg-card px-2 text-[12px] text-foreground"
+                        className="h-9 min-w-0 flex-1 rounded-lg bg-card px-2 text-[0.75rem] text-foreground"
                       />
                     </label>
                     <button

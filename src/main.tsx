@@ -1,11 +1,14 @@
 import { Component, StrictMode, type ErrorInfo, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
+import { UpdatePrompt } from "./app/chrome/UpdatePrompt";
 import { Root } from "./app/Root";
 import "./index.css";
+import { followSystemTextSize } from "./lib/dynamic-type";
 import { applyTheme, storedTheme } from "./lib/theme";
 
 // Claro por defecto; el oscuro se elige desde el menú lateral.
 applyTheme(storedTheme());
+followSystemTextSize();
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -42,6 +45,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ErrorBoundary>
       <Root />
+      <UpdatePrompt />
     </ErrorBoundary>
   </StrictMode>,
 );

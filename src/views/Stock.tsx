@@ -207,7 +207,7 @@ export function Stock(props: {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder={maintenance ? "Buscar en el catálogo…" : "Buscar en lo que falta…"}
-          className="h-11 min-w-0 flex-1 rounded-xl bg-card px-3.5 text-[16px]"
+          className="h-11 min-w-0 flex-1 rounded-xl bg-card px-3.5 text-[1rem]"
         />
         <button
           type="button"
@@ -276,7 +276,7 @@ export function Stock(props: {
       )}
 
       {!maintenance && props.needs.length > 0 && (
-        <Button onClick={props.addNeedsToChecklist} className="mt-6 h-13 w-full rounded-xl text-[15px]">
+        <Button onClick={props.addNeedsToChecklist} className="mt-6 h-13 w-full rounded-xl text-[0.9375rem]">
           <ListChecks className="size-5" /> Añadir necesidades a la lista
         </Button>
       )}

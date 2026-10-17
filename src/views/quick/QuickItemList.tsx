@@ -55,7 +55,7 @@ export function QuickItemList({
                     ),
                   )
                 }
-                className="h-9 border-0 bg-transparent px-1 text-[13px] font-semibold"
+                className="h-9 border-0 bg-transparent px-1 text-[0.8125rem] font-semibold"
               />
               <p className={`px-1 text-xs font-semibold ${item.confidence >= 0.8 ? "text-primary" : "text-warning"}`}>
                 {item.confidence >= 0.8 ? "Identificado" : "Revisar"} · {item.source} · {item.category}

@@ -120,7 +120,7 @@ export function StoreList(props: {
                         <button
                           type="button"
                           onClick={toggle}
-                          className={`min-w-0 flex-1 truncate py-2 text-left text-[13px] font-semibold ${item.done ? "text-muted-foreground line-through" : ""}`}
+                          className={`min-w-0 flex-1 truncate py-2 text-left text-[0.8125rem] font-semibold ${item.done ? "text-muted-foreground line-through" : ""}`}
                         >
                           {item.name}
                           {price?.priceCents ? <PriceTag price={price} quantity={item.quantity} /> : null}

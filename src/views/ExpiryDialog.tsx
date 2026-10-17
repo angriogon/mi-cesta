@@ -66,7 +66,7 @@ export function ExpiryDialog({ api, items, onClose }: { api: CestaApi; items: Ex
                 value={dates[item.productId] || ""}
                 onChange={(event) => setDates((current) => ({ ...current, [item.productId]: event.target.value }))}
                 aria-label={`Caducidad de ${item.name}`}
-                className="h-10 max-w-[9.5rem] rounded-lg bg-card px-1 text-[12px] text-foreground"
+                className="h-10 max-w-[9.5rem] rounded-lg bg-card px-1 text-[0.75rem] text-foreground"
               />
             </label>
           ))}

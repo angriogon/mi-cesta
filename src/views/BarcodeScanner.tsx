@@ -1,3 +1,4 @@
+import { copy } from "../copy/es";
 import { Camera, Flashlight, LoaderCircle, RotateCcw, ScanLine, X } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiError, type CestaApi } from "../data/api";
@@ -71,7 +72,7 @@ export function BarcodeScanner({
       setProduct(await api.saveBarcode(unknownCode, unknownName));
       setStatus("Producto guardado e identificado.");
     } catch (error) {
-      setStatus(error instanceof ApiError ? error.message : "No se ha podido guardar.");
+      setStatus(error instanceof ApiError ? error.message : copy.errors.saveShort);
     } finally {
       setBusy(false);
     }
@@ -208,7 +209,7 @@ export function BarcodeScanner({
                     // Al no reconocer el código, el siguiente paso es escribir el nombre: abrir el teclado ahorra un toque.
                     // eslint-disable-next-line jsx-a11y/no-autofocus
                     autoFocus
-                    className="mt-1.5 h-11 rounded-lg text-[17px]"
+                    className="mt-1.5 h-11 rounded-lg text-[1.0625rem]"
                   />
                   <Button
                     type="submit"

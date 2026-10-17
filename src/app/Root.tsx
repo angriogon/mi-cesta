@@ -1,3 +1,4 @@
+import { copy } from "../copy/es";
 import type { Session } from "@supabase/supabase-js";
 import { ShoppingBasket } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -15,7 +16,18 @@ import { HouseholdScreen } from "./auth/HouseholdScreen";
 const HOUSEHOLD_KEY = "cesta-household-id";
 
 export function Root() {
-  return backendMode === "local" ? <LocalRoot /> : <SupabaseRoot />;
+  if (backendMode === "local") return <LocalRoot />;
+  if (backendMode === "unconfigured") return <Unconfigured />;
+  return <SupabaseRoot />;
+}
+
+function Unconfigured() {
+  return (
+    <main className="flex min-h-[100dvh] flex-col items-center justify-center bg-background px-6 text-center text-foreground">
+      <h1 className="text-lg font-semibold">{copy.unconfigured.title}</h1>
+      <p className="mt-2 max-w-72 text-sm leading-6 text-muted-foreground">{copy.unconfigured.text}</p>
+    </main>
+  );
 }
 
 function LocalRoot() {
@@ -109,7 +121,7 @@ export function Splash() {
       <div className="flex size-[76px] items-center justify-center rounded-xl bg-primary text-primary-foreground">
         <ShoppingBasket className="size-8" strokeWidth={1.8} />
       </div>
-      <p className="mt-4 text-[17px] font-semibold text-primary">Cesta</p>
+      <p className="mt-4 text-[1.0625rem] font-semibold text-primary">Cesta</p>
       <p className="absolute bottom-[calc(1.4rem+env(safe-area-inset-bottom))] text-xs font-semibold uppercase text-muted-foreground">
         Powered by AR
       </p>

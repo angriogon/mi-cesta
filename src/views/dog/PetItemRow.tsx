@@ -29,7 +29,7 @@ export function PetItemRow({
       <div className="flex min-h-10 items-center gap-1.5">
         <Dog className="size-4 shrink-0 text-primary" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-semibold">{item.name}</p>
+          <p className="truncate text-[0.8125rem] font-semibold">{item.name}</p>
           <p className={`text-xs font-semibold ${lowStock ? "text-warning" : "text-muted-foreground"}`}>
             {lowStock ? `Reponer · mínimo ${item.minimumStock}` : `Mínimo ${item.minimumStock}`}
           </p>

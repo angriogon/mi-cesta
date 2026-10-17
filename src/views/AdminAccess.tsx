@@ -65,7 +65,7 @@ export function AdminAccess({ admin, account }: { admin: AdminState; account: Ac
             <Button
               onClick={() => void biometricUnlock()}
               disabled={busy}
-              className="mt-6 h-13 w-full rounded-xl text-[15px]"
+              className="mt-6 h-13 w-full rounded-xl text-[0.9375rem]"
             >
               <FingerprintPattern className="size-5" /> Entrar con Face ID / Touch ID
             </Button>

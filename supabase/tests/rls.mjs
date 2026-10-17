@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 // Comprueba la migración en un Postgres embebido (PGlite) que imita lo mínimo de Supabase: usuarios, almacenamiento y permisos.
 import { readFileSync } from "node:fs";
-const migration = ["20261017000000_cesta.sql", "20261018000000_apply_batch.sql"]
+const migration = ["20261017000000_cesta.sql", "20261018000000_apply_batch.sql", "20261019000000_prune_history.sql"]
   .map((file) => readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8"))
   .join("\n");
 const db = new PGlite();
@@ -193,6 +193,32 @@ ok(
   (await as(ANA, `select count(*)::int n from products where household_id=$1 and id='b1'`, [hid])).rows[0].n === 0,
   "apply_batch borra por id",
 );
+// ---- prune_history: límite al historial ----
+await db.query(
+  `insert into stock_events (household_id, id, product_id, delta, reason, created_at) values
+   ($1, 'se-old', 'p', 1, 'purchase', now() - interval '500 days'), ($1, 'se-new', 'p', 1, 'purchase', now() - interval '60 days')`,
+  [hid],
+);
+await db.query(
+  `insert into operations (household_id, id, operation_type, summary, created_at) values
+   ($1, 'op-old', 'purchase', 'vieja', now() - interval '45 days'), ($1, 'op-new', 'purchase', 'nueva', now())`,
+  [hid],
+);
+let pruneBlocked = false;
+try {
+  await as(ANA, `select public.prune_history()`);
+} catch {
+  pruneBlocked = true;
+}
+ok(pruneBlocked, "nadie puede ejecutar prune_history desde la app");
+await db.query(`select public.prune_history()`);
+const kept = (
+  await db.query(
+    `select id from stock_events where id like 'se-%' union all select id from operations where id like 'op-%' order by 1`,
+  )
+).rows.map((r) => r.id);
+ok(kept.join() === "op-new,se-new", `prune_history borra solo lo antiguo (${kept.join()})`);
+
 await as(ANA, `select public.leave_household($1)`, [hid]);
 ok(
   (await as(LUIS, `select role from household_members where household_id=$1`, [hid])).rows[0].role === "owner",

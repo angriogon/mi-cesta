@@ -31,7 +31,7 @@ export function PurchaseShell({
           role="tab"
           onClick={() => onStageChange("prepare")}
           aria-selected={stage === "prepare"}
-          className={`${stage === "prepare" ? "h-8 rounded-[7px] bg-thumb text-[13px] font-semibold text-foreground shadow-thumb" : "h-8 rounded-[7px] text-[13px] font-medium text-foreground"}`}
+          className={`${stage === "prepare" ? "h-8 rounded-[7px] bg-thumb text-[0.8125rem] font-semibold text-foreground shadow-thumb" : "h-8 rounded-[7px] text-[0.8125rem] font-medium text-foreground"}`}
         >
           Preparar · {preparingCount}
         </button>
@@ -40,7 +40,7 @@ export function PurchaseShell({
           role="tab"
           onClick={() => onStageChange("store")}
           aria-selected={stage === "store"}
-          className={`${stage === "store" ? "h-8 rounded-[7px] bg-thumb text-[13px] font-semibold text-foreground shadow-thumb" : "h-8 rounded-[7px] text-[13px] font-medium text-foreground"}`}
+          className={`${stage === "store" ? "h-8 rounded-[7px] bg-thumb text-[0.8125rem] font-semibold text-foreground shadow-thumb" : "h-8 rounded-[7px] text-[0.8125rem] font-medium text-foreground"}`}
         >
           En tienda · {storeCount}
         </button>

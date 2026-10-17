@@ -75,8 +75,9 @@ export default defineConfig({
     tailwindcss(),
     ocrAssets(),
     VitePWA({
-      registerType: "autoUpdate",
-      injectRegister: "auto",
+      // La versión nueva espera a que se toque «Actualizar» (ver UpdatePrompt); el registro lo hace la app.
+      registerType: "prompt",
+      injectRegister: false,
       includeAssets: ["apple-touch-icon.png", "cesta-icon.svg"],
       manifest: {
         id: base,

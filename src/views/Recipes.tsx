@@ -107,7 +107,7 @@ export function RecipesView({
         value={goal}
         onChange={(event) => setGoal(event.target.value as RecipeGoal)}
         aria-label="Qué quieres resolver hoy"
-        className="mb-2 w-full [&_select]:h-11 [&_select]:rounded-xl [&_select]:bg-card [&_select]:text-[13px]"
+        className="mb-2 w-full [&_select]:h-11 [&_select]:rounded-xl [&_select]:bg-card [&_select]:text-[0.8125rem]"
       >
         <option value="all">¿Qué quieres resolver hoy?</option>
         <option value="expiry">Gastar lo que caduca</option>
@@ -126,8 +126,8 @@ export function RecipesView({
             <Link2 className="size-3.5" />
             <p className="text-xs font-semibold uppercase">Dos comidas, un mismo ingrediente</p>
           </div>
-          <p className="mt-1.5 text-[12px] font-semibold">Hoy · {plan.first.title}</p>
-          <p className="mt-1 text-[12px] font-semibold">Mañana · {plan.second.title}</p>
+          <p className="mt-1.5 text-[0.75rem] font-semibold">Hoy · {plan.first.title}</p>
+          <p className="mt-1 text-[0.75rem] font-semibold">Mañana · {plan.second.title}</p>
           <p className="mt-1 text-xs text-muted-foreground">
             Abres {plan.shared.join(", ")} hoy y lo terminas mañana.
             {plan.missing.length ? ` Solo comprar: ${plan.missing.join(", ")}.` : " No necesitas comprar nada."}
@@ -161,7 +161,7 @@ export function RecipesView({
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Buscar receta o ingrediente…"
           aria-label="Buscar receta o ingrediente"
-          className="h-11 rounded-xl bg-card pl-9 text-[15px]"
+          className="h-11 rounded-xl bg-card pl-9 text-[0.9375rem]"
         />
       </div>
       <div className="mb-3 grid grid-cols-4 rounded-[9px] bg-fill p-0.5" role="tablist" aria-label="Filtrar recetas">
@@ -179,7 +179,7 @@ export function RecipesView({
             role="tab"
             aria-selected={filter === value}
             onClick={() => setFilter(value)}
-            className={`h-8 rounded-[7px] px-1 text-[13px] ${filter === value ? "bg-thumb font-semibold text-foreground shadow-thumb" : "font-medium text-foreground"}`}
+            className={`h-8 rounded-[7px] px-1 text-[0.8125rem] ${filter === value ? "bg-thumb font-semibold text-foreground shadow-thumb" : "font-medium text-foreground"}`}
           >
             {label}
           </button>
@@ -224,7 +224,7 @@ export function RecipesView({
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-semibold">{recipe.title}</p>
+                    <p className="truncate text-[0.8125rem] font-semibold">{recipe.title}</p>
                     <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                       {recipe.meal} · {recipe.missing.length ? `Faltan ${recipe.missing.length}` : "Lista para cocinar"}{" "}
                       · <Clock className="size-2.5" /> {recipe.minutes} min

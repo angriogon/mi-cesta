@@ -5,11 +5,24 @@ import type { ExternalPrices } from "../data/api";
 export const APP_VERSION = "5.0.0";
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+/** Clave pública del proyecto: la nueva «publishable» (sb_publishable_…) o, si no hay, la antigua «anon». */
+const anonKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? import.meta.env.VITE_SUPABASE_ANON_KEY) as
+  string | undefined;
 
-/** Sin Supabase configurado la app funciona en modo local (datos solo en este dispositivo). */
-export const backendMode: "supabase" | "local" =
-  url && anonKey && import.meta.env.VITE_FORCE_LOCAL !== "true" ? "supabase" : "local";
+const forceLocal = import.meta.env.VITE_FORCE_LOCAL === "true";
+
+/**
+ * Para usar Cesta hace falta cuenta. El modo local (datos solo en este dispositivo) es solo para
+ * pruebas: se activa con `VITE_FORCE_LOCAL=true` o en desarrollo sin Supabase configurado.
+ * Una versión publicada sin Supabase no arranca en local: muestra que falta la configuración.
+ */
+export const backendMode: "supabase" | "local" | "unconfigured" = forceLocal
+  ? "local"
+  : url && anonKey
+    ? "supabase"
+    : import.meta.env.DEV
+      ? "local"
+      : "unconfigured";
 
 export type CestaSupabase = SupabaseClient<Database>;
 

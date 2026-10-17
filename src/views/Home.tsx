@@ -61,10 +61,11 @@ export function Home({
       className="flex min-h-[calc(100dvh-10.2rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col gap-3 pt-1"
       aria-label="Resumen de Cesta"
     >
-      <div className="flex items-end justify-between gap-2">
-        <div className="min-w-0">
+      {/* Con texto grande (Dynamic Type) el selector de modo y las tarjetas bajan de línea en vez de apretarse. */}
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div className="min-w-[10rem] flex-1">
           <p className="eyebrow">Resumen de hoy</p>
-          <h1 className="mt-1 truncate text-[21px] font-semibold">
+          <h1 className="mt-1 truncate text-[1.3125rem] font-semibold">
             {data?.tranquility.label || "Preparando tu hogar…"}
           </h1>
         </div>
@@ -73,7 +74,7 @@ export function Home({
             type="button"
             onClick={() => onModeChange("normal")}
             aria-pressed={data?.mode !== "autocesta"}
-            className={`px-3 ${data?.mode === "autocesta" ? "h-8 rounded-[7px] text-[13px] font-medium text-foreground" : "h-8 rounded-[7px] bg-thumb text-[13px] font-semibold text-foreground shadow-thumb"}`}
+            className={`px-3 ${data?.mode === "autocesta" ? "h-8 rounded-[7px] text-[0.8125rem] font-medium text-foreground" : "h-8 rounded-[7px] bg-thumb text-[0.8125rem] font-semibold text-foreground shadow-thumb"}`}
           >
             Normal
           </button>
@@ -81,28 +82,28 @@ export function Home({
             type="button"
             onClick={() => onModeChange("autocesta")}
             aria-pressed={data?.mode === "autocesta"}
-            className={`px-3 ${data?.mode === "autocesta" ? "h-8 rounded-[7px] bg-thumb text-[13px] font-semibold text-foreground shadow-thumb" : "h-8 rounded-[7px] text-[13px] font-medium text-foreground"}`}
+            className={`px-3 ${data?.mode === "autocesta" ? "h-8 rounded-[7px] bg-thumb text-[0.8125rem] font-semibold text-foreground shadow-thumb" : "h-8 rounded-[7px] text-[0.8125rem] font-medium text-foreground"}`}
           >
             AutoCesta
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-[6.2rem_1fr] gap-2">
+      <div className="flex flex-wrap gap-2">
         <div
-          className="flex min-h-[106px] flex-col items-center justify-center rounded-xl bg-primary-soft text-primary"
+          className="flex min-h-[106px] shrink-0 basis-[6.2rem] flex-col items-center justify-center rounded-xl bg-primary-soft text-primary"
           aria-label={`Índice de tranquilidad: ${score} de 100`}
         >
           <Gauge className="size-4" />
-          <strong className="text-[30px] leading-9">{score}</strong>
+          <strong className="text-[1.875rem] leading-9">{score}</strong>
           <span className="text-xs font-semibold uppercase">tranquilidad</span>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={onOpenExpiring} className="rounded-xl bg-card p-3 text-left">
-            <span className="text-xs font-semibold text-muted-foreground">
+        <div className="grid min-w-0 flex-1 basis-[13rem] grid-cols-2 gap-2">
+          <button type="button" onClick={onOpenExpiring} className="min-w-0 rounded-xl bg-card p-3 text-left">
+            <span className="block text-xs font-semibold text-muted-foreground">
               {next && next.daysUntil < 0 ? "Caducado" : "Próximo a caducar"}
             </span>
-            <strong className="mt-2 line-clamp-2 block text-[12px] leading-4">
+            <strong className="mt-2 line-clamp-2 block text-[0.75rem] leading-4">
               {next?.productName || "Nada urgente"}
             </strong>
             <span
@@ -111,12 +112,12 @@ export function Home({
               {next ? expiryText(next) : "Todo en orden"}
             </span>
           </button>
-          <button type="button" onClick={onOpenStock} className="rounded-xl bg-card p-3 text-left">
-            <span className="text-xs font-semibold text-muted-foreground">Existencias totales</span>
-            <strong className="mt-1 block text-[25px] leading-8">
+          <button type="button" onClick={onOpenStock} className="min-w-0 rounded-xl bg-card p-3 text-left">
+            <span className="block text-xs font-semibold text-muted-foreground">Existencias totales</span>
+            <strong className="mt-1 block text-[1.5625rem] leading-8">
               {Number.isInteger(units) ? units : units.toFixed(1)}
             </strong>
-            <span className="text-xs font-semibold text-primary">Incluye todos los estados</span>
+            <span className="block text-xs font-semibold text-primary">Incluye todos los estados</span>
           </button>
         </div>
       </div>
@@ -130,7 +131,7 @@ export function Home({
         >
           <Sparkles className="mt-0.5 size-4 shrink-0 text-warning" />
           <div className="min-w-0 flex-1">
-            <p className="line-clamp-2 text-[12px] font-semibold leading-4">
+            <p className="line-clamp-2 text-[0.75rem] font-semibold leading-4">
               {question?.prompt || recommendation?.title || "Todo bajo control"}
             </p>
             <p className="mt-1 line-clamp-2 text-xs leading-4 text-warning">
@@ -189,7 +190,7 @@ export function Home({
             ] as const
           ).map(([key, label, tone]) => (
             <div key={key} className={`rounded-xl px-1 py-2 ${tone}`}>
-              <strong className="block text-[14px]">{states[key]}</strong>
+              <strong className="block text-[0.875rem]">{states[key]}</strong>
               <span className="text-xs">{label}</span>
             </div>
           ))}
@@ -207,7 +208,7 @@ export function Home({
               aria-expanded={detail === item.key}
               className={`rounded-xl px-1 py-2 ${detail === item.key ? "bg-muted" : ""}`}
             >
-              <strong className="block truncate text-[12px]">{item.value}</strong>
+              <strong className="block truncate text-[0.75rem]">{item.value}</strong>
               <span className="mt-0.5 block text-xs leading-3 text-muted-foreground">{item.label}</span>
             </button>
           ))}

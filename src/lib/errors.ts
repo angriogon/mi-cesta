@@ -1,3 +1,4 @@
+import { copy } from "../copy/es";
 /**
  * Política única de errores: ningún fallo se descarta sin dejar rastro.
  *
@@ -52,8 +53,8 @@ export const notifyError =
   (error: unknown): void =>
     reportError(error, context, userMessage);
 
-export const LOAD_FAILED = "No se han podido cargar algunos datos. Comprueba la conexión.";
-export const SAVE_FAILED = "No se ha podido guardar. Comprueba la conexión.";
+export const LOAD_FAILED = copy.errors.load;
+export const SAVE_FAILED = copy.errors.save;
 
 /** Solo para pruebas. */
 export function resetErrorsForTests(): void {

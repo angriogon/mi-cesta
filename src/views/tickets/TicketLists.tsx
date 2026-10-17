@@ -184,7 +184,10 @@ export function TicketHistory({
   if (!tickets.length) return null;
   return (
     <section className="mt-6" aria-labelledby="ticket-history-title">
-      <h2 id="ticket-history-title" className="mb-2.5 px-1 text-[12px] font-semibold uppercase text-muted-foreground">
+      <h2
+        id="ticket-history-title"
+        className="mb-2.5 px-1 text-[0.75rem] font-semibold uppercase text-muted-foreground"
+      >
         Historial
       </h2>
       <div className="overflow-hidden rounded-xl bg-card">

@@ -39,7 +39,7 @@ npm run test:all     # tipos + unitarias + base de datos + extremo a extremo en 
 - **Operaciones atómicas**: las acciones de varios pasos (guardar compra, deshacer, cocinar, guardar ticket, resolver revisión, borrar producto o ticket) acumulan sus escrituras en un `BatchDb` y las aplican juntas con la función `apply_batch` de Supabase: o todas o ninguna. Para leer una fila usa `db.get` o `db.listBy` en lugar de leer la tabla entera.
 - **Tipos de Supabase**: `src/data/database.types.ts` se genera con `npm run gen:types` (requiere la CLI de Supabase). `src/data/schema.ts` hace fallar la compilación si los tipos de la app y las columnas reales dejan de coincidir.
 
-Sin variables de entorno la app funciona en **modo local**: los datos se guardan solo en ese dispositivo. Es útil para probar y para las pruebas automáticas.
+Para usar Cesta hace falta cuenta. El **modo local** (datos solo en ese dispositivo) es solo para pruebas: lo usan `npm run dev` sin variables de entorno y las pruebas automáticas (`VITE_FORCE_LOCAL=true`). Una versión publicada sin Supabase configurado muestra que falta la configuración en lugar de arrancar en local.
 
 ## Supabase (cuentas y hogar compartido)
 

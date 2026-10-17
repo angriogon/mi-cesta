@@ -30,7 +30,7 @@ export function ZonePicker({
               className="flex w-full items-center justify-between rounded-lg border border-primary/20 bg-muted px-3 py-2.5 text-left"
             >
               <span>
-                <b className="block text-[12px] text-primary">Continuar {session.location}</b>
+                <b className="block text-[0.75rem] text-primary">Continuar {session.location}</b>
                 <small className="text-xs text-muted-foreground">{session.items.length} productos guardados</small>
               </span>
               <ChevronLeft className="size-4 rotate-180 text-primary" />
@@ -47,7 +47,7 @@ export function ZonePicker({
             className={`min-h-20 rounded-xl border p-3 text-left ${zone === location ? "border-primary bg-muted text-primary " : " bg-card"}`}
           >
             <MapPin className="size-4" />
-            <span className="mt-2 block text-[12px] font-semibold leading-4">{zone}</span>
+            <span className="mt-2 block text-[0.75rem] font-semibold leading-4">{zone}</span>
           </button>
         ))}
       </div>
