@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import type { CestaApi } from "../../data/api";
 import type { Preferences } from "../../data/types";
 import { reportError } from "../../lib/errors";
+import { UpdateCheck } from "./UpdateCheck";
 import { Button, Input } from "../../ui/primitives";
 
 export function NewsPage({ version }: { version: string }) {
@@ -11,6 +12,7 @@ export function NewsPage({ version }: { version: string }) {
       <h2 className="text-lg font-semibold">Novedades</h2>
       <div className="mt-4 rounded-xl bg-card p-4">
         <p className="text-xs font-semibold text-primary">Versión {version}</p>
+        <UpdateCheck />
         <ul className="mt-3 space-y-2 text-xs leading-5 text-muted-foreground">
           <li>• Cuentas y hogares compartidos: toda la familia ve la misma lista al momento.</li>
           <li>• Funciona sin conexión y se instala en la pantalla de inicio.</li>

@@ -5,7 +5,8 @@ import { errorMessage } from "../app/errorMessage";
 import { useTickets } from "../app/useTickets";
 import type { PriceRef, TicketItem } from "../data/types";
 import { parseTicketText } from "../domain/tickets";
-import { compressImage, recognizeText } from "../lib/image";
+import { prepareTicketPhoto, recognizeText } from "../lib/image";
+import { readText } from "../lib/storage";
 import { parseEuroToCents, todayIso } from "../lib/text";
 import { Button, Input } from "../ui/primitives";
 import type { Notify } from "../ui/Toast";
@@ -52,12 +53,15 @@ export function TicketsView({
     setBusy(true);
     setProgress(2);
     setStatus("Preparando la foto…");
-    const image = await compressImage(selected);
-    setFile(image);
-    setPreview(URL.createObjectURL(image));
-    setStatus("Leyendo el ticket en este dispositivo…");
     try {
-      const text = await recognizeText(image, setProgress);
+      const { photo, ocr } = await prepareTicketPhoto(selected);
+      setFile(photo);
+      setPreview(URL.createObjectURL(photo));
+      setStatus("Leyendo el ticket en este dispositivo…");
+      const text = await recognizeText(ocr, setProgress, { block: true });
+      // Diagnóstico del lector (banco de tickets reales): localStorage "cesta-debug-ocr" = "1".
+      if (readText("cesta-debug-ocr") === "1")
+        console.info("[ocr]", JSON.stringify({ text, image: ocr.toDataURL("image/png") }));
       const parsed = parseTicketText(text);
       setRawText(text);
       setDate(parsed.purchasedAt);
