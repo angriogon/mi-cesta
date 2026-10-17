@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#176b4d"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Mi Cesta">
+<link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./icons/icon-192.png">
+<title>Mi Cesta</title>
+<style>
+:root{--green:#176b4d;--bg:#f4f7f5;--ink:#18231e;--muted:#6b7771;--line:#e1e8e3}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding-bottom:30px}
+header{background:var(--green);color:white;padding:24px 18px 22px;border-radius:0 0 24px 24px}
+header h1{margin:0 0 5px;font-size:27px}header p{margin:0;opacity:.85;font-size:14px}
+main{max-width:650px;margin:auto;padding:16px}
+.summary{display:flex;gap:10px;margin-top:-5px;margin-bottom:16px}.stat{flex:1;background:white;padding:14px;border-radius:16px;box-shadow:0 3px 14px #173c2510}.stat small{display:block;color:var(--muted);font-size:12px}.stat strong{font-size:22px;display:block;margin-top:4px}
+.panel{background:white;border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 3px 14px #173c2508}
+h2{font-size:17px;margin:0 0 12px}.add{display:grid;grid-template-columns:1fr 76px 90px;gap:8px}
+input,select,button{font:inherit;border-radius:11px;border:1px solid var(--line);padding:12px;min-width:0}input:focus,select:focus{outline:2px solid #a6d5bd}
+button{background:var(--green);color:white;border:0;font-weight:650;cursor:pointer}.secondary{background:#edf5f0;color:var(--green)}.filters{display:flex;gap:8px;margin-bottom:12px}.filters button{flex:1;padding:9px;font-size:13px}.filters .active{background:var(--green);color:white}
+.item{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}.item:last-child{border:0}.item input[type=checkbox]{width:21px;height:21px;accent-color:var(--green);flex-shrink:0}.item-name{flex:1;min-width:0}.item-name.done{text-decoration:line-through;color:#89948e}.detail{font-size:12px;color:var(--muted);margin-top:3px}.price{font-weight:700;white-space:nowrap}.remove{background:transparent;color:#9a554a;padding:6px 8px;font-size:18px}
+.empty{text-align:center;color:var(--muted);padding:22px 4px}.actions{display:flex;gap:8px}.actions button{flex:1}.foot{text-align:center;color:var(--muted);font-size:12px;padding:8px}
+@media(max-width:390px){.add{grid-template-columns:1fr 70px}.add button{grid-column:1/-1}.stat strong{font-size:19px}}
+</style></head>
+<body>
+<header><h1>🛒 Mi Cesta</h1><p>Tu compra organizada, estés donde estés.</p></header>
+<main>
+<div class="summary"><div class="stat"><small>Artículos pendientes</small><strong id="pending">0</strong></div><div class="stat"><small>Total estimado</small><strong id="total">0,00 €</strong></div></div>
+<section class="panel"><h2>Añadir a la cesta</h2><form id="addForm" class="add"><input id="name" placeholder="¿Qué necesitas?" required maxlength="100" aria-label="Artículo"><input id="qty" type="number" min="1" step="1" value="1" aria-label="Cantidad"><button type="submit">Añadir</button></form><div style="margin-top:8px"><input id="price" type="number" min="0" step=".01" placeholder="Precio unitario estimado (€), opcional" style="width:100%" aria-label="Precio unitario"></div></section>
+<section class="panel"><h2>Lista de la compra</h2><div class="filters"><button class="active" data-filter="all">Todos</button><button class="secondary" data-filter="pending">Pendientes</button><button class="secondary" data-filter="done">Comprados</button></div><div id="items"></div><div class="actions" style="margin-top:12px"><button class="secondary" id="clearDone">Borrar comprados</button><button class="secondary" id="export">Exportar lista</button></div></section>
+<p class="foot">Los datos se guardan en este dispositivo. No se envían a ningún servidor.</p>
+</main>
+<script>
+const KEY='mi-cesta-v1';let list=[];let filter='all';
+try{list=JSON.parse(localStorage.getItem(KEY)||'[]')}catch{}
+const $=id=>document.getElementById(id);const euro=n=>Number(n||0).toLocaleString('es-ES',{style:'currency',currency:'EUR'});
+function save(){localStorage.setItem(KEY,JSON.stringify(list));render()}
+function render(){
+ const visible=list.filter(x=>filter==='all'||(filter==='done'?x.done:!x.done));
+ $('pending').textContent=list.filter(x=>!x.done).reduce((a,x)=>a+Number(x.qty),0);
+ $('total').textContent=euro(list.reduce((a,x)=>a+(Number(x.price)||0)*Number(x.qty),0));
+ $('items').innerHTML=visible.length?'':'<div class="empty">Tu cesta está vacía por aquí.<br>Añade lo que necesitas comprar.</div>';
+ visible.forEach(x=>{const el=document.createElement('div');el.className='item';
+ const cb=document.createElement('input');cb.type='checkbox';cb.checked=x.done;cb.setAttribute('aria-label','Marcar comprado');cb.onchange=()=>{x.done=cb.checked;save()};
+ const body=document.createElement('div');body.className='item-name'+(x.done?' done':'');const nm=document.createElement('div');nm.textContent=x.name;const dt=document.createElement('div');dt.className='detail';dt.textContent='Cantidad: '+x.qty+(x.price!==''?' · '+euro(x.price)+' / ud.':'');body.append(nm,dt);
+ const pr=document.createElement('div');pr.className='price';pr.textContent=x.price!==''?euro(Number(x.price)*Number(x.qty)):'';const del=document.createElement('button');del.className='remove';del.textContent='×';del.setAttribute('aria-label','Eliminar '+x.name);del.onclick=()=>{list=list.filter(y=>y.id!==x.id);save()};el.append(cb,body,pr,del);$('items').append(el)});
+ document.querySelectorAll('[data-filter]').forEach(b=>{b.className=b.dataset.filter===filter?'active':'secondary'});
+}
+$('addForm').addEventListener('submit',e=>{e.preventDefault();const name=$('name').value.trim();if(!name)return;list.unshift({id:Date.now()+Math.random(),name,qty:Math.max(1,Number($('qty').value)||1),price:$('price').value===''?'':Math.max(0,Number($('price').value)||0),done:false});$('name').value='';$('qty').value='1';$('price').value='';save();$('name').focus()});
+document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;render()});
+$('clearDone').onclick=()=>{list=list.filter(x=>!x.done);save()};
+$('export').onclick=()=>{const blob=new Blob([JSON.stringify(list,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mi-cesta.json';a.click();URL.revokeObjectURL(a.href)};
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));render();
+</script></body></html>
