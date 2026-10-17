@@ -229,9 +229,9 @@ export function goalReason(goal: RecipeGoal, recipe: ScoredRecipe): string {
     case "cheap":
       return recipe.missing.length === 1 ? "Solo falta 1 ingrediente." : `Solo faltan ${recipe.missing.length} ingredientes.`;
     default:
-      return recipe.missing.length === 0
-        ? "Ya tienes todos los ingredientes."
-        : `Aprovecha ${recipe.present.length} productos de tu almacén.`;
+      if (recipe.missing.length === 0) return "Ya tienes todos los ingredientes.";
+      if (recipe.present.length === 0) return "Aún no tienes ninguno de sus ingredientes en casa.";
+      return recipe.present.length === 1 ? "Aprovecha 1 producto de tu almacén." : `Aprovecha ${recipe.present.length} productos de tu almacén.`;
   }
 }
 

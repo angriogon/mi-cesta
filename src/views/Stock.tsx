@@ -22,7 +22,7 @@ import {
 import { useDeferredValue, useEffect, useMemo, useState, type FormEvent } from "react";
 import type { CestaApi } from "../data/api";
 import type { InventoryLot, LotState, Product } from "../data/types";
-import type { Certainty, Prediction } from "../domain/autocesta";
+import { expiringLots, type Certainty, type Prediction } from "../domain/autocesta";
 import { CATEGORIES, type Category } from "../domain/categories";
 import type { StockLike } from "../domain/lists";
 import { daysUntil, normalize } from "../lib/text";
@@ -40,11 +40,11 @@ export const STATE_LABEL: Record<LotState, string> = {
 };
 const STATES = Object.keys(STATE_LABEL) as LotState[];
 const STATE_TONE: Record<LotState, string> = {
-  closed: "border-[#d8e5d9] bg-[#eef4ef] text-[#295b3f]",
-  opened: "border-[#eadfc8] bg-[#faf4e8] text-[#8a652d]",
-  reserved: "border-[#ddd9eb] bg-[#f2eff9] text-[#65518c]",
-  cooked: "border-[#ecd7ce] bg-[#fbefeb] text-[#984b37]",
-  frozen: "border-[#cfe1e9] bg-[#eaf4f8] text-[#356b82]",
+  closed: "border-[#d8e5d9] bg-[#eef4ef] text-[#295b3f] dark:border-[#2d3b31] dark:bg-[#1f2c23] dark:text-[#9fd0ae]",
+  opened: "border-[#eadfc8] bg-[#faf4e8] text-[#8a652d] dark:border-[#3a3222] dark:bg-[#2d271c] dark:text-[#e2c08a]",
+  reserved: "border-[#ddd9eb] bg-[#f2eff9] text-[#65518c] dark:border-[#332d44] dark:bg-[#252033] dark:text-[#c3b4e6]",
+  cooked: "border-[#ecd7ce] bg-[#fbefeb] text-[#984b37] dark:border-[#40291f] dark:bg-[#2f201c] dark:text-[#e6a490]",
+  frozen: "border-[#cfe1e9] bg-[#eaf4f8] text-[#356b82] dark:border-[#24363f] dark:bg-[#1b2a31] dark:text-[#93c4d9]",
 };
 
 function StateIcon({ state }: { state: LotState }) {
@@ -56,7 +56,7 @@ function StateIcon({ state }: { state: LotState }) {
 }
 
 /** Lotes con caducidad y estado; se puede cambiar el estado, poner fecha o retirarlos. */
-function ExpiryStates({ api, notify }: { api: CestaApi; notify: Notify }) {
+function ExpiryStates({ api, notify, products }: { api: CestaApi; notify: Notify; products: Product[] }) {
   const [lots, setLots] = useState<InventoryLot[]>([]);
   const [open, setOpen] = useState(true);
   const [status, setStatus] = useState("");
@@ -85,9 +85,13 @@ function ExpiryStates({ api, notify }: { api: CestaApi; notify: Notify }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api]);
 
+  // Fecha real o, si no hay, la estimada por categoría (la misma que usa Inicio).
+  const estimates = useMemo(() => new Map(expiringLots(lots, products).map((lot) => [lot.id, lot])), [lots, products]);
+  const effective = (lot: InventoryLot) => lot.expiryDate || estimates.get(lot.id)?.expiryDate || "9999";
   const visible = useMemo(
-    () => [...lots].sort((a, b) => (a.expiryDate || "9999").localeCompare(b.expiryDate || "9999")).slice(0, 30),
-    [lots],
+    () => [...lots].sort((a, b) => effective(a).localeCompare(effective(b))).slice(0, 30),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lots, estimates],
   );
   const summary = useMemo(
     () =>
@@ -167,7 +171,9 @@ function ExpiryStates({ api, notify }: { api: CestaApi; notify: Notify }) {
             </div>
           )}
           {visible.map((lot, index) => {
-            const days = lot.expiryDate ? daysUntil(lot.expiryDate) : null;
+            const estimate = lot.expiryDate ? null : estimates.get(lot.id);
+            const days = lot.expiryDate ? daysUntil(lot.expiryDate) : (estimate?.daysUntil ?? null);
+            const prefix = estimate ? "≈" : "";
             return (
               <div key={lot.id} className={index ? "border-t border-border/70" : ""}>
                 <div className="flex w-full items-center gap-2 px-2.5 py-2.5">
@@ -191,10 +197,10 @@ function ExpiryStates({ api, notify }: { api: CestaApi; notify: Notify }) {
                     type="button"
                     onClick={() => setEditing(editing === lot.id ? null : lot.id)}
                     aria-expanded={editing === lot.id}
-                    aria-label={`Editar fecha de ${lot.productName}`}
-                    className={`min-h-9 min-w-[3.6rem] shrink-0 rounded-lg px-1.5 py-1.5 text-center text-[10px] font-bold ${days !== null && days <= 2 ? "bg-[#f8dfda] text-[#9b3f38]" : "bg-[#f3eadc] text-[#8b622b]"}`}
+                    aria-label={`Editar fecha de ${lot.productName}${estimate ? " (fecha estimada)" : ""}`}
+                    className={`min-h-9 min-w-[3.6rem] shrink-0 rounded-lg px-1.5 py-1.5 text-center text-[10px] font-bold ${days !== null && days <= 2 ? "bg-[#f8dfda] text-[#9b3f38] dark:bg-[#3a1f1c] dark:text-[#f0a49b]" : "bg-[#f3eadc] text-[#8b622b] dark:bg-[#2d271c] dark:text-[#e2c08a]"}`}
                   >
-                    {days === null ? "Sin fecha" : days < 0 ? "Caducado" : days === 0 ? "Hoy" : `${days} d`}
+                    {days === null ? "Sin fecha" : days < 0 ? "Caducado" : days === 0 ? `${prefix}Hoy` : `${prefix}${days} d`}
                   </button>
                 </div>
                 {editing === lot.id && (
@@ -272,6 +278,7 @@ export function Stock(props: {
   useEffect(() => {
     if (!admin.unlocked) {
       setMaintenance(false);
+      setCollapsed(new Set());
       return;
     }
     if (pending) {
@@ -286,6 +293,7 @@ export function Stock(props: {
     setStatus("");
     if (maintenance) {
       setMaintenance(false);
+      setCollapsed(new Set());
       return;
     }
     if (!admin.unlocked) {
@@ -401,7 +409,7 @@ export function Stock(props: {
         </section>
       )}
 
-      {!maintenance && <ExpiryStates api={props.api} notify={props.notify} />}
+      {!maintenance && <ExpiryStates api={props.api} notify={props.notify} products={props.products} />}
 
       {!maintenance && doubtful.length > 0 && (
         <section className="mb-3 rounded-[16px] border border-[#d8e5d9] bg-[#eef4ef] px-3 py-2.5 text-[#20462f] dark:border-border dark:bg-card dark:text-foreground">

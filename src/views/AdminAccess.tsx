@@ -1,6 +1,7 @@
 import { FingerprintPattern, KeyRound, Lock, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { readJson, removeKey, writeJson } from "../lib/storage";
+import { LOCAL_RESET_PHRASE, type Account } from "../app/account";
 import { Button, Input } from "../ui/primitives";
 
 interface AdminSettings {
@@ -151,7 +152,9 @@ export function useAdmin(householdId: string) {
   );
 }
 
-export function AdminAccess({ admin }: { admin: AdminState }) {
+export function AdminAccess({ admin, account }: { admin: AdminState; account: Account }) {
+  const [forgot, setForgot] = useState(false);
+  const [secret, setSecret] = useState("");
   const [pin, setPin] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -263,6 +266,40 @@ export function AdminAccess({ admin }: { admin: AdminState }) {
           </Button>
         </form>
       </div>
+      {configured && !forgot && (
+        <button type="button" onClick={() => setForgot(true)} className="mt-4 py-1 text-xs font-bold text-primary">
+          ¿Has olvidado el PIN?
+        </button>
+      )}
+      {forgot && (
+        <form
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setError("");
+            if (await account.verifyPassword(secret)) {
+              admin.forget();
+              setForgot(false);
+              setSecret("");
+            } else setError(account.mode === "local" ? `Escribe ${LOCAL_RESET_PHRASE} para confirmar.` : "La contraseña no es correcta.");
+          }}
+          className="mt-4 w-full rounded-[20px] border border-border bg-card p-4"
+        >
+          <p className="text-xs leading-5 text-muted-foreground">
+            {account.mode === "local" ? `Escribe ${LOCAL_RESET_PHRASE} para borrar el PIN de este dispositivo y crear uno nuevo.` : "Confirma con la contraseña de tu cuenta para crear un PIN nuevo en este dispositivo."}
+          </p>
+          <Input
+            type={account.mode === "local" ? "text" : "password"}
+            autoComplete={account.mode === "local" ? "off" : "current-password"}
+            value={secret}
+            onChange={(event) => setSecret(event.target.value)}
+            aria-label={account.mode === "local" ? "Frase de confirmación" : "Contraseña de la cuenta"}
+            className="mt-2 h-11 rounded-xl"
+          />
+          <Button type="submit" disabled={!secret} variant="outline" className="mt-2 h-11 w-full rounded-xl">
+            Crear un PIN nuevo
+          </Button>
+        </form>
+      )}
       <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
         <Lock className="size-3.5" /> Se bloquea al salir o cambiar de aplicación.
       </p>

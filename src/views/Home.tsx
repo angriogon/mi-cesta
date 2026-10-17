@@ -151,10 +151,10 @@ export function Home({
         <div className="mt-2 grid grid-cols-4 gap-1.5 text-center">
           {(
             [
-              ["closed", "Cerrado", "bg-[#eef4ef] text-[#295b3f]"],
-              ["opened", "Abierto", "bg-[#faf4e8] text-[#8a652d]"],
-              ["frozen", "Congelado", "bg-[#eaf4f8] text-[#356b82]"],
-              ["cooked", "Cocinado", "bg-[#fbefeb] text-[#984b37]"],
+              ["closed", "Cerrado", "bg-[#eef4ef] text-[#295b3f] dark:bg-[#1f2c23] dark:text-[#9fd0ae]"],
+              ["opened", "Abierto", "bg-[#faf4e8] text-[#8a652d] dark:bg-[#2d271c] dark:text-[#e2c08a]"],
+              ["frozen", "Congelado", "bg-[#eaf4f8] text-[#356b82] dark:bg-[#1b2a31] dark:text-[#93c4d9]"],
+              ["cooked", "Cocinado", "bg-[#fbefeb] text-[#984b37] dark:bg-[#2f201c] dark:text-[#e6a490]"],
             ] as const
           ).map(([key, label, tone]) => (
             <div key={key} className={`rounded-xl px-1 py-2 ${tone}`}>

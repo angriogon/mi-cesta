@@ -84,6 +84,9 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
   const admin = useAdmin(householdId);
   const toast = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
+  const productsRef = useRef<Product[]>([]);
+  productsRef.current = products;
+  const writes = useRef(new Map<string, Promise<unknown>>());
   const device = useMemo(() => deviceId(), []);
 
   // ---- Sincronización de listas (revisión + mezcla por nombre, como la versión original) ----
@@ -382,15 +385,20 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
     }
   }
 
+  /** Toques rápidos en +/−: se parte siempre del último valor y se guardan en orden. */
   async function updateStock(id: string, change: (item: StockLike) => StockLike) {
-    const current = stock.find((item) => item.id === id);
-    if (!current) return;
-    const next = change(current);
-    setProducts((items) =>
-      items.map((item) => (item.id === id ? { ...item, currentStock: next.quantity, minimumStock: next.minimum } : item)),
+    const product = productsRef.current.find((item) => item.id === id);
+    if (!product) return;
+    const next = change(toStock(product));
+    productsRef.current = productsRef.current.map((item) =>
+      item.id === id ? { ...item, currentStock: next.quantity, minimumStock: next.minimum } : item,
     );
+    setProducts(productsRef.current);
+    const previous = writes.current.get(id) ?? Promise.resolve();
+    const write = previous.then(() => api.updateProduct(id, { currentStock: next.quantity, minimumStock: next.minimum }));
+    writes.current.set(id, write.catch(() => undefined));
     try {
-      await api.updateProduct(id, { currentStock: next.quantity, minimumStock: next.minimum });
+      await write;
       void refreshOverview();
     } catch (error) {
       toast.show(errorMessage(error, "No se ha podido guardar el cambio."));
@@ -809,7 +817,7 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
               >
                 <X className="size-4" />
               </button>
-              <AdminAccess admin={admin} />
+              <AdminAccess admin={admin} account={account} />
             </div>
           </div>
         )}
