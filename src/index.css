@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/geist.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/geist-mono.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  --font-geist-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-geist-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --radius: 0.625rem;
+  --background: #f5f7f3;
+  --foreground: #172019;
+  --card: #fff;
+  --card-foreground: #172019;
+  --primary: #295b3f;
+  --primary-foreground: #fff;
+  --secondary: #e1ebe3;
+  --secondary-foreground: #224d35;
+  --muted: #edf1ec;
+  --muted-foreground: #718077;
+  --accent: #e6eee7;
+  --accent-foreground: #234e36;
+  --destructive: #c84343;
+  --border: #dfe6df;
+  --input: #d9e2da;
+  --ring: #295b3f;
+}
+
+.dark {
+  --background: #101712;
+  --foreground: #edf3ee;
+  --card: #19221c;
+  --card-foreground: #edf3ee;
+  --primary: #87bd98;
+  --primary-foreground: #102016;
+  --secondary: #26382c;
+  --secondary-foreground: #d9eadf;
+  --muted: #222e26;
+  --muted-foreground: #9aaba0;
+  --accent: #26382c;
+  --accent-foreground: #d9eadf;
+  --destructive: #f08080;
+  --border: #2d3b31;
+  --input: #384a3e;
+  --ring: #87bd98;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    background-color: var(--background);
+    font-family: var(--font-geist-sans);
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    margin: 0;
+    background-color: var(--background);
+    color: var(--foreground);
+    overscroll-behavior-y: none;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: default;
+  }
+}
+
+.eyebrow {
+  color: var(--primary);
+  letter-spacing: 0.15em;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.purchase-stage-switch {
+  z-index: 20;
+  top: calc(0.8rem + env(safe-area-inset-top));
+  width: min(420px, 100vw - 5rem);
+  position: fixed;
+  left: 50%;
+  transform: translate(calc(1.7rem - 50%));
+}
+
+@media (max-width: 380px) {
+  .purchase-stage-switch {
+    width: calc(100vw - 4.8rem);
+    transform: translate(calc(1.75rem - 50%));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
