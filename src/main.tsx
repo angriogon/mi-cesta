@@ -1,0 +1,43 @@
+import { Component, StrictMode, type ErrorInfo, type ReactNode } from "react";
+import { createRoot } from "react-dom/client";
+import { Root } from "./app/Root";
+import "./index.css";
+
+// Modo oscuro según el sistema (iOS lo cambia automáticamente por la noche).
+const dark = window.matchMedia("(prefers-color-scheme: dark)");
+const applyTheme = () => document.documentElement.classList.toggle("dark", dark.matches);
+applyTheme();
+dark.addEventListener("change", applyTheme);
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("Cesta ha fallado", error, info.componentStack);
+  }
+
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-background px-6 text-center text-foreground">
+        <h1 className="text-lg font-bold">Algo no ha ido bien</h1>
+        <p className="mt-2 max-w-72 text-sm leading-6 text-muted-foreground">Tus datos están a salvo. Vuelve a abrir Cesta para continuar.</p>
+        <button type="button" onClick={() => window.location.reload()} className="mt-5 h-11 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground">
+          Volver a abrir
+        </button>
+      </div>
+    );
+  }
+}
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <ErrorBoundary>
+      <Root />
+    </ErrorBoundary>
+  </StrictMode>,
+);

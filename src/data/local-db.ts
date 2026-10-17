@@ -55,7 +55,7 @@ export function newHousehold(id: string, name = "Mi hogar"): Household {
     name,
     inviteCode: Math.random().toString(36).slice(2, 8).toUpperCase(),
     mode: "normal",
-    petName: "Serranito",
+    petName: "Mascota",
     postalCode: "",
     priceMeta: { postalCode: "", lastAttemptedAt: null, lastSuccessfulAt: null, updatedCount: 0 },
     preferences: { specialDietEnabled: false, allergens: [], avoided: [] },
