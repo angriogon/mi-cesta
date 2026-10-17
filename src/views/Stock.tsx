@@ -8,7 +8,7 @@ import type { StockLike } from "../domain/lists";
 import { normalize } from "../lib/text";
 import { Button, EmptyState, Input, StatCard } from "../ui/primitives";
 import type { Notify } from "../ui/Toast";
-import type { AdminState } from "./AdminAccess";
+import type { AdminState } from "./admin/useAdmin";
 import { ExpiryStates } from "./stock/ExpiryStates";
 import { AdminSection, MaintenancePanel, SuppressedList } from "./stock/MaintenanceSections";
 import { StockRow } from "./stock/StockRow";

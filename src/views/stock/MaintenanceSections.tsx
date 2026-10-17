@@ -6,7 +6,7 @@ import { reportError } from "../../lib/errors";
 import { CATEGORIES, type Category } from "../../domain/categories";
 import { Button, Input, NativeSelect } from "../../ui/primitives";
 import type { Notify } from "../../ui/Toast";
-import type { AdminState } from "../AdminAccess";
+import type { AdminState } from "../admin/useAdmin";
 
 /** Productos que AutoCesta tiene prohibido sugerir, con la opción de volver a permitirlo. */
 export function SuppressedList({ api, notify, products }: { api: CestaApi; notify: Notify; products: Product[] }) {

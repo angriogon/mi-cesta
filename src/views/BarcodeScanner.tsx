@@ -3,9 +3,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiError, type CestaApi } from "../data/api";
 import type { BarcodeProduct } from "../data/types";
 import { Button, Input } from "../ui/primitives";
-import { logError, reportError } from "../lib/errors";
-
-type Controls = { stop: () => void };
+import { useBarcodeCamera } from "./scanner/useBarcodeCamera";
 
 /** Escáner EAN/UPC con la cámara trasera; si no se reconoce, permite guardar el nombre. */
 export function BarcodeScanner({
@@ -19,8 +17,6 @@ export function BarcodeScanner({
   onUse: (product: BarcodeProduct) => void;
   continuous?: boolean;
 }) {
-  const video = useRef<HTMLVideoElement>(null);
-  const controls = useRef<Controls | null>(null);
   const busyRef = useRef(false);
   const lastCode = useRef("");
   const [manual, setManual] = useState("");
@@ -30,15 +26,21 @@ export function BarcodeScanner({
   const [busy, setBusy] = useState(false);
   const [product, setProduct] = useState<BarcodeProduct | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const [torchAvailable, setTorchAvailable] = useState(false);
-  const [torch, setTorch] = useState(false);
+  const camera = useBarcodeCamera({
+    active: !product && !unknownCode,
+    attempt,
+    onCode: (code) => {
+      if (code !== lastCode.current) void lookup(code);
+    },
+    onError: setStatus,
+  });
 
   async function lookup(raw: string) {
     const code = raw.replace(/\D/g, "").slice(0, 18);
     if (code.length < 8 || busyRef.current) return;
     busyRef.current = true;
     lastCode.current = code;
-    controls.current?.stop();
+    camera.stop();
     setBusy(true);
     setUnknownCode("");
     setUnknownName("");
@@ -80,91 +82,10 @@ export function BarcodeScanner({
     setUnknownCode("");
     setUnknownName("");
     setManual("");
-    setTorch(false);
-    setTorchAvailable(false);
     lastCode.current = "";
     setStatus("Acerca el código al recuadro y evita reflejos.");
     setAttempt((value) => value + 1);
   }
-
-  async function toggleTorch() {
-    const track = (video.current?.srcObject as MediaStream | null)?.getVideoTracks()[0];
-    if (!track) return;
-    try {
-      await track.applyConstraints({ advanced: [{ torch: !torch } as MediaTrackConstraintSet] });
-      setTorch(!torch);
-    } catch (error) {
-      reportError(error, "linterna");
-      setTorchAvailable(false);
-    }
-  }
-
-  useEffect(() => {
-    if (product || unknownCode) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const [{ BrowserMultiFormatReader }, { BarcodeFormat, DecodeHintType }] = await Promise.all([
-          import("@zxing/browser"),
-          import("@zxing/library"),
-        ]);
-        if (cancelled || !video.current) return;
-        const hints = new Map();
-        hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-          BarcodeFormat.EAN_13,
-          BarcodeFormat.EAN_8,
-          BarcodeFormat.UPC_A,
-          BarcodeFormat.UPC_E,
-          BarcodeFormat.CODE_128,
-        ]);
-        const reader = new BrowserMultiFormatReader(hints, {
-          delayBetweenScanAttempts: 70,
-          delayBetweenScanSuccess: 900,
-        });
-        const started = await reader.decodeFromConstraints(
-          {
-            video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-            audio: false,
-          },
-          video.current,
-          (result) => {
-            const code = result?.getText().replace(/\D/g, "") ?? "";
-            if (code.length >= 8 && code !== lastCode.current) void lookup(code);
-          },
-        );
-        if (cancelled) {
-          started.stop();
-          return;
-        }
-        controls.current = started;
-        const track = (video.current.srcObject as MediaStream | null)?.getVideoTracks()[0];
-        // Linterna, enfoque y zoom aún no están en los tipos DOM de TypeScript 7; el lint usa TypeScript 6, que sí los trae.
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-        const capabilities = track?.getCapabilities?.() as
-          (MediaTrackCapabilities & { torch?: boolean; focusMode?: string[]; zoom?: { max: number } }) | undefined;
-        setTorchAvailable(Boolean(capabilities?.torch));
-        const advanced: MediaTrackConstraintSet[] = [];
-        if (capabilities?.focusMode?.includes("continuous"))
-          advanced.push({ focusMode: "continuous" } as MediaTrackConstraintSet);
-        if (capabilities?.zoom && capabilities.zoom.max > 1)
-          advanced.push({ zoom: Math.min(1.5, capabilities.zoom.max) } as MediaTrackConstraintSet);
-        if (advanced.length) track?.applyConstraints({ advanced }).catch(logError("ajustar cámara"));
-      } catch (error) {
-        if (!cancelled)
-          setStatus(
-            (error as DOMException)?.name === "NotAllowedError"
-              ? "Sin permiso para usar la cámara. Actívalo en Ajustes o escribe el código."
-              : "No se pudo abrir la cámara. Introduce el código manualmente.",
-          );
-      }
-    })();
-    return () => {
-      cancelled = true;
-      controls.current?.stop();
-      controls.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attempt, product, unknownCode]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose();
@@ -174,7 +95,7 @@ export function BarcodeScanner({
 
   return (
     <div
-      className="fixed inset-0 z-[80] overflow-y-auto bg-primary/90 px-4 py-[calc(1rem+env(safe-area-inset-top))] backdrop-blur-sm"
+      className="fixed inset-0 z-[80] overflow-y-auto bg-black/80 px-4 py-[calc(1rem+env(safe-area-inset-top))] backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label="Escanear producto"
@@ -195,16 +116,16 @@ export function BarcodeScanner({
         </div>
         {!product && !unknownCode && (
           <div className="relative aspect-[4/3] overflow-hidden bg-black">
-            <video key={attempt} ref={video} muted playsInline className="size-full object-cover" />
+            <video key={attempt} ref={camera.video} muted playsInline className="size-full object-cover" />
             <div className="pointer-events-none absolute inset-[27%_7%] rounded-xl border-2 border-white/90 shadow-float">
               <span className="absolute inset-x-4 top-1/2 h-px bg-red-400/90 shadow-float" />
             </div>
-            {torchAvailable && (
+            {camera.torchAvailable && (
               <button
                 type="button"
-                onClick={() => void toggleTorch()}
-                aria-label={torch ? "Apagar linterna" : "Encender linterna"}
-                className={`absolute bottom-3 right-3 flex size-11 items-center justify-center rounded-full border border-white/30 ${torch ? "bg-white text-primary" : "bg-black/45 text-white"}`}
+                onClick={() => void camera.toggleTorch()}
+                aria-label={camera.torch ? "Apagar linterna" : "Encender linterna"}
+                className={`absolute bottom-3 right-3 flex size-11 items-center justify-center rounded-full border border-white/30 ${camera.torch ? "bg-white text-primary" : "bg-black/45 text-white"}`}
               >
                 <Flashlight className="size-4" />
               </button>

@@ -4,7 +4,7 @@ import { duplicateCount, groupByCategory } from "../domain/lists";
 import { setErrorNotifier } from "../lib/errors";
 import { deviceId, readJson, writeJson } from "../lib/storage";
 import { useToast } from "../ui/Toast";
-import { useAdmin } from "../views/AdminAccess";
+import { useAdmin } from "../views/admin/useAdmin";
 import type { ExpiryItem } from "../views/ExpiryDialog";
 import type { Account } from "./account";
 import { usePetAlerts, usePreloadScreens, useSavedNotice, useSplash, useStorePresence } from "./useAppEffects";
