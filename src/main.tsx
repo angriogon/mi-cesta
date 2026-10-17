@@ -4,11 +4,13 @@ import { UpdatePrompt } from "./app/chrome/UpdatePrompt";
 import { Root } from "./app/Root";
 import "./index.css";
 import { followSystemTextSize } from "./lib/dynamic-type";
+import { blockZoom } from "./lib/no-zoom";
 import { applyTheme, storedTheme } from "./lib/theme";
 
 // Claro por defecto; el oscuro se elige desde el menú lateral.
 applyTheme(storedTheme());
 followSystemTextSize();
+blockZoom();
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };

@@ -137,6 +137,8 @@
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
+    /* Sin zoom por doble toque (y sin el retraso de 300 ms que conlleva). */
+    touch-action: manipulation;
   }
   body {
     margin: 0;
