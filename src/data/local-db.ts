@@ -92,7 +92,7 @@ export class LocalDb implements Db {
   }
 
   private rows<T extends TableName>(table: T): Tables[T][] {
-    return ((this.data.tables[table] ??= []) as Tables[T][]);
+    return (this.data.tables[table] ??= []) as Tables[T][];
   }
 
   async list<T extends TableName>(table: T): Promise<Tables[T][]> {
@@ -163,8 +163,8 @@ export class LocalDb implements Db {
     if (file.size > 1_500_000) return null;
     const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(reader.error);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error ?? new Error("No se pudo leer la imagen."));
       reader.readAsDataURL(file);
     });
     this.data.images[ticketId] = dataUrl;

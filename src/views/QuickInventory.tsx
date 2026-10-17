@@ -1,4 +1,18 @@
-import { Camera, ChevronLeft, LoaderCircle, MapPin, Mic, PackageCheck, Plus, ReceiptText, Save, ScanLine, Sparkles, Trash2, X } from "lucide-react";
+import {
+  Camera,
+  ChevronLeft,
+  LoaderCircle,
+  MapPin,
+  Mic,
+  PackageCheck,
+  Plus,
+  ReceiptText,
+  Save,
+  ScanLine,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { CestaApi } from "../data/api";
 import type { BarcodeProduct, QuickItem, QuickSession } from "../data/types";
@@ -6,6 +20,7 @@ import { categoryForLocation, labelsFromOcr, LOCATIONS, mergeQuickItems, parseSp
 import { compressImage, recognizeText } from "../lib/image";
 import { Button, Input } from "../ui/primitives";
 import { BarcodeScanner } from "./BarcodeScanner";
+import { LOAD_FAILED, notifyError, reportError } from "../lib/errors";
 
 interface SpeechRecognitionLike {
   lang: string;
@@ -20,7 +35,15 @@ interface SpeechRecognitionLike {
 
 type SpeechCtor = new () => SpeechRecognitionLike;
 
-export function QuickInventory({ api, onClose, onCommitted }: { api: CestaApi; onClose: () => void; onCommitted: () => Promise<void> }) {
+export function QuickInventory({
+  api,
+  onClose,
+  onCommitted,
+}: {
+  api: CestaApi;
+  onClose: () => void;
+  onCommitted: () => Promise<void>;
+}) {
   const [step, setStep] = useState<"location" | "capture">("location");
   const [location, setLocation] = useState<string>(LOCATIONS[0]);
   const [items, setItems] = useState<QuickItem[]>([]);
@@ -39,12 +62,15 @@ export function QuickInventory({ api, onClose, onCommitted }: { api: CestaApi; o
     api
       .quickInventory()
       .then((data) => setSessions(data.sessions))
-      .catch(() => undefined);
+      .catch(notifyError("cargar inventarios", LOAD_FAILED));
     return () => recognition.current?.stop();
   }, [api]);
 
   const counts = useMemo(
-    () => ({ ready: items.filter((item) => item.confidence >= 0.8).length, review: items.filter((item) => item.confidence < 0.8).length }),
+    () => ({
+      ready: items.filter((item) => item.confidence >= 0.8).length,
+      review: items.filter((item) => item.confidence < 0.8).length,
+    }),
     [items],
   );
 
@@ -91,7 +117,8 @@ export function QuickInventory({ api, onClose, onCommitted }: { api: CestaApi; o
           ? `${data.recentTicketItems.length} productos propuestos desde tickets de las últimas dos semanas.`
           : "No hay tickets de las últimas dos semanas.",
       );
-    } catch {
+    } catch (error) {
+      reportError(error, "inventario rápido");
       setStatus("No se han podido cargar los tickets.");
     } finally {
       setBusy(false);
@@ -106,8 +133,13 @@ export function QuickInventory({ api, onClose, onCommitted }: { api: CestaApi; o
       const text = await recognizeText(await compressImage(file));
       const labels = labelsFromOcr(text, location);
       add(labels);
-      setStatus(labels.length ? `${labels.length} etiquetas propuestas. Revisa nombres y cantidades.` : "No se han reconocido etiquetas. Prueba con más luz o usa el dictado.");
-    } catch {
+      setStatus(
+        labels.length
+          ? `${labels.length} etiquetas propuestas. Revisa nombres y cantidades.`
+          : "No se han reconocido etiquetas. Prueba con más luz o usa el dictado.",
+      );
+    } catch (error) {
+      reportError(error, "inventario rápido");
       setStatus("No se ha podido leer la fotografía. Prueba con más luz o utiliza el dictado.");
     } finally {
       setBusy(false);
@@ -120,10 +152,13 @@ export function QuickInventory({ api, onClose, onCommitted }: { api: CestaApi; o
       recognition.current?.stop();
       return;
     }
-    const Speech = (window as unknown as { SpeechRecognition?: SpeechCtor; webkitSpeechRecognition?: SpeechCtor }).SpeechRecognition ??
-      (window as unknown as { webkitSpeechRecognition?: SpeechCtor }).webkitSpeechRecognition;
+    const Speech =
+      (window as unknown as { SpeechRecognition?: SpeechCtor; webkitSpeechRecognition?: SpeechCtor })
+        .SpeechRecognition ?? (window as unknown as { webkitSpeechRecognition?: SpeechCtor }).webkitSpeechRecognition;
     if (!Speech) {
-      setStatus("El dictado no está disponible en este navegador. Usa el micrófono del teclado y separa los productos con comas.");
+      setStatus(
+        "El dictado no está disponible en este navegador. Usa el micrófono del teclado y separa los productos con comas.",
+      );
       return;
     }
     const instance = new Speech();
@@ -184,7 +219,12 @@ export function QuickInventory({ api, onClose, onCommitted }: { api: CestaApi; o
             <p className="text-[10px] font-bold uppercase tracking-[.13em] text-primary">Inventario rápido</p>
             <h1 className="truncate text-lg font-bold">{step === "location" ? "Elige una zona" : location}</h1>
           </div>
-          <button type="button" onClick={onClose} aria-label="Cerrar" className="flex size-10 items-center justify-center rounded-xl border border-border bg-card">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="flex size-10 items-center justify-center rounded-xl border border-border bg-card"
+          >
             <X className="size-4" />
           </button>
         </header>
@@ -192,7 +232,8 @@ export function QuickInventory({ api, onClose, onCommitted }: { api: CestaApi; o
         {step === "location" ? (
           <section className="mt-5">
             <p className="text-xs leading-5 text-muted-foreground">
-              Trabaja por zonas: cuenta lo que hay en cada una y se suma a tus existencias. Puedes guardar el progreso y continuar en otro momento.
+              Trabaja por zonas: cuenta lo que hay en cada una y se suma a tus existencias. Puedes guardar el progreso y
+              continuar en otro momento.
             </p>
             {sessions.length > 0 && (
               <div className="mt-3 space-y-2">
@@ -210,7 +251,9 @@ export function QuickInventory({ api, onClose, onCommitted }: { api: CestaApi; o
                   >
                     <span>
                       <b className="block text-[12px] text-primary">Continuar {session.location}</b>
-                      <small className="text-[10px] text-muted-foreground">{session.items.length} productos guardados</small>
+                      <small className="text-[10px] text-muted-foreground">
+                        {session.items.length} productos guardados
+                      </small>
                     </span>
                     <ChevronLeft className="size-4 rotate-180 text-primary" />
                   </button>
@@ -240,7 +283,11 @@ export function QuickInventory({ api, onClose, onCommitted }: { api: CestaApi; o
         ) : (
           <>
             <div className="mt-4 grid grid-cols-4 gap-1.5">
-              <button type="button" onClick={() => setScanning(true)} className="flex min-h-16 flex-col items-center justify-center rounded-[15px] border border-border bg-card text-[10px] font-bold">
+              <button
+                type="button"
+                onClick={() => setScanning(true)}
+                className="flex min-h-16 flex-col items-center justify-center rounded-[15px] border border-border bg-card text-[10px] font-bold"
+              >
                 <ScanLine className="mb-1 size-4 text-primary" />
                 Escanear
               </button>
@@ -269,7 +316,14 @@ export function QuickInventory({ api, onClose, onCommitted }: { api: CestaApi; o
                 <ReceiptText className="mb-1 size-4 text-primary" />
                 Tickets
               </button>
-              <input ref={fileInput} type="file" accept="image/*" capture="environment" className="sr-only" onChange={(event) => void fromPhoto(event.target.files?.[0] ?? null)} />
+              <input
+                ref={fileInput}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="sr-only"
+                onChange={(event) => void fromPhoto(event.target.files?.[0] ?? null)}
+              />
             </div>
             <form onSubmit={submit} className="mt-3 grid grid-cols-[4rem_1fr_2.8rem] gap-1.5">
               <Input
@@ -286,27 +340,46 @@ export function QuickInventory({ api, onClose, onCommitted }: { api: CestaApi; o
                 aria-label="Producto"
                 className="h-11 rounded-xl bg-card text-[15px]"
               />
-              <Button type="submit" size="icon" disabled={!name.trim()} aria-label="Añadir" className="size-11 rounded-xl">
+              <Button
+                type="submit"
+                size="icon"
+                disabled={!name.trim()}
+                aria-label="Añadir"
+                className="size-11 rounded-xl"
+              >
                 <Plus className="size-4" />
               </Button>
             </form>
             {(busy || status) && (
-              <p className="mt-3 flex items-start gap-2 rounded-xl bg-muted px-3 py-2 text-[11px] leading-4 text-muted-foreground" role="status">
-                {busy ? <LoaderCircle className="mt-0.5 size-3.5 shrink-0 animate-spin" /> : <Sparkles className="mt-0.5 size-3.5 shrink-0 text-primary" />}
+              <p
+                className="mt-3 flex items-start gap-2 rounded-xl bg-muted px-3 py-2 text-[11px] leading-4 text-muted-foreground"
+                role="status"
+              >
+                {busy ? (
+                  <LoaderCircle className="mt-0.5 size-3.5 shrink-0 animate-spin" />
+                ) : (
+                  <Sparkles className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                )}
                 {status}
               </p>
             )}
             {items.length > 0 && (
               <section className="mt-4">
                 <div className="mb-2 flex items-center justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-[.1em] text-muted-foreground">{items.length} productos</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[.1em] text-muted-foreground">
+                    {items.length} productos
+                  </p>
                   <p className="text-[10px] text-muted-foreground">
-                    <b className="text-primary">{counts.ready}</b> listos · <b className="text-[#9a632b]">{counts.review}</b> revisar
+                    <b className="text-primary">{counts.ready}</b> listos ·{" "}
+                    <b className="text-[#9a632b]">{counts.review}</b> revisar
                   </p>
                 </div>
                 <div className="overflow-hidden rounded-[17px] border border-border bg-card">
                   {items.map((item, index) => (
-                    <div key={item.id} className={`grid grid-cols-[1fr_4rem_2.2rem] items-center gap-1.5 px-2 py-2 ${index ? "border-t border-border/70" : ""}`}>
+                    <div
+                      key={item.id}
+                      className={`grid grid-cols-[1fr_4rem_2.2rem] items-center gap-1.5 px-2 py-2 ${index ? "border-t border-border/70" : ""}`}
+                    >
                       <div className="min-w-0">
                         <Input
                           value={item.name}
@@ -314,13 +387,22 @@ export function QuickInventory({ api, onClose, onCommitted }: { api: CestaApi; o
                           onChange={(event) =>
                             setItems((list) =>
                               list.map((entry) =>
-                                entry.id === item.id ? { ...entry, name: event.target.value, category: categoryForLocation(event.target.value, location), confidence: 0.95 } : entry,
+                                entry.id === item.id
+                                  ? {
+                                      ...entry,
+                                      name: event.target.value,
+                                      category: categoryForLocation(event.target.value, location),
+                                      confidence: 0.95,
+                                    }
+                                  : entry,
                               ),
                             )
                           }
                           className="h-9 border-0 bg-transparent px-1 text-[13px] font-bold shadow-none"
                         />
-                        <p className={`px-1 text-[9px] font-semibold ${item.confidence >= 0.8 ? "text-primary" : "text-[#9a632b]"}`}>
+                        <p
+                          className={`px-1 text-[9px] font-semibold ${item.confidence >= 0.8 ? "text-primary" : "text-[#9a632b]"}`}
+                        >
                           {item.confidence >= 0.8 ? "Identificado" : "Revisar"} · {item.source} · {item.category}
                         </p>
                       </div>
@@ -331,7 +413,12 @@ export function QuickInventory({ api, onClose, onCommitted }: { api: CestaApi; o
                         onChange={(event) =>
                           setItems((list) =>
                             list.map((entry) =>
-                              entry.id === item.id ? { ...entry, quantity: Math.max(0.01, Number(event.target.value.replace(",", ".")) || 1) } : entry,
+                              entry.id === item.id
+                                ? {
+                                    ...entry,
+                                    quantity: Math.max(0.01, Number(event.target.value.replace(",", ".")) || 1),
+                                  }
+                                : entry,
                             ),
                           )
                         }
@@ -351,10 +438,19 @@ export function QuickInventory({ api, onClose, onCommitted }: { api: CestaApi; o
               </section>
             )}
             <div className="sticky bottom-0 mt-5 grid grid-cols-[1fr_1.35fr] gap-2 bg-gradient-to-t from-background via-background to-transparent pb-2 pt-5">
-              <Button variant="outline" disabled={busy || !items.length} onClick={() => void persist("save")} className="h-12 rounded-2xl text-xs">
+              <Button
+                variant="outline"
+                disabled={busy || !items.length}
+                onClick={() => void persist("save")}
+                className="h-12 rounded-2xl text-xs"
+              >
                 <Save className="size-4" /> Guardar
               </Button>
-              <Button disabled={busy || !items.length} onClick={() => void persist("commit")} className="h-12 rounded-2xl text-xs">
+              <Button
+                disabled={busy || !items.length}
+                onClick={() => void persist("commit")}
+                className="h-12 rounded-2xl text-xs"
+              >
                 <PackageCheck className="size-4" /> Incorporar al almacén
               </Button>
             </div>

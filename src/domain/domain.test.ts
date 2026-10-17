@@ -65,7 +65,12 @@ describe("listas", () => {
     expect(items).toHaveLength(1);
     expect(items[0].quantity).toBe(2);
     expect(items[0].isNew).toBe(true);
-    const known = addToShopping([], "tomate", [{ id: "t", name: "Tomate", category: "Fruta y verdura", quantity: 0, minimum: 0 }], {});
+    const known = addToShopping(
+      [],
+      "tomate",
+      [{ id: "t", name: "Tomate", category: "Fruta y verdura", quantity: 0, minimum: 0 }],
+      {},
+    );
     expect(known[0]).toMatchObject({ name: "Tomate", isNew: false });
   });
 
@@ -76,7 +81,9 @@ describe("listas", () => {
     ];
     expect(duplicateCount(list)).toBe(1);
     expect(mergeDuplicates(list)).toEqual([{ ...list[0], quantity: 3 }]);
-    const checklist = moveToChecklist(mergeDuplicates(list), [{ id: "x", name: "PAN", quantity: 1, category: "Panadería", done: true }]);
+    const checklist = moveToChecklist(mergeDuplicates(list), [
+      { id: "x", name: "PAN", quantity: 1, category: "Panadería", done: true },
+    ]);
     expect(checklist).toHaveLength(1);
     expect(checklist[0]).toMatchObject({ quantity: 4, done: false });
   });
@@ -185,7 +192,13 @@ describe("recetas", () => {
     expect(scored[0].missing).toEqual([]);
     const ready = filterRecipes(scored, { filter: "ready", goal: "all", query: "", skipped: new Set(), lots: [] });
     expect(ready.every((recipe) => recipe.missing.length === 0)).toBe(true);
-    const skipped = filterRecipes(scored, { filter: "ready", goal: "all", query: "", skipped: new Set([scored[0].id]), lots: [] });
+    const skipped = filterRecipes(scored, {
+      filter: "ready",
+      goal: "all",
+      query: "",
+      skipped: new Set([scored[0].id]),
+      lots: [],
+    });
     expect(skipped.some((recipe) => recipe.id === scored[0].id)).toBe(false);
     expect(chainedPlan(scored, new Set())).not.toBeNull();
   });
@@ -270,7 +283,17 @@ describe("AutoCesta", () => {
 
   it("sugiere reponer lo que está bajo mínimos solo en modo AutoCesta", () => {
     const products = [product("Leche", { currentStock: 1, minimumStock: 4 })];
-    const base = { lots: [], stockEvents: [], tickets: [], prices: [], shopping: [], events: [], operations: [], activity: [], now: NOW };
+    const base = {
+      lots: [],
+      stockEvents: [],
+      tickets: [],
+      prices: [],
+      shopping: [],
+      events: [],
+      operations: [],
+      activity: [],
+      now: NOW,
+    };
     expect(buildOverview({ ...base, mode: "normal", products }).suggestions).toEqual([]);
     const auto = buildOverview({ ...base, mode: "autocesta", products });
     expect(auto.suggestions[0]).toMatchObject({ productName: "Leche", quantity: 3 });

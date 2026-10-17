@@ -1,4 +1,5 @@
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
+import type { Database, Json, TablesUpdate } from "./database.types";
 import type { CasResult, Db } from "./db";
 import type { Household, ListItem, Lists, TableName, Tables } from "./types";
 
@@ -30,9 +31,17 @@ export class SupabaseDb implements Db {
   readonly kind = "supabase" as const;
 
   constructor(
-    private readonly client: SupabaseClient,
+    private readonly client: SupabaseClient<Database>,
     readonly householdId: string,
   ) {}
+
+  /**
+   * Las operaciones genéricas reciben el nombre de tabla en tiempo de ejecución, así que usan el cliente sin tipar.
+   * Que los tipos de la app coinciden con las columnas reales lo comprueba `schema.ts` al compilar.
+   */
+  private get anyTable(): SupabaseClient {
+    return this.client;
+  }
 
   private fail(error: { message: string } | null, action: string): void {
     if (error) throw new Error(`${action}: ${error.message}`);
@@ -42,7 +51,7 @@ export class SupabaseDb implements Db {
     const pageSize = 1000;
     const rows: Tables[T][] = [];
     for (let from = 0; ; from += pageSize) {
-      const { data, error } = await this.client
+      const { data, error } = await this.anyTable
         .from(table)
         .select("*")
         .eq("household_id", this.householdId)
@@ -56,14 +65,14 @@ export class SupabaseDb implements Db {
 
   async insert<T extends TableName>(table: T, rows: Tables[T][]): Promise<void> {
     if (!rows.length) return;
-    const { error } = await this.client
+    const { error } = await this.anyTable
       .from(table)
       .upsert(rows.map((row) => rowToDb({ ...(row as object), householdId: this.householdId })));
     this.fail(error, `Guardar ${table}`);
   }
 
   async update<T extends TableName>(table: T, id: string, patch: Partial<Tables[T]>): Promise<void> {
-    const { error } = await this.client
+    const { error } = await this.anyTable
       .from(table)
       .update(rowToDb(patch as Record<string, unknown>))
       .eq("household_id", this.householdId)
@@ -73,12 +82,12 @@ export class SupabaseDb implements Db {
 
   async remove(table: TableName, ids: string[]): Promise<void> {
     if (!ids.length) return;
-    const { error } = await this.client.from(table).delete().eq("household_id", this.householdId).in("id", ids);
+    const { error } = await this.anyTable.from(table).delete().eq("household_id", this.householdId).in("id", ids);
     this.fail(error, `Eliminar en ${table}`);
   }
 
   async removeAll(table: TableName): Promise<void> {
-    const { error } = await this.client.from(table).delete().eq("household_id", this.householdId);
+    const { error } = await this.anyTable.from(table).delete().eq("household_id", this.householdId);
     this.fail(error, `Vaciar ${table}`);
   }
 
@@ -91,7 +100,7 @@ export class SupabaseDb implements Db {
   async updateHousehold(patch: Partial<Household>): Promise<Household> {
     const { data, error } = await this.client
       .from("households")
-      .update(rowToDb(patch as Record<string, unknown>))
+      .update(rowToDb(patch as Record<string, unknown>) as TablesUpdate<"households">)
       .eq("id", this.householdId)
       .select("*")
       .single();
@@ -108,13 +117,13 @@ export class SupabaseDb implements Db {
   async casLists(shopping: ListItem[], checklist: ListItem[], revision: number): Promise<CasResult> {
     const { data, error } = await this.client.rpc("cas_lists", {
       p_household_id: this.householdId,
-      p_shopping: shopping,
-      p_checklist: checklist,
+      p_shopping: shopping as unknown as Json,
+      p_checklist: checklist as unknown as Json,
       p_revision: revision,
     });
     this.fail(error, "Sincronizar listas");
     const result = data as { ok: boolean; lists: Record<string, unknown> };
-    return { ok: result.ok, lists: rowFromDb<Lists>(result.lists) } as CasResult;
+    return { ok: result.ok, lists: rowFromDb<Lists>(result.lists) };
   }
 
   async uploadTicketImage(ticketId: string, file: Blob): Promise<string | null> {
@@ -154,7 +163,10 @@ export class SupabaseDb implements Db {
 
   /** Solo para pruebas: simula un cambio recibido por el canal. */
   notifyForTests(table: TableName | "lists") {
-    channelsByClient.get(this.client)?.get(this.householdId)?.listeners.forEach((listener) => listener(table));
+    channelsByClient
+      .get(this.client)
+      ?.get(this.householdId)
+      ?.listeners.forEach((listener) => listener(table));
   }
 }
 
@@ -164,9 +176,9 @@ interface SharedChannel {
   listeners: Set<Listener>;
 }
 
-const channelsByClient = new WeakMap<SupabaseClient, Map<string, SharedChannel>>();
+const channelsByClient = new WeakMap<SupabaseClient<Database>, Map<string, SharedChannel>>();
 
-function sharedChannel(client: SupabaseClient, householdId: string): SharedChannel {
+function sharedChannel(client: SupabaseClient<Database>, householdId: string): SharedChannel {
   let channels = channelsByClient.get(client);
   if (!channels) {
     channels = new Map();
@@ -176,8 +188,10 @@ function sharedChannel(client: SupabaseClient, householdId: string): SharedChann
   if (existing) return existing;
   const entry: SharedChannel = { channel: client.channel(`household:${householdId}`), listeners: new Set() };
   for (const table of REALTIME_TABLES) {
-    entry.channel.on("postgres_changes", { event: "*", schema: "public", table, filter: `household_id=eq.${householdId}` }, () =>
-      entry.listeners.forEach((listener) => listener(table)),
+    entry.channel.on(
+      "postgres_changes",
+      { event: "*", schema: "public", table, filter: `household_id=eq.${householdId}` },
+      () => entry.listeners.forEach((listener) => listener(table)),
     );
   }
   entry.channel.subscribe();

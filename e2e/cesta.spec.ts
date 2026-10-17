@@ -193,34 +193,41 @@ test("inventario rápido: zona, lista escrita, guardar e incorporar", async ({ p
   await expect(page.getByText("Inventario guardado.")).toBeVisible();
   await page.getByRole("button", { name: "Incorporar al almacén" }).click();
   await expect(page.getByText("3 productos incorporados.")).toBeVisible();
-  await expect(page.getByRole("heading", { name: /Todo en calma|Casi todo|Algunas cosas/ })).toBeVisible({ timeout: 5000 });
+  await expect(page.getByRole("heading", { name: /Todo en calma|Casi todo|Algunas cosas/ })).toBeVisible({
+    timeout: 5000,
+  });
 });
 
 test.describe("sin service worker", () => {
   test.use({ serviceWorkers: "block" });
   test("código de barras: producto conocido y desconocido", async ({ page }) => {
-  await openApp(page);
-  await page.route("https://world.openfoodfacts.org/**", async (route) => {
-    const known = route.request().url().includes("8410000000001");
-    await route.fulfill({
-      json: known ? { status: 1, product: { product_name_es: "Galletas María", brands: "Marca", allergens_tags: ["en:gluten"] } } : { status: 0 },
+    await openApp(page);
+    await page.route("https://world.openfoodfacts.org/**", async (route) => {
+      const known = route.request().url().includes("8410000000001");
+      await route.fulfill({
+        json: known
+          ? {
+              status: 1,
+              product: { product_name_es: "Galletas María", brands: "Marca", allergens_tags: ["en:gluten"] },
+            }
+          : { status: 0 },
+      });
     });
-  });
-  await nav(page, "Compra").click();
-  await page.getByRole("button", { name: "Escanear código de barras" }).first().click();
-  await page.getByLabel("Código EAN").fill("8410000000001");
-  await page.getByRole("button", { name: "Buscar" }).click();
-  await expect(page.getByText("Alérgenos: gluten")).toBeVisible();
-  await page.getByRole("button", { name: "Usar este producto" }).click();
-  await expect(page.getByText("Galletas María")).toBeVisible();
+    await nav(page, "Compra").click();
+    await page.getByRole("button", { name: "Escanear código de barras" }).first().click();
+    await page.getByLabel("Código EAN").fill("8410000000001");
+    await page.getByRole("button", { name: "Buscar" }).click();
+    await expect(page.getByText("Alérgenos: gluten")).toBeVisible();
+    await page.getByRole("button", { name: "Usar este producto" }).click();
+    await expect(page.getByText("Galletas María")).toBeVisible();
 
-  await page.getByRole("button", { name: "Escanear código de barras" }).first().click();
-  await page.getByLabel("Código EAN").fill("8410000000099");
-  await page.getByRole("button", { name: "Buscar" }).click();
-  await page.getByPlaceholder("Nombre del producto").fill("Paté de la abuela");
-  await page.getByRole("button", { name: "Guardar y usar" }).click();
-  await page.getByRole("button", { name: "Usar este producto" }).click();
-  await expect(page.getByText("Paté de la abuela")).toBeVisible();
+    await page.getByRole("button", { name: "Escanear código de barras" }).first().click();
+    await page.getByLabel("Código EAN").fill("8410000000099");
+    await page.getByRole("button", { name: "Buscar" }).click();
+    await page.getByPlaceholder("Nombre del producto").fill("Paté de la abuela");
+    await page.getByRole("button", { name: "Guardar y usar" }).click();
+    await page.getByRole("button", { name: "Usar este producto" }).click();
+    await expect(page.getByText("Paté de la abuela")).toBeVisible();
   });
 });
 

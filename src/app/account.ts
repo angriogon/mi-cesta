@@ -23,24 +23,24 @@ export const LOCAL_RESET_PHRASE = "RESTABLECER";
 export async function myHouseholds(): Promise<HouseholdSummary[]> {
   const { data, error } = await supabase().rpc("my_households");
   if (error) throw new Error(error.message);
-  return ((data ?? []) as { id: string; name: string; invite_code: string; role: "owner" | "member" }[]).map((row) => ({
+  return (data ?? []).map((row) => ({
     id: row.id,
     name: row.name,
     inviteCode: row.invite_code,
-    role: row.role,
+    role: row.role === "owner" ? "owner" : "member",
   }));
 }
 
 export async function createHousehold(name: string): Promise<string> {
   const { data, error } = await supabase().rpc("create_household", { p_name: name.trim() || "Mi hogar" });
   if (error) throw new Error(error.message);
-  return data as string;
+  return data;
 }
 
 export async function joinHousehold(code: string): Promise<string> {
   const { data, error } = await supabase().rpc("join_household", { p_code: code.trim().toUpperCase() });
   if (error) throw new Error(error.message.includes("invalid") ? "El código no es válido." : error.message);
-  return data as string;
+  return data;
 }
 
 export function supabaseAccount(email: string, householdId: string, onLeave: () => void): Account {
@@ -79,7 +79,7 @@ export function supabaseAccount(email: string, householdId: string, onLeave: () 
     async members() {
       const { data, error } = await supabase().rpc("household_members_list", { p_household_id: householdId });
       if (error) throw new Error(error.message);
-      return ((data ?? []) as { user_id: string; email: string; role: string }[]).map((row) => ({
+      return (data ?? []).map((row) => ({
         userId: row.user_id,
         email: row.email,
         role: row.role,
@@ -110,10 +110,14 @@ export function translateAuthError(message: string): string {
   const text = message.toLowerCase();
   if (text.includes("invalid login")) return "Email o contraseña incorrectos.";
   if (text.includes("email not confirmed")) return "Confirma tu email con el enlace que te hemos enviado.";
-  if (text.includes("already registered") || text.includes("already been registered")) return "Ese email ya tiene una cuenta. Inicia sesión.";
-  if (text.includes("password should be") || text.includes("weak")) return "La contraseña debe tener al menos 8 caracteres.";
-  if (text.includes("rate limit") || text.includes("too many")) return "Demasiados intentos. Espera un minuto y vuelve a probar.";
-  if (text.includes("network") || text.includes("fetch")) return "Sin conexión. Comprueba internet e inténtalo de nuevo.";
+  if (text.includes("already registered") || text.includes("already been registered"))
+    return "Ese email ya tiene una cuenta. Inicia sesión.";
+  if (text.includes("password should be") || text.includes("weak"))
+    return "La contraseña debe tener al menos 8 caracteres.";
+  if (text.includes("rate limit") || text.includes("too many"))
+    return "Demasiados intentos. Espera un minuto y vuelve a probar.";
+  if (text.includes("network") || text.includes("fetch"))
+    return "Sin conexión. Comprueba internet e inténtalo de nuevo.";
   return "No se ha podido completar. Inténtalo de nuevo.";
 }
 

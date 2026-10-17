@@ -12,7 +12,12 @@ const CORS = {
 
 interface MercadonaProduct {
   display_name?: string;
-  price_instructions?: { unit_price?: string; bulk_price?: string; reference_price?: string; reference_format?: string };
+  price_instructions?: {
+    unit_price?: string;
+    bulk_price?: string;
+    reference_price?: string;
+    reference_format?: string;
+  };
 }
 
 interface MercadonaCategory {
@@ -34,7 +39,11 @@ function normalize(value: string): string {
 }
 
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { ...init, signal: AbortSignal.timeout(8000), headers: { accept: "application/json", ...init?.headers } });
+  const response = await fetch(url, {
+    ...init,
+    signal: AbortSignal.timeout(8000),
+    headers: { accept: "application/json", ...init?.headers },
+  });
   if (!response.ok) throw new Error(`${url}: ${response.status}`);
   return (await response.json()) as T;
 }
@@ -59,7 +68,8 @@ function centsOf(product: MercadonaProduct): number {
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
-    if (!request.headers.get("authorization")) return Response.json({ error: "unauthorized" }, { status: 401, headers: CORS });
+    if (!request.headers.get("authorization"))
+      return Response.json({ error: "unauthorized" }, { status: 401, headers: CORS });
     const { postalCode, names } = (await request.json()) as { postalCode?: string; names?: string[] };
     if (!postalCode || !/^\d{5}$/.test(postalCode) || !Array.isArray(names)) {
       return Response.json({ error: "bad request" }, { status: 400, headers: CORS });
@@ -90,7 +100,9 @@ Deno.serve(async (request) => {
         catalog.find((item) => item.key === key) ??
         catalog.find((item) => item.key.startsWith(`${key} `)) ??
         catalog.find((item) => item.key.includes(key)) ??
-        (singular.length >= 4 ? catalog.find((item) => item.key.startsWith(singular) || item.key.includes(` ${singular}`)) : undefined);
+        (singular.length >= 4
+          ? catalog.find((item) => item.key.startsWith(singular) || item.key.includes(` ${singular}`))
+          : undefined);
       return match ? [{ name, priceCents: match.cents }] : [];
     });
     return Response.json({ prices, warehouse }, { headers: { ...CORS, "cache-control": "private, max-age=3600" } });

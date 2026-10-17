@@ -30,6 +30,7 @@ import type {
   TicketItem,
   TicketReview,
 } from "./types";
+import { logError } from "../lib/errors";
 
 export class ApiError extends Error {
   constructor(
@@ -68,12 +69,18 @@ export class CestaApi {
     return products.sort((a, b) => a.name.localeCompare(b.name, "es"));
   }
 
-  async createProduct(input: { name: string; category: Category; currentStock?: number; minimumStock?: number }): Promise<Product> {
+  async createProduct(input: {
+    name: string;
+    category: Category;
+    currentStock?: number;
+    minimumStock?: number;
+  }): Promise<Product> {
     const name = input.name.trim().replace(/\s+/g, " ");
     if (name.length < 2) throw new ApiError("Escribe un nombre de al menos 2 caracteres.");
     if (name.length > 80) throw new ApiError("El nombre es demasiado largo.");
     const products = await this.db.list("products");
-    if (products.some((product) => normalize(product.name) === normalize(name))) throw new ApiError("Ese producto ya existe.", 409);
+    if (products.some((product) => normalize(product.name) === normalize(name)))
+      throw new ApiError("Ese producto ya existe.", 409);
     const product: Product = {
       id: uid(),
       householdId: this.db.householdId,
@@ -123,11 +130,21 @@ export class CestaApi {
   async deleteProduct(id: string): Promise<void> {
     await this.db.remove("products", [id]);
     const lots = (await this.db.list("inventory_lots")).filter((lot) => lot.productId === id);
-    await this.db.remove("inventory_lots", lots.map((lot) => lot.id));
+    await this.db.remove(
+      "inventory_lots",
+      lots.map((lot) => lot.id),
+    );
   }
 
   private async logStock(productId: string, delta: number, reason: StockReason) {
-    const event: StockEvent = { id: uid(), householdId: this.db.householdId, productId, delta, reason, createdAt: now() };
+    const event: StockEvent = {
+      id: uid(),
+      householdId: this.db.householdId,
+      productId,
+      delta,
+      reason,
+      createdAt: now(),
+    };
     await this.db.insert("stock_events", [event]);
   }
 
@@ -207,7 +224,12 @@ export class CestaApi {
   }
 
   /** Guarda las listas; si otro dispositivo las cambió antes, mezcla por nombre y reintenta. */
-  async saveLists(shopping: ListItem[], checklist: ListItem[], revision: number, merge: (remote: Lists) => Lists): Promise<Lists> {
+  async saveLists(
+    shopping: ListItem[],
+    checklist: ListItem[],
+    revision: number,
+    merge: (remote: Lists) => Lists,
+  ): Promise<Lists> {
     let attempt = await this.db.casLists(shopping, checklist, revision);
     for (let tries = 0; !attempt.ok && tries < 3; tries += 1) {
       const merged = merge(attempt.lists);
@@ -219,7 +241,9 @@ export class CestaApi {
 
   async startPurchase(planned: { name: string; quantity: number }[]): Promise<void> {
     await this.db.removeAll("purchase_sessions");
-    await this.db.insert("purchase_sessions", [{ id: uid(), householdId: this.db.householdId, planned, createdAt: now() }]);
+    await this.db.insert("purchase_sessions", [
+      { id: uid(), householdId: this.db.householdId, planned, createdAt: now() },
+    ]);
   }
 
   async purchaseSession() {
@@ -231,7 +255,10 @@ export class CestaApi {
    * Guarda en el almacén lo marcado como comprado. La compra queda como "provisional" para
    * que, al guardar el ticket, esos productos no se sumen dos veces.
    */
-  async storePurchased(items: ListItem[]): Promise<{ products: Product[]; stored: { productId: string; name: string; quantity: number; category: Category }[] }> {
+  async storePurchased(items: ListItem[]): Promise<{
+    products: Product[];
+    stored: { productId: string; name: string; quantity: number; category: Category }[];
+  }> {
     const products = await this.db.list("products");
     const inverse: InverseStep[] = [];
     const stored: { productId: string; name: string; quantity: number; category: Category }[] = [];
@@ -245,11 +272,20 @@ export class CestaApi {
       {
         id: uid(),
         householdId: this.db.householdId,
-        items: stored.map((item) => ({ productId: item.productId, name: item.name, quantity: item.quantity, reconciled: 0 })),
+        items: stored.map((item) => ({
+          productId: item.productId,
+          name: item.name,
+          quantity: item.quantity,
+          reconciled: 0,
+        })),
         createdAt: now(),
       },
     ]);
-    await this.recordOperation("purchase", `Compra · ${stored.length} ${stored.length === 1 ? "producto" : "productos"}`, inverse);
+    await this.recordOperation(
+      "purchase",
+      `Compra · ${stored.length} ${stored.length === 1 ? "producto" : "productos"}`,
+      inverse,
+    );
     return { products: await this.products(), stored };
   }
 
@@ -267,7 +303,18 @@ export class CestaApi {
       this.db.list("operations"),
       this.db.list("activity"),
     ]);
-    return buildOverview({ mode: household.mode, products, lots, stockEvents, tickets, prices, shopping, events, operations, activity });
+    return buildOverview({
+      mode: household.mode,
+      products,
+      lots,
+      stockEvents,
+      tickets,
+      prices,
+      shopping,
+      events,
+      operations,
+      activity,
+    });
   }
 
   async insights(): Promise<Prediction[]> {
@@ -286,7 +333,13 @@ export class CestaApi {
       await this.logEvent("question-skip", productId, {});
       return;
     }
-    const inverse: InverseStep[] = [{ kind: "setProduct", productId, patch: { currentStock: product.currentStock, confirmedAt: product.confirmedAt } }];
+    const inverse: InverseStep[] = [
+      {
+        kind: "setProduct",
+        productId,
+        patch: { currentStock: product.currentStock, confirmedAt: product.confirmedAt },
+      },
+    ];
     const target =
       answer === "yes"
         ? Math.max(1, product.currentStock)
@@ -295,7 +348,12 @@ export class CestaApi {
           : 0;
     if (target !== product.currentStock) await this.logStock(productId, target - product.currentStock, "answer");
     await this.db.update("products", productId, { currentStock: target, confirmedAt: now(), updatedAt: now() });
-    const summary = answer === "yes" ? `Queda ${product.name}` : answer === "little" ? `Queda poco ${product.name}` : `No queda ${product.name}`;
+    const summary =
+      answer === "yes"
+        ? `Queda ${product.name}`
+        : answer === "little"
+          ? `Queda poco ${product.name}`
+          : `No queda ${product.name}`;
     await this.recordOperation("answer", summary, inverse);
   }
 
@@ -332,15 +390,22 @@ export class CestaApi {
     const events = await this.db.list("household_events");
     return events
       .filter((event) => event.kind === "substitution" && event.data.decision === "reject" && event.ref)
-      .map((event) => ({ requestedName: String(event.data.requestedName ?? ""), productId: event.ref! }));
+      .map((event) => ({
+        requestedName: typeof event.data.requestedName === "string" ? event.data.requestedName : "",
+        productId: event.ref!,
+      }));
   }
 
   async activity(deviceId: string, deviceName: string, detail: string): Promise<void> {
-    await this.db.insert("activity", [{ id: deviceId, householdId: this.db.householdId, deviceId, deviceName, detail, updatedAt: now() }]);
+    await this.db.insert("activity", [
+      { id: deviceId, householdId: this.db.householdId, deviceId, deviceName, detail, updatedAt: now() },
+    ]);
   }
 
   private async logEvent(kind: HouseholdEvent["kind"], ref: string | null, data: Record<string, unknown>) {
-    await this.db.insert("household_events", [{ id: uid(), householdId: this.db.householdId, kind, ref, data, createdAt: now() }]);
+    await this.db.insert("household_events", [
+      { id: uid(), householdId: this.db.householdId, kind, ref, data, createdAt: now() },
+    ]);
   }
 
   private async recordOperation(operationType: Operation["operationType"], summary: string, inverse: InverseStep[]) {
@@ -353,7 +418,9 @@ export class CestaApi {
   /** Deshace la última operación reversible (ticket, compra, cocinado, respuesta o inventario). */
   async undo(): Promise<string | null> {
     const operations = await this.db.list("operations");
-    const last = operations.filter((operation) => !operation.undone).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+    const last = operations
+      .filter((operation) => !operation.undone)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
     if (!last) return null;
     const products = await this.db.list("products");
     for (const step of [...last.inverse].reverse()) {
@@ -367,13 +434,23 @@ export class CestaApi {
       else if (step.kind === "restoreLot") await this.db.insert("inventory_lots", [step.lot]);
       else if (step.kind === "deleteTicket") {
         const ticket = (await this.db.list("tickets")).find((item) => item.id === step.ticketId);
-        if (ticket?.imagePath) await this.db.removeTicketImages([ticket.imagePath]).catch(() => undefined);
+        if (ticket?.imagePath)
+          await this.db.removeTicketImages([ticket.imagePath]).catch(logError("borrar foto de ticket"));
         await this.db.remove("tickets", [step.ticketId]);
         const reviews = (await this.db.list("ticket_reviews")).filter((review) => review.ticketId === step.ticketId);
-        await this.db.remove("ticket_reviews", reviews.map((review) => review.id));
-        const prices = (await this.db.list("prices")).filter((price) => price.source === "ticket" && price.id.startsWith(`${step.ticketId}:`));
-        await this.db.remove("prices", prices.map((price) => price.id));
-      } else if (step.kind === "setProduct") await this.db.update("products", step.productId, { ...step.patch, updatedAt: now() });
+        await this.db.remove(
+          "ticket_reviews",
+          reviews.map((review) => review.id),
+        );
+        const prices = (await this.db.list("prices")).filter(
+          (price) => price.source === "ticket" && price.id.startsWith(`${step.ticketId}:`),
+        );
+        await this.db.remove(
+          "prices",
+          prices.map((price) => price.id),
+        );
+      } else if (step.kind === "setProduct")
+        await this.db.update("products", step.productId, { ...step.patch, updatedAt: now() });
     }
     await this.db.update("operations", last.id, { undone: true });
     return last.summary;
@@ -413,12 +490,19 @@ export class CestaApi {
     const [prices, household] = await Promise.all([this.db.list("prices"), this.db.getHousehold()]);
     // Último precio conocido por producto.
     const latest = new Map<string, PriceRef>();
-    for (const price of prices.sort((a, b) => a.observedAt.localeCompare(b.observedAt))) latest.set(normalize(price.productName), price);
+    for (const price of prices.sort((a, b) => a.observedAt.localeCompare(b.observedAt)))
+      latest.set(normalize(price.productName), price);
     return { prices: [...latest.values()], meta: household.priceMeta };
   }
 
   /** Actualiza precios: aprende de los tickets y consulta Mercadona para fruta y verdura. */
-  async refreshPrices(): Promise<{ prices: PriceRef[]; meta: PriceMeta; learned: number; externalUpdated: number; online: boolean }> {
+  async refreshPrices(): Promise<{
+    prices: PriceRef[];
+    meta: PriceMeta;
+    learned: number;
+    externalUpdated: number;
+    online: boolean;
+  }> {
     const household = await this.db.getHousehold();
     const tickets = await this.db.list("tickets");
     const learned = new Set(
@@ -431,7 +515,15 @@ export class CestaApi {
     const attemptedAt = now();
     if (this.externalPrices && household.postalCode) {
       const products = (await this.db.list("products")).filter((product) => product.category === "Fruta y verdura");
-      const result = await this.externalPrices.fetch(household.postalCode, products.map((product) => product.name)).catch(() => null);
+      const result = await this.externalPrices
+        .fetch(
+          household.postalCode,
+          products.map((product) => product.name),
+        )
+        .catch((error: unknown) => {
+          logError("precios externos")(error);
+          return null;
+        });
       if (result) {
         online = true;
         const rows: PriceRef[] = [];
@@ -470,7 +562,9 @@ export class CestaApi {
   async tickets(): Promise<{ tickets: Ticket[]; reviews: TicketReview[] }> {
     const [tickets, reviews] = await Promise.all([this.db.list("tickets"), this.db.list("ticket_reviews")]);
     return {
-      tickets: tickets.sort((a, b) => b.purchasedAt.localeCompare(a.purchasedAt) || b.createdAt.localeCompare(a.createdAt)),
+      tickets: tickets.sort(
+        (a, b) => b.purchasedAt.localeCompare(a.purchasedAt) || b.createdAt.localeCompare(a.createdAt),
+      ),
       reviews: reviews.filter((review) => !review.resolved).sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
     };
   }
@@ -498,7 +592,9 @@ export class CestaApi {
       this.db.list("prices"),
       this.db.list("provisional_purchases"),
     ]);
-    const recentProvisional = provisional.filter((purchase) => Date.now() - new Date(purchase.createdAt).getTime() <= 4 * 864e5);
+    const recentProvisional = provisional.filter(
+      (purchase) => Date.now() - new Date(purchase.createdAt).getTime() <= 4 * 864e5,
+    );
     const inverse: InverseStep[] = [{ kind: "deleteTicket", ticketId }];
     const reviews: TicketReview[] = [];
     const newPrices: PriceRef[] = [];
@@ -529,7 +625,9 @@ export class CestaApi {
         .filter((price) => price.productId === product.id)
         .sort((a, b) => b.observedAt.localeCompare(a.observedAt))[0];
       if (previous && unitCents && Math.abs(unitCents - previous.priceCents) / previous.priceCents >= 0.6)
-        reviews.push(this.review(ticketId, item, "price_change", product.id, { previousPriceCents: previous.priceCents }));
+        reviews.push(
+          this.review(ticketId, item, "price_change", product.id, { previousPriceCents: previous.priceCents }),
+        );
       if (unitCents)
         newPrices.push({
           id: `${ticketId}:${product.id}`,
@@ -560,13 +658,19 @@ export class CestaApi {
         await this.changeStock(product, units, "ticket", inverse);
         added += units;
         if (PERISHABLE.includes(product.category)) {
-          const lot = await this.addLot({ productId: product.id, productName: product.name, quantity: units, expiryDate: null });
+          const lot = await this.addLot({
+            productId: product.id,
+            productName: product.name,
+            quantity: units,
+            expiryDate: null,
+          });
           inverse.push({ kind: "deleteLot", lotId: lot.id });
         }
       }
     }
 
-    for (const purchase of recentProvisional) await this.db.update("provisional_purchases", purchase.id, { items: purchase.items });
+    for (const purchase of recentProvisional)
+      await this.db.update("provisional_purchases", purchase.id, { items: purchase.items });
 
     const ticket: Ticket = {
       id: ticketId,
@@ -621,10 +725,14 @@ export class CestaApi {
 
   async deleteTicket(id: string): Promise<void> {
     const ticket = (await this.db.list("tickets")).find((item) => item.id === id);
-    if (ticket?.imagePath) await this.db.removeTicketImages([ticket.imagePath]).catch(() => undefined);
+    if (ticket?.imagePath)
+      await this.db.removeTicketImages([ticket.imagePath]).catch(logError("borrar foto de ticket"));
     await this.db.remove("tickets", [id]);
     const reviews = (await this.db.list("ticket_reviews")).filter((review) => review.ticketId === id);
-    await this.db.remove("ticket_reviews", reviews.map((review) => review.id));
+    await this.db.remove(
+      "ticket_reviews",
+      reviews.map((review) => review.id),
+    );
   }
 
   /** Resuelve una línea dudosa. Si se corrige el nombre, se recuerda para los próximos tickets. */
@@ -636,7 +744,13 @@ export class CestaApi {
       const products = await this.db.list("products");
       const product = findProduct(name, products) ?? (await this.ensureProduct(products, name));
       await this.db.insert("name_aliases", [
-        { id: uid(), householdId: this.db.householdId, alias: review.description, productId: product.id, createdAt: now() },
+        {
+          id: uid(),
+          householdId: this.db.householdId,
+          alias: review.description,
+          productId: product.id,
+          createdAt: now(),
+        },
       ]);
       const units = Number.isInteger(review.quantity) && review.quantity > 0 ? review.quantity : 1;
       const inverse: InverseStep[] = [];
@@ -658,7 +772,9 @@ export class CestaApi {
         ]);
         if (ticket)
           await this.db.update("tickets", ticket.id, {
-            items: ticket.items.map((item) => (item.description === review.description && !item.productId ? { ...item, productId: product.id } : item)),
+            items: ticket.items.map((item) =>
+              item.description === review.description && !item.productId ? { ...item, productId: product.id } : item,
+            ),
           });
       }
     }
@@ -671,14 +787,19 @@ export class CestaApi {
 
   // ---------- Inventario rápido ----------
 
-  async quickInventory(): Promise<{ sessions: QuickSession[]; recentTicketItems: Omit<QuickItem, "id" | "source" | "confidence">[] }> {
+  async quickInventory(): Promise<{
+    sessions: QuickSession[];
+    recentTicketItems: Omit<QuickItem, "id" | "source" | "confidence">[];
+  }> {
     const [sessions, tickets, products] = await Promise.all([
       this.db.list("quick_sessions"),
       this.db.list("tickets"),
       this.db.list("products"),
     ]);
     const recent = new Map<string, Omit<QuickItem, "id" | "source" | "confidence">>();
-    for (const ticket of tickets.filter((item) => Date.now() - new Date(`${item.purchasedAt}T12:00:00`).getTime() <= 14 * 864e5)) {
+    for (const ticket of tickets.filter(
+      (item) => Date.now() - new Date(`${item.purchasedAt}T12:00:00`).getTime() <= 14 * 864e5,
+    )) {
       for (const line of ticket.items) {
         const product = line.productId ? products.find((item) => item.id === line.productId) : null;
         const name = product?.name ?? line.description;
@@ -762,7 +883,10 @@ export class CestaApi {
       createdAt: now(),
     };
     const existing = (await this.db.list("barcodes")).filter((item) => item.code === clean);
-    await this.db.remove("barcodes", existing.map((item) => item.id));
+    await this.db.remove(
+      "barcodes",
+      existing.map((item) => item.id),
+    );
     await this.db.insert("barcodes", [product]);
     return product;
   }
@@ -778,8 +902,16 @@ export class CestaApi {
     const clean = name.trim();
     if (clean.length < 2) throw new ApiError("Escribe un nombre de al menos 2 caracteres.");
     const items = await this.db.list("dog_items");
-    if (items.some((item) => normalize(item.name) === normalize(clean))) throw new ApiError("Ese artículo ya existe.", 409);
-    const item: DogItem = { id: uid(), householdId: this.db.householdId, name: clean, currentStock: 0, minimumStock: 1, updatedAt: now() };
+    if (items.some((item) => normalize(item.name) === normalize(clean)))
+      throw new ApiError("Ese artículo ya existe.", 409);
+    const item: DogItem = {
+      id: uid(),
+      householdId: this.db.householdId,
+      name: clean,
+      currentStock: 0,
+      minimumStock: 1,
+      updatedAt: now(),
+    };
     await this.db.insert("dog_items", [item]);
     return item;
   }
@@ -811,14 +943,25 @@ export class CestaApi {
     if (!title.trim()) throw new ApiError("Escribe el aviso.");
     if (!/^\d{2}:\d{2}$/.test(reminderTime)) throw new ApiError("La hora no es válida.");
     await this.db.insert("dog_reminders", [
-      { id: uid(), householdId: this.db.householdId, title: title.trim().slice(0, 80), reminderTime, enabled: true, createdAt: now() },
+      {
+        id: uid(),
+        householdId: this.db.householdId,
+        title: title.trim().slice(0, 80),
+        reminderTime,
+        enabled: true,
+        createdAt: now(),
+      },
     ]);
     return this.reminders();
   }
 
-  async updateReminder(id: string, patch: Partial<Pick<DogReminder, "title" | "reminderTime" | "enabled">>): Promise<DogReminder[]> {
+  async updateReminder(
+    id: string,
+    patch: Partial<Pick<DogReminder, "title" | "reminderTime" | "enabled">>,
+  ): Promise<DogReminder[]> {
     if (patch.title !== undefined && !patch.title.trim()) throw new ApiError("Escribe el aviso.");
-    if (patch.reminderTime !== undefined && !/^\d{2}:\d{2}$/.test(patch.reminderTime)) throw new ApiError("La hora no es válida.");
+    if (patch.reminderTime !== undefined && !/^\d{2}:\d{2}$/.test(patch.reminderTime))
+      throw new ApiError("La hora no es válida.");
     await this.db.update("dog_reminders", id, { ...patch, ...(patch.title ? { title: patch.title.trim() } : {}) });
     return this.reminders();
   }
@@ -882,11 +1025,14 @@ export class CestaApi {
       "barcodes",
     ] as const;
     const images = (await this.db.list("tickets")).flatMap((ticket) => (ticket.imagePath ? [ticket.imagePath] : []));
-    await this.db.removeTicketImages(images).catch(() => undefined);
+    await this.db.removeTicketImages(images).catch(logError("borrar fotos del hogar"));
     for (const table of tables) await this.db.removeAll(table);
     const products = await this.db.list("products");
     const custom = products.filter((product) => product.sku.startsWith("custom-"));
-    await this.db.remove("products", custom.map((product) => product.id));
+    await this.db.remove(
+      "products",
+      custom.map((product) => product.id),
+    );
     for (const product of products.filter((item) => !item.sku.startsWith("custom-"))) {
       if (product.currentStock || product.minimumStock || product.suppressed)
         await this.db.update("products", product.id, {

@@ -1,4 +1,18 @@
-import { Archive, Check, ChevronDown, FileDown, ListChecks, PackageCheck, Plus, ScanLine, Sparkles, Store, Trash2, Users, X } from "lucide-react";
+import {
+  Archive,
+  Check,
+  ChevronDown,
+  FileDown,
+  ListChecks,
+  PackageCheck,
+  Plus,
+  ScanLine,
+  Sparkles,
+  Store,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode, type RefObject } from "react";
 import type { Overview } from "../domain/autocesta";
 import type { Category } from "../domain/categories";
@@ -12,7 +26,9 @@ type Grouped = { category: Category; items: ListItem[] }[];
 
 export function priceFor(item: ListItem, prices: PriceRef[]): PriceRef | undefined {
   return prices
-    .filter((price) => normalize(price.productName) === normalize(item.name) || similarNames(price.productName, item.name))
+    .filter(
+      (price) => normalize(price.productName) === normalize(item.name) || similarNames(price.productName, item.name),
+    )
     .sort((a, b) => b.observedAt.localeCompare(a.observedAt))[0];
 }
 
@@ -33,7 +49,8 @@ function merchantBadge(price: PriceRef): string {
 function PriceTag({ price, quantity }: { price: PriceRef; quantity: number }) {
   return (
     <span className={`ml-1 text-[9px] font-bold ${merchantTone(price)}`} title={`Último precio en ${price.merchant}`}>
-      <b className="mr-0.5 rounded bg-current/10 px-1 text-[7px]">{merchantBadge(price)}</b>≈ {formatCents(price.priceCents * quantity)}
+      <b className="mr-0.5 rounded bg-current/10 px-1 text-[7px]">{merchantBadge(price)}</b>≈{" "}
+      {formatCents(price.priceCents * quantity)}
     </span>
   );
 }
@@ -191,7 +208,12 @@ export function Prepare(props: {
     <>
       {props.duplicateCount > 0 && (
         <div className="mb-3 flex justify-end">
-          <Button variant="outline" size="sm" onClick={props.mergeDuplicates} className="h-9 rounded-xl px-2.5 text-[10px]">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={props.mergeDuplicates}
+            className="h-9 rounded-xl px-2.5 text-[10px]"
+          >
             Unir repetidos · {props.duplicateCount}
           </Button>
         </div>
@@ -209,7 +231,10 @@ export function Prepare(props: {
           {props.suggestions.length > 0 && (
             <div className="mt-2 space-y-1">
               {props.suggestions.map((suggestion) => (
-                <div key={suggestion.productId} className="flex items-center gap-2 rounded-xl bg-card px-2 py-1.5 dark:bg-muted">
+                <div
+                  key={suggestion.productId}
+                  className="flex items-center gap-2 rounded-xl bg-card px-2 py-1.5 dark:bg-muted"
+                >
                   <button
                     type="button"
                     role="checkbox"
@@ -237,7 +262,11 @@ export function Prepare(props: {
                     </p>
                     <p className="truncate text-[9px] text-muted-foreground">{suggestion.reason}</p>
                   </div>
-                  <button type="button" onClick={() => props.suppressSuggestion(suggestion.productId)} className="px-1 py-2 text-[9px] font-bold text-muted-foreground">
+                  <button
+                    type="button"
+                    onClick={() => props.suppressSuggestion(suggestion.productId)}
+                    className="px-1 py-2 text-[9px] font-bold text-muted-foreground"
+                  >
                     No sugerir
                   </button>
                 </div>
@@ -251,7 +280,10 @@ export function Prepare(props: {
               </summary>
               <div className="mt-1 space-y-1">
                 {props.pendingSuggestions.map((suggestion) => (
-                  <div key={suggestion.productId} className="flex items-center gap-2 rounded-lg bg-[#faf7ef] px-2 py-1 dark:bg-muted">
+                  <div
+                    key={suggestion.productId}
+                    className="flex items-center gap-2 rounded-lg bg-[#faf7ef] px-2 py-1 dark:bg-muted"
+                  >
                     <span className="min-w-0 flex-1 truncate text-[9px]">
                       {suggestion.productName} · {Math.round(suggestion.confidence * 100)} % certeza
                     </span>
@@ -262,7 +294,11 @@ export function Prepare(props: {
                     >
                       Añadir
                     </button>
-                    <button type="button" onClick={() => props.suppressSuggestion(suggestion.productId)} className="px-1 py-1.5 text-[9px] font-bold">
+                    <button
+                      type="button"
+                      onClick={() => props.suppressSuggestion(suggestion.productId)}
+                      className="px-1 py-1.5 text-[9px] font-bold"
+                    >
                       No sugerir
                     </button>
                   </div>
@@ -326,7 +362,9 @@ export function Prepare(props: {
                 >
                   <Archive className="size-3.5 text-primary" />
                   <span className="min-w-0 flex-1 truncate text-sm font-semibold">{item.name}</span>
-                  <span className="text-[10px] text-muted-foreground">{item.quantity > 0 ? `En casa · ${item.quantity}` : "En catálogo"}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {item.quantity > 0 ? `En casa · ${item.quantity}` : "En catálogo"}
+                  </span>
                 </button>
               ))}
               {!exact && (
@@ -337,13 +375,21 @@ export function Prepare(props: {
                 >
                   <Plus className="size-3.5 text-primary" />
                   <span className="min-w-0 flex-1 truncate text-sm font-semibold">Añadir “{props.name.trim()}”</span>
-                  <span className="rounded-full bg-[#efe5dc] px-2 py-0.5 text-[9px] font-bold text-[#8f4b2f]">NUEVO</span>
+                  <span className="rounded-full bg-[#efe5dc] px-2 py-0.5 text-[9px] font-bold text-[#8f4b2f]">
+                    NUEVO
+                  </span>
                 </button>
               )}
             </div>
           )}
         </div>
-        <Button variant="outline" size="icon-lg" onClick={props.openScanner} aria-label="Escanear código de barras" className="size-12 rounded-xl">
+        <Button
+          variant="outline"
+          size="icon-lg"
+          onClick={props.openScanner}
+          aria-label="Escanear código de barras"
+          className="size-12 rounded-xl"
+        >
           <ScanLine className="size-4.5" />
         </Button>
         <Button
@@ -396,7 +442,10 @@ export function Prepare(props: {
                 aria-expanded={!collapsed.has(group.category)}
                 className="mb-1.5 flex w-full items-center justify-between px-1 py-1"
               >
-                <h2 id={`shopping-${group.category}`} className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                <h2
+                  id={`shopping-${group.category}`}
+                  className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground"
+                >
                   {group.category} · {group.items.length}
                 </h2>
                 <ChevronDown
@@ -411,16 +460,23 @@ export function Prepare(props: {
                     const inStock = props.stock.find((product) => normalize(product.name) === normalize(item.name));
                     const plannedUntil = inStock ? productById.get(inStock.id)?.plannedUntil : null;
                     const overbuy =
-                      !!inStock && item.quantity + inStock.quantity > Math.max(2, inStock.minimum * 2) && !(plannedUntil && plannedUntil >= todayIso());
+                      !!inStock &&
+                      item.quantity + inStock.quantity > Math.max(2, inStock.minimum * 2) &&
+                      !(plannedUntil && plannedUntil >= todayIso());
                     return (
-                      <div key={item.id} className={`group flex min-h-[52px] items-center gap-1.5 px-2 ${index ? "border-t border-border/75" : ""}`}>
+                      <div
+                        key={item.id}
+                        className={`group flex min-h-[52px] items-center gap-1.5 px-2 ${index ? "border-t border-border/75" : ""}`}
+                      >
                         <div className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5">
                           <span className="min-w-0 flex-1 text-left text-[13px] font-semibold">
                             <span className="block truncate">{item.name}</span>
                             <span className="flex flex-wrap items-center gap-1">
                               {price?.priceCents ? <PriceTag price={price} quantity={item.quantity} /> : null}
                               {inStock && inStock.quantity > 0 && (
-                                <span className="rounded bg-[#f8e2de] px-1 py-0.5 text-[8px] font-bold text-[#9b3f38]">EN CASA · {inStock.quantity}</span>
+                                <span className="rounded bg-[#f8e2de] px-1 py-0.5 text-[8px] font-bold text-[#9b3f38]">
+                                  EN CASA · {inStock.quantity}
+                                </span>
                               )}
                               {overbuy && inStock && (
                                 <button
@@ -433,20 +489,36 @@ export function Prepare(props: {
                                 </button>
                               )}
                               {item.isNew && (
-                                <span className="rounded-full bg-[#efe5dc] px-1.5 py-0.5 text-[8px] font-bold text-[#8f4b2f]">NUEVO</span>
+                                <span className="rounded-full bg-[#efe5dc] px-1.5 py-0.5 text-[8px] font-bold text-[#8f4b2f]">
+                                  NUEVO
+                                </span>
                               )}
                             </span>
                           </span>
                           <div className="max-w-[7.2rem] shrink">
-                            <CategorySelect value={item.category} onChange={(category) => props.changeCategory(item, category)} label={`Cambiar categoría de ${item.name}`} />
+                            <CategorySelect
+                              value={item.category}
+                              onChange={(category) => props.changeCategory(item, category)}
+                              label={`Cambiar categoría de ${item.name}`}
+                            />
                           </div>
                         </div>
                         <Stepper
                           value={item.quantity}
                           label={item.name}
                           minusDisabled={item.quantity <= 1}
-                          onMinus={() => props.updateItem(item.id, (entry) => ({ ...entry, quantity: Math.max(1, entry.quantity - 1) }))}
-                          onPlus={() => props.updateItem(item.id, (entry) => ({ ...entry, quantity: Math.min(99, entry.quantity + 1) }))}
+                          onMinus={() =>
+                            props.updateItem(item.id, (entry) => ({
+                              ...entry,
+                              quantity: Math.max(1, entry.quantity - 1),
+                            }))
+                          }
+                          onPlus={() =>
+                            props.updateItem(item.id, (entry) => ({
+                              ...entry,
+                              quantity: Math.min(99, entry.quantity + 1),
+                            }))
+                          }
                         />
                         <button
                           type="button"
@@ -489,7 +561,9 @@ export function StoreList(props: {
   const [saving, setSaving] = useState(false);
   const [alternativeFor, setAlternativeFor] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
-  const budget = props.items.filter((item) => !item.done).reduce((sum, item) => sum + (priceFor(item, props.prices)?.priceCents ?? 0) * item.quantity, 0);
+  const budget = props.items
+    .filter((item) => !item.done)
+    .reduce((sum, item) => sum + (priceFor(item, props.prices)?.priceCents ?? 0) * item.quantity, 0);
 
   useEffect(() => {
     if (!confirmClear) return;
@@ -501,7 +575,9 @@ export function StoreList(props: {
     <>
       <div className="mb-3 flex items-center justify-end gap-2">
         {budget > 0 && (
-          <span className="mr-auto rounded-xl bg-[#eaf3eb] px-3 py-2 text-[10px] font-bold text-primary dark:bg-secondary">Presupuesto · {formatCents(budget)}</span>
+          <span className="mr-auto rounded-xl bg-[#eaf3eb] px-3 py-2 text-[10px] font-bold text-primary dark:bg-secondary">
+            Presupuesto · {formatCents(budget)}
+          </span>
         )}
         <button
           type="button"
@@ -548,7 +624,11 @@ export function StoreList(props: {
                       product.category === item.category &&
                       product.quantity > 0 &&
                       normalize(product.name) !== normalize(item.name) &&
-                      !props.rejected.some((rejected) => rejected.productId === product.id && normalize(rejected.requestedName) === normalize(item.name)),
+                      !props.rejected.some(
+                        (rejected) =>
+                          rejected.productId === product.id &&
+                          normalize(rejected.requestedName) === normalize(item.name),
+                      ),
                   );
                   const toggle = () => props.updateItem(item.id, (entry) => ({ ...entry, done: !entry.done }));
                   return (
@@ -590,8 +670,18 @@ export function StoreList(props: {
                           value={item.quantity}
                           label={`unidades compradas de ${item.name}`}
                           minusDisabled={item.quantity <= 1}
-                          onMinus={() => props.updateItem(item.id, (entry) => ({ ...entry, quantity: Math.max(1, entry.quantity - 1) }))}
-                          onPlus={() => props.updateItem(item.id, (entry) => ({ ...entry, quantity: Math.min(99, entry.quantity + 1) }))}
+                          onMinus={() =>
+                            props.updateItem(item.id, (entry) => ({
+                              ...entry,
+                              quantity: Math.max(1, entry.quantity - 1),
+                            }))
+                          }
+                          onPlus={() =>
+                            props.updateItem(item.id, (entry) => ({
+                              ...entry,
+                              quantity: Math.min(99, entry.quantity + 1),
+                            }))
+                          }
                         />
                         <button
                           type="button"
@@ -660,7 +750,10 @@ export function StoreList(props: {
           }}
           className="mt-5 h-12 w-full rounded-2xl text-sm shadow-[0_10px_24px_rgba(41,91,63,.16)]"
         >
-          <PackageCheck className="size-4" /> {saving ? "Actualizando almacén…" : `Guardar ${props.completed} ${props.completed === 1 ? "unidad" : "unidades"} en el almacén`}
+          <PackageCheck className="size-4" />{" "}
+          {saving
+            ? "Actualizando almacén…"
+            : `Guardar ${props.completed} ${props.completed === 1 ? "unidad" : "unidades"} en el almacén`}
         </Button>
       )}
     </>

@@ -1,5 +1,15 @@
 import { Archive, Bell, Dog, House, LoaderCircle, PackageCheck, ReceiptText, ShoppingBasket, X } from "lucide-react";
-import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
+import {
+  lazy,
+  startTransition,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type TouchEvent,
+} from "react";
 import { ApiError, type CestaApi } from "../data/api";
 import type { DogReminder, ListItem, PriceMeta, PriceRef, Product } from "../data/types";
 import type { Overview, Prediction } from "../domain/autocesta";
@@ -30,11 +40,14 @@ import { Menu } from "../views/Menu";
 import { Prepare, PurchaseShell, StoreList } from "../views/Purchase";
 import { Stock } from "../views/Stock";
 import { Toast, useToast } from "../ui/Toast";
+import { LOAD_FAILED, SAVE_FAILED, logError, notifyError, reportError, setErrorNotifier } from "../lib/errors";
 
 const DogView = lazy(() => import("../views/Dog").then((module) => ({ default: module.DogView })));
 const TicketsView = lazy(() => import("../views/Tickets").then((module) => ({ default: module.TicketsView })));
 const RecipesView = lazy(() => import("../views/Recipes").then((module) => ({ default: module.RecipesView })));
-const QuickInventory = lazy(() => import("../views/QuickInventory").then((module) => ({ default: module.QuickInventory })));
+const QuickInventory = lazy(() =>
+  import("../views/QuickInventory").then((module) => ({ default: module.QuickInventory })),
+);
 
 export type View = "home" | "purchase" | "stock" | "dog" | "tickets" | "recipes" | "inventory-quick";
 type ScannerTarget = "shopping" | "checklist" | "stock";
@@ -74,7 +87,12 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
   const [dogAlert, setDogAlert] = useState<DogReminder | null>(null);
   const [reminders, setReminders] = useState<DogReminder[]>([]);
   const [prices, setPrices] = useState<PriceRef[]>([]);
-  const [priceMeta, setPriceMeta] = useState<PriceMeta>({ postalCode: "", lastAttemptedAt: null, lastSuccessfulAt: null, updatedCount: 0 });
+  const [priceMeta, setPriceMeta] = useState<PriceMeta>({
+    postalCode: "",
+    lastAttemptedAt: null,
+    lastSuccessfulAt: null,
+    updatedCount: 0,
+  });
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [scanner, setScanner] = useState<ScannerTarget | null>(null);
   const [expiryItems, setExpiryItems] = useState<ExpiryItem[]>([]);
@@ -83,6 +101,8 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
   const [rejected, setRejected] = useState<{ requestedName: string; productId: string }[]>([]);
   const admin = useAdmin(householdId);
   const toast = useToast();
+  const showToast = toast.show;
+  useEffect(() => setErrorNotifier((message) => showToast(message)), [showToast]);
   const inputRef = useRef<HTMLInputElement>(null);
   const productsRef = useRef<Product[]>([]);
   productsRef.current = products;
@@ -118,8 +138,9 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
         setShopping(saved.shopping);
         setChecklist(saved.checklist);
       }
-    } catch {
+    } catch (error) {
       dirty.current = true;
+      reportError(error, "guardar listas", "Sin conexión: la lista se guardará en cuanto vuelva.");
     }
   }, [api]);
 
@@ -134,8 +155,9 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
         setChecklist(lists.checklist);
       }
       loaded.current = true;
-    } catch {
+    } catch (error) {
       loaded.current = true;
+      reportError(error, "cargar listas", LOAD_FAILED);
     }
   }, [api, pushLists]);
 
@@ -157,8 +179,9 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
   const refreshOverview = useCallback(async () => {
     try {
       setOverview(await api.overview(shoppingRef.current));
-    } catch {
+    } catch (error) {
       // Se reintenta en el siguiente refresco.
+      reportError(error, "cargar resumen", LOAD_FAILED);
     }
   }, [api]);
 
@@ -166,8 +189,9 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
     try {
       const next = await api.products();
       startTransition(() => setProducts(next));
-    } catch {
+    } catch (error) {
       // Se reintenta en el siguiente refresco.
+      reportError(error, "cargar productos", LOAD_FAILED);
     }
     await refreshOverview();
   }, [api, refreshOverview]);
@@ -186,21 +210,27 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
   }, [pullLists, refreshProducts]);
 
   useEffect(() => {
-    const fadeTimer = window.setTimeout(() => {
-      setSplashFading(true);
-      window.setTimeout(() => setSplash(false), 220);
-    }, ready ? 0 : 1400);
+    const fadeTimer = window.setTimeout(
+      () => {
+        setSplashFading(true);
+        window.setTimeout(() => setSplash(false), 220);
+      },
+      ready ? 0 : 1400,
+    );
     return () => window.clearTimeout(fadeTimer);
   }, [ready]);
 
   useEffect(() => {
     if (!ready) return;
     const timer = window.setTimeout(() => {
-      api.reminders().then(setReminders).catch(() => undefined);
-      refreshPrices().catch(() => undefined);
-      api.insights().then(setPredictions).catch(() => undefined);
-      api.rejectedSubstitutions().then(setRejected).catch(() => undefined);
-      api.household().then((household) => setPetName(household.petName || "Mascota")).catch(() => undefined);
+      api.reminders().then(setReminders).catch(notifyError("cargar avisos", LOAD_FAILED));
+      refreshPrices().catch(notifyError("cargar precios", LOAD_FAILED));
+      api.insights().then(setPredictions).catch(notifyError("cargar previsiones", LOAD_FAILED));
+      api.rejectedSubstitutions().then(setRejected).catch(notifyError("cargar sustituciones", LOAD_FAILED));
+      api
+        .household()
+        .then((household) => setPetName(household.petName || "Mascota"))
+        .catch(notifyError("cargar hogar", LOAD_FAILED));
     }, 450);
     return () => window.clearTimeout(timer);
   }, [ready, api, refreshPrices]);
@@ -240,8 +270,9 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
         if (tables.has("lists")) void pullLists();
         if (tables.has("products") || tables.has("inventory_lots") || tables.has("tickets") || tables.has("activity"))
           void refreshProducts();
-        if (tables.has("dog_reminders")) api.reminders().then(setReminders).catch(() => undefined);
-        if (tables.has("prices")) refreshPrices().catch(() => undefined);
+        if (tables.has("dog_reminders"))
+          api.reminders().then(setReminders).catch(notifyError("cargar avisos", LOAD_FAILED));
+        if (tables.has("prices")) refreshPrices().catch(notifyError("cargar precios", LOAD_FAILED));
       }, 400);
     });
     const onVisible = () => {
@@ -292,7 +323,10 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
             )
             .catch(() => {
               try {
-                new Notification(`Aviso de ${petName}`, { body: reminder.title, tag: `cesta-dog-${reminder.id}-${today}` });
+                new Notification(`Aviso de ${petName}`, {
+                  body: reminder.title,
+                  tag: `cesta-dog-${reminder.id}-${today}`,
+                });
               } catch {
                 // iOS solo permite notificaciones desde el service worker.
               }
@@ -315,8 +349,12 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
     if (!ready || view !== "purchase" || stage !== "store") return;
     const ping = () =>
       void api
-        .activity(device, deviceName(), `${pendingInStore} ${pendingInStore === 1 ? "producto pendiente" : "productos pendientes"}`)
-        .catch(() => undefined);
+        .activity(
+          device,
+          deviceName(),
+          `${pendingInStore} ${pendingInStore === 1 ? "producto pendiente" : "productos pendientes"}`,
+        )
+        .catch(logError("presencia en tienda"));
     ping();
     const interval = window.setInterval(ping, 25_000);
     return () => window.clearInterval(interval);
@@ -340,7 +378,8 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
   const duplicates = useMemo(() => duplicateCount(shopping), [shopping]);
 
   // ---- Acciones ----
-  const remember = (name: string, category: Category) => setMemory((current) => ({ ...current, [normalize(name)]: category }));
+  const remember = (name: string, category: Category) =>
+    setMemory((current) => ({ ...current, [normalize(name)]: category }));
 
   function addNamed(name: string) {
     if (!name.trim()) return;
@@ -355,7 +394,9 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
       setView("purchase");
       return;
     }
-    void api.startPurchase(shopping.map(({ name, quantity }) => ({ name, quantity }))).catch(() => undefined);
+    void api
+      .startPurchase(shopping.map(({ name, quantity }) => ({ name, quantity })))
+      .catch(notifyError("iniciar compra", SAVE_FAILED));
     setChecklist((items) => moveToChecklist(shopping, items));
     setShopping([]);
     setStage("store");
@@ -377,9 +418,12 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
       setSavedCount(bought.length);
       setProducts(result.products);
       void refreshOverview();
-      api.insights().then(setPredictions).catch(() => undefined);
+      api.insights().then(setPredictions).catch(notifyError("cargar previsiones", LOAD_FAILED));
       const perishable = result.stored.filter((item) => PERISHABLE.includes(item.category));
-      if (perishable.length) setExpiryItems(perishable.map((item) => ({ productId: item.productId, name: item.name, quantity: item.quantity })));
+      if (perishable.length)
+        setExpiryItems(
+          perishable.map((item) => ({ productId: item.productId, name: item.name, quantity: item.quantity })),
+        );
     } catch (error) {
       toast.show(errorMessage(error, "No se ha podido guardar en el almacén. Inténtalo de nuevo."));
     }
@@ -395,8 +439,14 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
     );
     setProducts(productsRef.current);
     const previous = writes.current.get(id) ?? Promise.resolve();
-    const write = previous.then(() => api.updateProduct(id, { currentStock: next.quantity, minimumStock: next.minimum }));
-    writes.current.set(id, write.catch(() => undefined));
+    const write = previous.then(() =>
+      api.updateProduct(id, { currentStock: next.quantity, minimumStock: next.minimum }),
+    );
+    // La cadena sigue aunque falle una escritura; el error se muestra justo debajo.
+    writes.current.set(
+      id,
+      write.catch(() => undefined),
+    );
     try {
       await write;
       void refreshOverview();
@@ -408,9 +458,13 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
 
   async function changeStockCategory(item: StockLike, category: Category) {
     setProducts((items) => items.map((product) => (product.id === item.id ? { ...product, category } : product)));
-    setShopping((items) => items.map((entry) => (normalize(entry.name) === normalize(item.name) ? { ...entry, category } : entry)));
+    setShopping((items) =>
+      items.map((entry) => (normalize(entry.name) === normalize(item.name) ? { ...entry, category } : entry)),
+    );
     remember(item.name, category);
-    await api.updateProduct(item.id, { category }).catch((error) => toast.show(errorMessage(error, "No se ha podido cambiar la categoría.")));
+    await api
+      .updateProduct(item.id, { category })
+      .catch((error) => toast.show(errorMessage(error, "No se ha podido cambiar la categoría.")));
   }
 
   async function removeStock(item: StockLike): Promise<boolean> {
@@ -418,7 +472,8 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
       await api.deleteProduct(item.id);
       setProducts((items) => items.filter((product) => product.id !== item.id));
       return true;
-    } catch {
+    } catch (error) {
+      reportError(error, "borrar producto");
       return false;
     }
   }
@@ -463,7 +518,7 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
     setView("purchase");
   }
 
-  async function useScanned(product: BarcodeProduct) {
+  async function addScannedProduct(product: BarcodeProduct) {
     const target = scanner;
     setScanner(null);
     if (target === "shopping") return addNamed(product.name);
@@ -516,8 +571,12 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
     setPullStart(null);
     if (pull >= 58) {
       setPull(88);
-      await Promise.all([pullLists(), refreshProducts(), refreshPrices().catch(() => undefined)]);
-      api.reminders().then(setReminders).catch(() => undefined);
+      await Promise.all([
+        pullLists(),
+        refreshProducts(),
+        refreshPrices().catch(notifyError("cargar precios", LOAD_FAILED)),
+      ]);
+      api.reminders().then(setReminders).catch(notifyError("cargar avisos", LOAD_FAILED));
       window.dispatchEvent(new Event("cesta-inventory-refresh"));
     }
     setPull(0);
@@ -525,10 +584,23 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
 
   const otherShoppers = overview?.activity.filter((item) => item.deviceId !== device) ?? [];
   const sectionTitle =
-    view === "stock" ? "Necesidades" : view === "dog" ? "Mascota" : view === "tickets" ? "Tickets" : view === "recipes" ? "Recetas" : null;
+    view === "stock"
+      ? "Necesidades"
+      : view === "dog"
+        ? "Mascota"
+        : view === "tickets"
+          ? "Tickets"
+          : view === "recipes"
+            ? "Recetas"
+            : null;
 
   return (
-    <main className="min-h-[100dvh] bg-background text-foreground" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={() => void onTouchEnd()}>
+    <main
+      className="min-h-[100dvh] bg-background text-foreground"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={() => void onTouchEnd()}
+    >
       {splash && (
         <div
           className={`fixed inset-0 z-[100] flex min-h-[100dvh] flex-col items-center justify-center bg-[#f6f8f3] transition-opacity duration-300 dark:bg-background ${splashFading ? "opacity-0" : "opacity-100"}`}
@@ -545,7 +617,10 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
       )}
 
       {/* Franja opaca detrás de la cabecera: el contenido no se transparenta al desplazarse. */}
-      <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 top-0 z-[19] h-[calc(3.6rem+env(safe-area-inset-top))] border-b border-border/60 bg-background" />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-x-0 top-0 z-[19] h-[calc(3.6rem+env(safe-area-inset-top))] border-b border-border/60 bg-background"
+      />
       <button
         type="button"
         onClick={() => setMenuOpen(true)}
@@ -637,8 +712,14 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
 
         {savedCount > 0 && view === "purchase" && (
           <output className="mb-5 flex items-center gap-3 rounded-[18px] border border-border bg-card p-3.5 text-sm font-semibold shadow-[0_8px_26px_rgba(32,47,38,.06)]">
-            <PackageCheck className="size-5 text-primary" /> {savedCount === 1 ? "Producto guardado" : `${savedCount} productos guardados`} en el almacén
-            <button type="button" className="ml-auto text-muted-foreground" onClick={() => setSavedCount(0)} aria-label="Cerrar">
+            <PackageCheck className="size-5 text-primary" />{" "}
+            {savedCount === 1 ? "Producto guardado" : `${savedCount} productos guardados`} en el almacén
+            <button
+              type="button"
+              className="ml-auto text-muted-foreground"
+              onClick={() => setSavedCount(0)}
+              aria-label="Cerrar"
+            >
               <X className="size-4" />
             </button>
           </output>
@@ -653,7 +734,9 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
               setOverview((current) => current && { ...current, mode });
               void runAndRefresh(() => api.setMode(mode), "No se ha podido cambiar el modo.");
             }}
-            onAnswer={(productId, answer) => void runAndRefresh(() => api.answer(productId, answer), "No se ha podido guardar la respuesta.")}
+            onAnswer={(productId, answer) =>
+              void runAndRefresh(() => api.answer(productId, answer), "No se ha podido guardar la respuesta.")
+            }
             onOpenExpiring={() => setView("stock")}
             onOpenStock={() => setView("stock")}
             onOpenPurchase={() => {
@@ -678,7 +761,9 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
                 stock={stock}
                 inputRef={inputRef}
                 addNamedItem={addNamed}
-                updateItem={(id, change) => setShopping((items) => items.map((item) => (item.id === id ? change(item) : item)))}
+                updateItem={(id, change) =>
+                  setShopping((items) => items.map((item) => (item.id === id ? change(item) : item)))
+                }
                 changeCategory={(item, category) => {
                   setShopping((items) => items.map((entry) => (entry.id === item.id ? { ...entry, category } : entry)));
                   remember(item.name, category);
@@ -699,15 +784,21 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
                 products={products}
                 openScanner={() => setScanner("shopping")}
                 onAvoided={() => {
-                  void api.avoided().catch(() => undefined);
+                  void api.avoided().catch(notifyError("registrar compra evitada", SAVE_FAILED));
                   setOverview(
-                    (current) => current && { ...current, weekly: { ...current.weekly, avoidedPurchases: current.weekly.avoidedPurchases + 1 } },
+                    (current) =>
+                      current && {
+                        ...current,
+                        weekly: { ...current.weekly, avoidedPurchases: current.weekly.avoidedPurchases + 1 },
+                      },
                   );
                 }}
                 suggestions={overview?.mode === "autocesta" ? overview.suggestions : []}
                 pendingSuggestions={overview?.mode === "autocesta" ? overview.pendingSuggestions : []}
                 acceptSuggestions={acceptSuggestions}
-                suppressSuggestion={(productId) => void runAndRefresh(() => api.suppress(productId), "No se ha podido guardar.")}
+                suppressSuggestion={(productId) =>
+                  void runAndRefresh(() => api.suppress(productId), "No se ha podido guardar.")
+                }
                 onPlanned={(productId) => {
                   setProducts((items) =>
                     items.map((item) => (item.id === productId ? { ...item, plannedUntil: todayIso() } : item)),
@@ -721,7 +812,9 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
                 items={checklist}
                 grouped={groupedChecklist}
                 completed={completedUnits}
-                updateItem={(id, change) => setChecklist((items) => items.map((item) => (item.id === id ? change(item) : item)))}
+                updateItem={(id, change) =>
+                  setChecklist((items) => items.map((item) => (item.id === id ? change(item) : item)))
+                }
                 removeItem={(id) => {
                   const removed = checklist.find((item) => item.id === id);
                   setChecklist((items) => items.filter((item) => item.id !== id));
@@ -739,7 +832,9 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
                 openScanner={() => setScanner("checklist")}
                 onSubstitution={(requestedName, productId, decision) => {
                   if (decision === "reject") setRejected((items) => [...items, { requestedName, productId }]);
-                  void api.substitution(requestedName, productId, decision).catch(() => undefined);
+                  void api
+                    .substitution(requestedName, productId, decision)
+                    .catch(notifyError("guardar sustitución", SAVE_FAILED));
                 }}
               />
             }
@@ -771,7 +866,8 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
                   await refreshProducts();
                   window.dispatchEvent(new Event("cesta-inventory-refresh"));
                   return true;
-                } catch {
+                } catch (error) {
+                  reportError(error, "cocinar receta");
                   return false;
                 }
               }}
@@ -850,7 +946,13 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
           />
         )}
 
-        {scanner && <BarcodeScanner api={api} onClose={() => setScanner(null)} onUse={(product) => void useScanned(product)} />}
+        {scanner && (
+          <BarcodeScanner
+            api={api}
+            onClose={() => setScanner(null)}
+            onUse={(product) => void addScannedProduct(product)}
+          />
+        )}
         {expiryItems.length > 0 && (
           <ExpiryDialog
             api={api}
@@ -869,7 +971,12 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
             className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-[520px] bg-gradient-to-t from-background from-75% to-transparent px-2.5 pb-[calc(.5rem+env(safe-area-inset-bottom))] pt-5 sm:px-3"
           >
             <div className="grid grid-cols-5 gap-0.5 rounded-[20px] border border-border bg-card/95 p-1 shadow-[0_12px_36px_rgba(32,47,38,.11)] backdrop-blur">
-              <NavButton active={view === "home"} onClick={() => setView("home")} icon={<House className="size-4" />} label="Inicio" />
+              <NavButton
+                active={view === "home"}
+                onClick={() => setView("home")}
+                icon={<House className="size-4" />}
+                label="Inicio"
+              />
               <NavButton
                 active={view === "purchase"}
                 onClick={() => setView("purchase")}
@@ -885,8 +992,18 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
                 badge={needs.length}
                 small
               />
-              <NavButton active={view === "dog"} onClick={() => setView("dog")} icon={<Dog className="size-4" />} label={petName} />
-              <NavButton active={view === "tickets"} onClick={() => setView("tickets")} icon={<ReceiptText className="size-4" />} label="Tickets" />
+              <NavButton
+                active={view === "dog"}
+                onClick={() => setView("dog")}
+                icon={<Dog className="size-4" />}
+                label={petName}
+              />
+              <NavButton
+                active={view === "tickets"}
+                onClick={() => setView("tickets")}
+                icon={<ReceiptText className="size-4" />}
+                label="Tickets"
+              />
             </div>
           </nav>
         )}
@@ -934,7 +1051,15 @@ function NavButton({
 
 function MenuIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="size-4.5" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      className="size-4.5"
+      aria-hidden="true"
+    >
       <path d="M4 5h16M4 12h16M4 19h16" />
     </svg>
   );

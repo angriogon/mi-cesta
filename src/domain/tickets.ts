@@ -28,11 +28,13 @@ export function parseTicketText(text: string, now = new Date()): ParsedTicket {
     .filter(Boolean);
 
   const totalLine =
-    [...lines].reverse().find((line) => /\b(total|importe|a pagar)\b/i.test(line) && !/subtotal/i.test(line) && AMOUNT.test(line)) ??
+    [...lines]
+      .reverse()
+      .find((line) => /\b(total|importe|a pagar)\b/i.test(line) && !/subtotal/i.test(line) && AMOUNT.test(line)) ??
     [...lines].reverse().find((line) => AMOUNT.test(line));
   const totalMatch = totalLine?.match(AMOUNT);
 
-  const dateMatch = text.match(/\b(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{2,4})\b/);
+  const dateMatch = text.match(/\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})\b/);
   let purchasedAt = todayIso(now);
   if (dateMatch) {
     const year = dateMatch[3].length === 2 ? `20${dateMatch[3]}` : dateMatch[3];
@@ -79,7 +81,11 @@ export function parseTicketText(text: string, now = new Date()): ParsedTicket {
     const weight = description.match(/^(\d+[.,]\d+)\s*kg\b/i);
     if (weight) {
       if (pendingName) {
-        items.push({ description: pendingName, quantity: Math.round(parseAmount(weight[1]) * 1000) / 1000, lineTotalCents });
+        items.push({
+          description: pendingName,
+          quantity: Math.round(parseAmount(weight[1]) * 1000) / 1000,
+          lineTotalCents,
+        });
       }
       pendingName = null;
       continue;
@@ -109,13 +115,16 @@ export function parseTicketText(text: string, now = new Date()): ParsedTicket {
 /** Señala posibles duplicados y precios muy distintos a los habituales antes de guardar. */
 export function reviewTicketLines(items: TicketItem[], prices: Pick<PriceRef, "productName" | "priceCents">[]) {
   const duplicates = items.filter(
-    (item, index) => items.findIndex((other) => cleanProductName(other.description) === cleanProductName(item.description)) !== index,
+    (item, index) =>
+      items.findIndex((other) => cleanProductName(other.description) === cleanProductName(item.description)) !== index,
   );
   const unexpected = items.flatMap((item) => {
     const reference = prices.find((price) => similarNames(price.productName, item.description));
     if (!reference?.priceCents || !item.quantity) return [];
     const unit = item.lineTotalCents / item.quantity;
-    return Math.abs(unit - reference.priceCents) / reference.priceCents >= 0.6 ? [{ name: item.description, current: unit }] : [];
+    return Math.abs(unit - reference.priceCents) / reference.priceCents >= 0.6
+      ? [{ name: item.description, current: unit }]
+      : [];
   });
   return { duplicates, unexpected };
 }

@@ -22,10 +22,12 @@ const FAMILIES: Record<string, string[]> = {
 function family(value: string): string {
   const clean = cleanProductName(value);
   for (const [key, members] of Object.entries(FAMILIES)) {
-    if ([key, ...members].some((member) => {
-      const m = cleanProductName(member);
-      return clean === m || clean.includes(m) || m.includes(clean);
-    }))
+    if (
+      [key, ...members].some((member) => {
+        const m = cleanProductName(member);
+        return clean === m || clean.includes(m) || m.includes(clean);
+      })
+    )
       return key;
   }
   return clean;
@@ -58,7 +60,9 @@ export function nameScore(line: string, productName: string): number {
   const ta = tokens(line);
   const tb = new Set(tokens(productName));
   if (!ta.length || !tb.size) return 0;
-  const shared = ta.filter((token) => tb.has(token) || [...tb].some((other) => other.startsWith(token) || token.startsWith(other)));
+  const shared = ta.filter(
+    (token) => tb.has(token) || [...tb].some((other) => other.startsWith(token) || token.startsWith(other)),
+  );
   return shared.length / Math.max(ta.length, tb.size);
 }
 

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiError, type CestaApi } from "../data/api";
 import type { BarcodeProduct } from "../data/types";
 import { Button, Input } from "../ui/primitives";
+import { logError, reportError } from "../lib/errors";
 
 type Controls = { stop: () => void };
 
@@ -92,7 +93,8 @@ export function BarcodeScanner({
     try {
       await track.applyConstraints({ advanced: [{ torch: !torch } as MediaTrackConstraintSet] });
       setTorch(!torch);
-    } catch {
+    } catch (error) {
+      reportError(error, "linterna");
       setTorchAvailable(false);
     }
   }
@@ -115,9 +117,15 @@ export function BarcodeScanner({
           BarcodeFormat.UPC_E,
           BarcodeFormat.CODE_128,
         ]);
-        const reader = new BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 70, delayBetweenScanSuccess: 900 });
+        const reader = new BrowserMultiFormatReader(hints, {
+          delayBetweenScanAttempts: 70,
+          delayBetweenScanSuccess: 900,
+        });
         const started = await reader.decodeFromConstraints(
-          { video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false },
+          {
+            video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+            audio: false,
+          },
           video.current,
           (result) => {
             const code = result?.getText().replace(/\D/g, "") ?? "";
@@ -130,12 +138,17 @@ export function BarcodeScanner({
         }
         controls.current = started;
         const track = (video.current.srcObject as MediaStream | null)?.getVideoTracks()[0];
-        const capabilities = track?.getCapabilities?.() as (MediaTrackCapabilities & { torch?: boolean; focusMode?: string[]; zoom?: { max: number } }) | undefined;
+        // Linterna, enfoque y zoom aún no están en los tipos DOM de TypeScript 7; el lint usa TypeScript 6, que sí los trae.
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+        const capabilities = track?.getCapabilities?.() as
+          (MediaTrackCapabilities & { torch?: boolean; focusMode?: string[]; zoom?: { max: number } }) | undefined;
         setTorchAvailable(Boolean(capabilities?.torch));
         const advanced: MediaTrackConstraintSet[] = [];
-        if (capabilities?.focusMode?.includes("continuous")) advanced.push({ focusMode: "continuous" } as MediaTrackConstraintSet);
-        if (capabilities?.zoom && capabilities.zoom.max > 1) advanced.push({ zoom: Math.min(1.5, capabilities.zoom.max) } as MediaTrackConstraintSet);
-        if (advanced.length) track?.applyConstraints({ advanced }).catch(() => undefined);
+        if (capabilities?.focusMode?.includes("continuous"))
+          advanced.push({ focusMode: "continuous" } as MediaTrackConstraintSet);
+        if (capabilities?.zoom && capabilities.zoom.max > 1)
+          advanced.push({ zoom: Math.min(1.5, capabilities.zoom.max) } as MediaTrackConstraintSet);
+        if (advanced.length) track?.applyConstraints({ advanced }).catch(logError("ajustar cámara"));
       } catch (error) {
         if (!cancelled)
           setStatus(
@@ -160,13 +173,23 @@ export function BarcodeScanner({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[80] overflow-y-auto bg-[#102018]/90 px-4 py-[calc(1rem+env(safe-area-inset-top))] backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Escanear producto">
+    <div
+      className="fixed inset-0 z-[80] overflow-y-auto bg-[#102018]/90 px-4 py-[calc(1rem+env(safe-area-inset-top))] backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Escanear producto"
+    >
       <section className="mx-auto max-w-[420px] overflow-hidden rounded-[24px] bg-background shadow-2xl">
         <div className="flex items-center justify-between p-3">
           <div className="flex items-center gap-2 text-sm font-bold">
             <ScanLine className="size-4 text-primary" /> Escanear producto
           </div>
-          <button type="button" onClick={onClose} aria-label="Cerrar escáner" className="flex size-10 items-center justify-center rounded-xl bg-card">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar escáner"
+            className="flex size-10 items-center justify-center rounded-xl bg-card"
+          >
             <X className="size-4" />
           </button>
         </div>
@@ -201,9 +224,17 @@ export function BarcodeScanner({
                 )}
                 <div className="min-w-0">
                   <h2 className="text-base font-bold">{product.name}</h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{[product.brand, product.quantity].filter(Boolean).join(" · ")}</p>
-                  {product.source && <p className="mt-1 text-[10px] font-semibold text-muted-foreground">{product.source}</p>}
-                  {product.allergens.length > 0 && <p className="mt-1 text-[11px] font-bold text-[#9b3f38]">Alérgenos: {product.allergens.join(", ")}</p>}
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {[product.brand, product.quantity].filter(Boolean).join(" · ")}
+                  </p>
+                  {product.source && (
+                    <p className="mt-1 text-[10px] font-semibold text-muted-foreground">{product.source}</p>
+                  )}
+                  {product.allergens.length > 0 && (
+                    <p className="mt-1 text-[11px] font-bold text-[#9b3f38]">
+                      Alérgenos: {product.allergens.join(", ")}
+                    </p>
+                  )}
                 </div>
               </div>
               {Object.values(product.nutrients).some(Boolean) && (
@@ -246,8 +277,14 @@ export function BarcodeScanner({
                 {status}
               </p>
               {unknownCode ? (
-                <form onSubmit={saveUnknown} className="mt-3 rounded-xl border border-[#ead9c8] bg-[#fbf6ef] p-3 dark:border-border dark:bg-card">
-                  <label htmlFor="unknown-product-name" className="text-[11px] font-bold text-[#825d38] dark:text-foreground">
+                <form
+                  onSubmit={saveUnknown}
+                  className="mt-3 rounded-xl border border-[#ead9c8] bg-[#fbf6ef] p-3 dark:border-border dark:bg-card"
+                >
+                  <label
+                    htmlFor="unknown-product-name"
+                    className="text-[11px] font-bold text-[#825d38] dark:text-foreground"
+                  >
                     ¿Qué producto es? · {unknownCode}
                   </label>
                   <Input
@@ -255,10 +292,16 @@ export function BarcodeScanner({
                     value={unknownName}
                     onChange={(event) => setUnknownName(event.target.value)}
                     placeholder="Nombre del producto"
+                    // Al no reconocer el código, el siguiente paso es escribir el nombre: abrir el teclado ahorra un toque.
+                    // eslint-disable-next-line jsx-a11y/no-autofocus
                     autoFocus
                     className="mt-1.5 h-11 rounded-xl bg-white text-sm dark:bg-muted"
                   />
-                  <Button type="submit" disabled={!unknownName.trim() || busy} className="mt-2 h-11 w-full rounded-xl text-xs">
+                  <Button
+                    type="submit"
+                    disabled={!unknownName.trim() || busy}
+                    className="mt-2 h-11 w-full rounded-xl text-xs"
+                  >
                     Guardar y usar
                   </Button>
                   <Button variant="ghost" onClick={reset} className="mt-1 h-10 w-full rounded-xl text-xs">

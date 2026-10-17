@@ -23,8 +23,14 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean
     return (
       <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-background px-6 text-center text-foreground">
         <h1 className="text-lg font-bold">Algo no ha ido bien</h1>
-        <p className="mt-2 max-w-72 text-sm leading-6 text-muted-foreground">Tus datos están a salvo. Vuelve a abrir Cesta para continuar.</p>
-        <button type="button" onClick={() => window.location.reload()} className="mt-5 h-11 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground">
+        <p className="mt-2 max-w-72 text-sm leading-6 text-muted-foreground">
+          Tus datos están a salvo. Vuelve a abrir Cesta para continuar.
+        </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-5 h-11 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground"
+        >
           Volver a abrir
         </button>
       </div>

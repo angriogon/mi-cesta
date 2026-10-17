@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { CestaApi } from "../data/api";
 import { addDaysIso, todayIso } from "../lib/text";
+import { reportError } from "../lib/errors";
 
 export interface ExpiryItem {
   productId: string;
@@ -21,24 +22,37 @@ export function ExpiryDialog({ api, items, onClose }: { api: CestaApi; items: Ex
     try {
       await Promise.all(
         items.map((item) =>
-          api.addLot({ productId: item.productId, productName: item.name, quantity: item.quantity, expiryDate: dates[item.productId] || null, state: "closed" }),
+          api.addLot({
+            productId: item.productId,
+            productName: item.name,
+            quantity: item.quantity,
+            expiryDate: dates[item.productId] || null,
+            state: "closed",
+          }),
         ),
       );
       onClose();
-    } catch {
+    } catch (error) {
+      reportError(error, "fechas de caducidad");
       setError("No se han podido guardar las fechas. Inténtalo de nuevo.");
       setSaving(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-[75] overflow-y-auto bg-background/95 px-4 py-[calc(1rem+env(safe-area-inset-top))] backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="expiry-title">
+    <div
+      className="fixed inset-0 z-[75] overflow-y-auto bg-background/95 px-4 py-[calc(1rem+env(safe-area-inset-top))] backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="expiry-title"
+    >
       <section className="mx-auto max-w-[420px] rounded-[22px] border border-border bg-card p-4">
         <h2 id="expiry-title" className="text-base font-bold">
           Caducidades de la compra
         </h2>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          Añade las fechas que conozcas. Si las dejas vacías, Cesta estimará una fecha y podrás corregirla en Necesidades.
+          Añade las fechas que conozcas. Si las dejas vacías, Cesta estimará una fecha y podrás corregirla en
+          Necesidades.
         </p>
         <div className="mt-4 space-y-2">
           {items.map((item) => (
@@ -62,7 +76,9 @@ export function ExpiryDialog({ api, items, onClose }: { api: CestaApi; items: Ex
             <button
               key={days}
               type="button"
-              onClick={() => setDates(Object.fromEntries(items.map((item) => [item.productId, addDaysIso(today, days)])))}
+              onClick={() =>
+                setDates(Object.fromEntries(items.map((item) => [item.productId, addDaysIso(today, days)])))
+              }
               className="rounded-lg bg-muted px-2 py-1.5 text-[10px] font-bold text-muted-foreground"
             >
               Todo en {days} días
@@ -75,7 +91,12 @@ export function ExpiryDialog({ api, items, onClose }: { api: CestaApi; items: Ex
           </p>
         )}
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => void save()} disabled={saving} className="h-11 rounded-xl border border-border text-xs font-bold">
+          <button
+            type="button"
+            onClick={() => void save()}
+            disabled={saving}
+            className="h-11 rounded-xl border border-border text-xs font-bold"
+          >
             Sin fechas
           </button>
           <button

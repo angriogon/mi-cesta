@@ -1,0 +1,7 @@
+dist
+coverage
+playwright-report
+test-results
+package-lock.json
+src/domain/seed-catalog.json
+src/data/database.types.ts

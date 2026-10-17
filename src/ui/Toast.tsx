@@ -54,7 +54,12 @@ export function Toast({ state, onDismiss }: { state: ToastState | null; onDismis
             {state.action.label}
           </button>
         )}
-        <button type="button" onClick={onDismiss} aria-label="Cerrar aviso" className="flex size-7 shrink-0 items-center justify-center opacity-70">
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Cerrar aviso"
+          className="flex size-7 shrink-0 items-center justify-center opacity-70"
+        >
           <X className="size-3.5" />
         </button>
       </div>

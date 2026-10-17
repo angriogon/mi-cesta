@@ -65,7 +65,9 @@ function SupabaseRoot() {
     void myHouseholds()
       .then((list) => {
         setHouseholds(list);
-        setHouseholdId((current) => (current && list.some((item) => item.id === current) ? current : (list[0]?.id ?? null)));
+        setHouseholdId((current) =>
+          current && list.some((item) => item.id === current) ? current : (list[0]?.id ?? null),
+        );
       })
       .catch(() => setHouseholds([]));
   }, [session]);
@@ -107,7 +109,10 @@ function SupabaseRoot() {
 
 export function Splash() {
   return (
-    <div className="fixed inset-0 z-[100] flex min-h-[100dvh] flex-col items-center justify-center bg-[#f6f8f3] dark:bg-background" aria-label="Iniciando Cesta">
+    <div
+      className="fixed inset-0 z-[100] flex min-h-[100dvh] flex-col items-center justify-center bg-[#f6f8f3] dark:bg-background"
+      aria-label="Iniciando Cesta"
+    >
       <div className="flex size-[76px] items-center justify-center rounded-[24px] bg-primary text-primary-foreground shadow-[0_18px_44px_rgba(41,91,63,.22)]">
         <ShoppingBasket className="size-8" strokeWidth={1.8} />
       </div>
@@ -124,7 +129,9 @@ function Card({ icon, title, text, children }: { icon: ReactNode; title: string;
     <div className="min-h-[100dvh] bg-background px-4 py-[calc(1.5rem+env(safe-area-inset-top))]">
       <div className="mx-auto flex min-h-[80dvh] max-w-[420px] items-center">
         <section className="w-full rounded-[24px] border border-border bg-card p-5 shadow-[0_18px_50px_rgba(32,47,38,.1)]">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground">{icon}</div>
+          <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+            {icon}
+          </div>
           <h1 className="mt-4 text-center text-xl font-bold">{title}</h1>
           <p className="mt-2 text-center text-xs leading-5 text-muted-foreground">{text}</p>
           {children}
@@ -162,9 +169,14 @@ function AuthScreen() {
         const { error: failure } = await auth.signInWithPassword({ email: email.trim(), password });
         if (failure) throw failure;
       } else if (mode === "signup") {
-        const { data, error: failure } = await auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: redirectTo } });
+        const { data, error: failure } = await auth.signUp({
+          email: email.trim(),
+          password,
+          options: { emailRedirectTo: redirectTo },
+        });
         if (failure) throw failure;
-        if (!data.session) setMessage("Te hemos enviado un email para confirmar la cuenta. Ábrelo desde este dispositivo.");
+        if (!data.session)
+          setMessage("Te hemos enviado un email para confirmar la cuenta. Ábrelo desde este dispositivo.");
       } else {
         const { error: failure } = await auth.resetPasswordForEmail(email.trim(), { redirectTo });
         if (failure) throw failure;
@@ -222,7 +234,13 @@ function AuthScreen() {
           </p>
         )}
         <Button type="submit" disabled={busy} className="h-12 w-full rounded-2xl">
-          {busy ? <LoaderCircle className="size-4 animate-spin" /> : mode === "reset" ? <Mail className="size-4" /> : <LogIn className="size-4" />}
+          {busy ? (
+            <LoaderCircle className="size-4 animate-spin" />
+          ) : mode === "reset" ? (
+            <Mail className="size-4" />
+          ) : (
+            <LogIn className="size-4" />
+          )}
           {mode === "login" ? " Entrar" : mode === "signup" ? " Crear cuenta" : " Enviar enlace"}
         </Button>
       </form>
@@ -264,7 +282,11 @@ function NewPasswordScreen({ onDone }: { onDone: () => void }) {
     else onDone();
   }
   return (
-    <Card icon={<LogIn className="size-5" />} title="Elige una contraseña nueva" text="La usarás para entrar y para confirmar acciones importantes.">
+    <Card
+      icon={<LogIn className="size-5" />}
+      title="Elige una contraseña nueva"
+      text="La usarás para entrar y para confirmar acciones importantes."
+    >
       <form onSubmit={submit} className="mt-5 space-y-3">
         <Input
           type="password"
@@ -310,7 +332,11 @@ function HouseholdScreen({ onReady }: { onReady: (id: string) => void }) {
   }
 
   return (
-    <Card icon={<House className="size-5" />} title="Tu hogar" text="Crea un hogar nuevo o únete al de tu familia con su código de invitación.">
+    <Card
+      icon={<House className="size-5" />}
+      title="Tu hogar"
+      text="Crea un hogar nuevo o únete al de tu familia con su código de invitación."
+    >
       {code && (
         <p className="mt-4 rounded-xl bg-[#eaf3eb] px-3 py-2 text-center text-xs font-semibold text-primary">
           Te han invitado a un hogar. Pulsa «Unirme» para entrar.
@@ -327,7 +353,14 @@ function HouseholdScreen({ onReady }: { onReady: (id: string) => void }) {
           Código de invitación
           <Input
             value={code}
-            onChange={(event) => setCode(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8))}
+            onChange={(event) =>
+              setCode(
+                event.target.value
+                  .toUpperCase()
+                  .replace(/[^A-Z0-9]/g, "")
+                  .slice(0, 8),
+              )
+            }
             placeholder="ABC123"
             autoCapitalize="characters"
             className="mt-1.5 h-11 rounded-xl text-center tracking-[.2em]"
@@ -349,7 +382,12 @@ function HouseholdScreen({ onReady }: { onReady: (id: string) => void }) {
       >
         <label className="block text-xs font-bold text-muted-foreground">
           Nombre del hogar
-          <Input value={name} onChange={(event) => setName(event.target.value)} maxLength={50} className="mt-1.5 h-11 rounded-xl" />
+          <Input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            maxLength={50}
+            className="mt-1.5 h-11 rounded-xl"
+          />
         </label>
         <Button type="submit" variant="outline" disabled={busy || !name.trim()} className="h-11 w-full rounded-xl">
           <House className="size-4" /> Crear hogar nuevo
@@ -360,7 +398,11 @@ function HouseholdScreen({ onReady }: { onReady: (id: string) => void }) {
           {error}
         </p>
       )}
-      <button type="button" onClick={() => void supabase().auth.signOut()} className="mt-5 w-full text-center text-xs font-bold text-muted-foreground">
+      <button
+        type="button"
+        onClick={() => void supabase().auth.signOut()}
+        className="mt-5 w-full text-center text-xs font-bold text-muted-foreground"
+      >
         Cerrar sesión
       </button>
     </Card>

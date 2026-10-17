@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { ApiError, type CestaApi } from "../data/api";
 import type { DogItem, DogReminder } from "../data/types";
 import { Button, Input, Stepper } from "../ui/primitives";
+import { reportError } from "../lib/errors";
 
 async function askNotifications(): Promise<NotificationPermission | "unavailable"> {
   if (!("Notification" in window)) return "unavailable";
@@ -15,7 +16,10 @@ async function askNotifications(): Promise<NotificationPermission | "unavailable
 }
 
 function isStandalone(): boolean {
-  return window.matchMedia?.("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return (
+    window.matchMedia?.("(display-mode: standalone)").matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
 }
 
 export function DogView({
@@ -56,7 +60,8 @@ export function DogView({
       setPetName(dog.petName);
       setNameDraft(dog.petName);
       setReminders(list);
-    } catch {
+    } catch (error) {
+      reportError(error, "mascota");
       setStatus("No se han podido cargar todos los datos.");
     } finally {
       setLoading(false);
@@ -104,7 +109,8 @@ export function DogView({
     setStatus(message);
     try {
       await api.updateDogItem(next);
-    } catch {
+    } catch (error) {
+      reportError(error, "mascota");
       setItems((list) => list.map((item) => (item.id === previous.id ? previous : item)));
       setStatus("No se ha podido guardar. Comprueba la conexión.");
     }
@@ -132,7 +138,8 @@ export function DogView({
       setNameDraft(name);
       onPetNameChange(name);
       setStatus("Nombre de la mascota actualizado.");
-    } catch {
+    } catch (error) {
+      reportError(error, "mascota");
       setStatus("No se ha podido actualizar el nombre.");
     }
   }
@@ -171,7 +178,8 @@ export function DogView({
     try {
       publish(await api.deleteReminder(reminder.id));
       setStatus("Aviso eliminado.");
-    } catch {
+    } catch (error) {
+      reportError(error, "mascota");
       setStatus("No se ha podido eliminar el aviso.");
     }
   }
@@ -187,7 +195,8 @@ export function DogView({
       await api.deleteDogItem(item.id);
       setItems((list) => list.filter((entry) => entry.id !== item.id));
       setStatus(`${item.name} eliminado.`);
-    } catch {
+    } catch (error) {
+      reportError(error, "mascota");
       setStatus("No se ha podido eliminar.");
     }
   }
@@ -203,10 +212,16 @@ export function DogView({
           aria-pressed={maintenance}
           className={`flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-[11px] font-bold ${maintenance ? "bg-primary text-primary-foreground" : "border border-border bg-card text-primary"}`}
         >
-          {adminUnlocked || maintenance ? <Wrench className="size-3.5" /> : <Lock className="size-3.5" />} {maintenance ? "Listo" : "Mantenimiento"}
+          {adminUnlocked || maintenance ? <Wrench className="size-3.5" /> : <Lock className="size-3.5" />}{" "}
+          {maintenance ? "Listo" : "Mantenimiento"}
         </button>
         {maintenance && (
-          <button type="button" onClick={lockAdmin} aria-label="Bloquear mantenimiento" className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+          <button
+            type="button"
+            onClick={lockAdmin}
+            aria-label="Bloquear mantenimiento"
+            className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground"
+          >
             <LogOut className="size-4" />
           </button>
         )}
@@ -216,15 +231,36 @@ export function DogView({
         <>
           <section className="mb-3 rounded-[16px] border border-[#d8e5d9] bg-[#edf4ee] p-3 dark:border-border dark:bg-card">
             <p className="text-xs font-bold text-[#20462f] dark:text-foreground">Mantenimiento de {petName}</p>
-            <p className="mt-0.5 text-[11px] text-[#20462f]/70 dark:text-muted-foreground">Edita su nombre y añade comidas, snacks u otros artículos.</p>
+            <p className="mt-0.5 text-[11px] text-[#20462f]/70 dark:text-muted-foreground">
+              Edita su nombre y añade comidas, snacks u otros artículos.
+            </p>
             <form onSubmit={rename} className="mt-3 grid grid-cols-[1fr_auto] gap-2">
-              <Input value={nameDraft} onChange={(event) => setNameDraft(event.target.value)} maxLength={40} placeholder="Nombre de la mascota" aria-label="Nombre de la mascota" className="h-10 rounded-lg bg-card text-sm" />
-              <Button type="submit" variant="outline" disabled={!nameDraft.trim() || nameDraft.trim() === petName} className="h-10 rounded-lg px-3 text-xs">
+              <Input
+                value={nameDraft}
+                onChange={(event) => setNameDraft(event.target.value)}
+                maxLength={40}
+                placeholder="Nombre de la mascota"
+                aria-label="Nombre de la mascota"
+                className="h-10 rounded-lg bg-card text-sm"
+              />
+              <Button
+                type="submit"
+                variant="outline"
+                disabled={!nameDraft.trim() || nameDraft.trim() === petName}
+                className="h-10 rounded-lg px-3 text-xs"
+              >
                 Guardar
               </Button>
             </form>
             <form onSubmit={addItem} className="mt-2 grid grid-cols-[1fr_auto] gap-2">
-              <Input value={newItem} onChange={(event) => setNewItem(event.target.value)} maxLength={60} placeholder="Nueva comida o snack" aria-label="Nueva comida o snack" className="h-10 rounded-lg bg-card text-sm" />
+              <Input
+                value={newItem}
+                onChange={(event) => setNewItem(event.target.value)}
+                maxLength={60}
+                placeholder="Nueva comida o snack"
+                aria-label="Nueva comida o snack"
+                className="h-10 rounded-lg bg-card text-sm"
+              />
               <Button type="submit" disabled={!newItem.trim()} className="h-10 rounded-lg px-3 text-xs">
                 <Plus className="size-3.5" /> Añadir
               </Button>
@@ -236,8 +272,21 @@ export function DogView({
               <p className="text-xs font-bold">Programar avisos</p>
             </div>
             <form onSubmit={addReminder} className="mt-3 grid grid-cols-[1fr_5.6rem] gap-2">
-              <Input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={80} placeholder="Ej. Dar snack" aria-label="Texto del aviso" className="h-10 rounded-lg text-sm" />
-              <Input type="time" value={time} onChange={(event) => setTime(event.target.value)} aria-label="Hora del aviso" className="h-10 rounded-lg px-1.5 text-sm" />
+              <Input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                maxLength={80}
+                placeholder="Ej. Dar snack"
+                aria-label="Texto del aviso"
+                className="h-10 rounded-lg text-sm"
+              />
+              <Input
+                type="time"
+                value={time}
+                onChange={(event) => setTime(event.target.value)}
+                aria-label="Hora del aviso"
+                className="h-10 rounded-lg px-1.5 text-sm"
+              />
               <Button type="submit" disabled={!title.trim()} className="col-span-2 h-10 rounded-lg text-xs">
                 <Plus className="size-3.5" /> Añadir aviso
               </Button>
@@ -253,8 +302,19 @@ export function DogView({
                     }}
                     className="grid grid-cols-[1fr_5.6rem] gap-1.5 rounded-xl bg-muted/60 p-2"
                   >
-                    <Input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} aria-label="Texto del aviso" className="h-9 rounded-lg bg-card px-2 text-xs" />
-                    <Input type="time" value={editTime} onChange={(event) => setEditTime(event.target.value)} aria-label="Hora del aviso" className="h-9 rounded-lg bg-card px-1 text-xs" />
+                    <Input
+                      value={editTitle}
+                      onChange={(event) => setEditTitle(event.target.value)}
+                      aria-label="Texto del aviso"
+                      className="h-9 rounded-lg bg-card px-2 text-xs"
+                    />
+                    <Input
+                      type="time"
+                      value={editTime}
+                      onChange={(event) => setEditTime(event.target.value)}
+                      aria-label="Hora del aviso"
+                      className="h-9 rounded-lg bg-card px-1 text-xs"
+                    />
                     <div className="col-span-2 grid grid-cols-2 gap-1.5">
                       <Button variant="outline" onClick={() => setEditing(null)} className="h-9 rounded-lg text-xs">
                         Cancelar
@@ -270,11 +330,19 @@ export function DogView({
                       type="button"
                       role="switch"
                       aria-checked={reminder.enabled}
-                      onClick={() => void updateReminder(reminder, { enabled: !reminder.enabled }, reminder.enabled ? "Aviso pausado." : "Aviso activado.")}
+                      onClick={() =>
+                        void updateReminder(
+                          reminder,
+                          { enabled: !reminder.enabled },
+                          reminder.enabled ? "Aviso pausado." : "Aviso activado.",
+                        )
+                      }
                       aria-label={reminder.enabled ? `Pausar ${reminder.title}` : `Activar ${reminder.title}`}
                       className="-m-1 flex size-8 shrink-0 items-center justify-center"
                     >
-                      <span className={`size-3 rounded-full ${reminder.enabled ? "bg-primary" : "bg-muted-foreground/35"}`} />
+                      <span
+                        className={`size-3 rounded-full ${reminder.enabled ? "bg-primary" : "bg-muted-foreground/35"}`}
+                      />
                     </button>
                     <span className="w-10 shrink-0 text-[11px] font-bold tabular-nums">{reminder.reminderTime}</span>
                     <span className="min-w-0 flex-1 truncate text-[11px] font-semibold">{reminder.title}</span>
@@ -306,7 +374,9 @@ export function DogView({
         </>
       ) : (
         <>
-          <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Control de {petName}</p>
+          <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+            Control de {petName}
+          </p>
           <section className="mb-3 grid grid-cols-2 gap-2">
             <div className="rounded-[16px] border border-border bg-card px-3 py-2.5">
               <p className="text-[10px] font-semibold text-muted-foreground">Artículos</p>
@@ -324,13 +394,18 @@ export function DogView({
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold">Avisos</p>
-                <p className="text-[10px] text-muted-foreground">{reminders.filter((reminder) => reminder.enabled).length} activos · edítalos en Mantenimiento</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {reminders.filter((reminder) => reminder.enabled).length} activos · edítalos en Mantenimiento
+                </p>
               </div>
             </div>
             {reminders.length > 0 && (
               <div className="mt-2 space-y-1">
                 {reminders.map((reminder) => (
-                  <div key={reminder.id} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 ${reminder.enabled ? "bg-muted/60" : "opacity-45"}`}>
+                  <div
+                    key={reminder.id}
+                    className={`flex items-center gap-2 rounded-lg px-2 py-1.5 ${reminder.enabled ? "bg-muted/60" : "opacity-45"}`}
+                  >
                     <span className="text-[11px] font-bold tabular-nums">{reminder.reminderTime}</span>
                     <span className="min-w-0 flex-1 truncate text-[11px] font-semibold">{reminder.title}</span>
                   </div>
@@ -372,8 +447,20 @@ export function DogView({
                         value={item.currentStock}
                         label={`existencias de ${item.name}`}
                         minusDisabled={item.currentStock <= 0}
-                        onMinus={() => void saveItem(item, { ...item, currentStock: Math.max(0, item.currentStock - 1) }, "Existencias actualizadas.")}
-                        onPlus={() => void saveItem(item, { ...item, currentStock: item.currentStock + 1 }, "Existencias actualizadas.")}
+                        onMinus={() =>
+                          void saveItem(
+                            item,
+                            { ...item, currentStock: Math.max(0, item.currentStock - 1) },
+                            "Existencias actualizadas.",
+                          )
+                        }
+                        onPlus={() =>
+                          void saveItem(
+                            item,
+                            { ...item, currentStock: item.currentStock + 1 },
+                            "Existencias actualizadas.",
+                          )
+                        }
                       />
                       <button
                         type="button"
@@ -386,10 +473,18 @@ export function DogView({
                     </>
                   ) : (
                     <>
-                      <span className="rounded-lg bg-muted px-2.5 py-1.5 text-xs font-bold tabular-nums">{item.currentStock}</span>
+                      <span className="rounded-lg bg-muted px-2.5 py-1.5 text-xs font-bold tabular-nums">
+                        {item.currentStock}
+                      </span>
                       <Button
                         disabled={item.currentStock === 0}
-                        onClick={() => void saveItem(item, { ...item, currentStock: Math.max(0, item.currentStock - 1) }, `1 unidad de ${item.name} descontada.`)}
+                        onClick={() =>
+                          void saveItem(
+                            item,
+                            { ...item, currentStock: Math.max(0, item.currentStock - 1) },
+                            `1 unidad de ${item.name} descontada.`,
+                          )
+                        }
                         className="h-10 rounded-xl px-3 text-[11px]"
                       >
                         Dar 1
@@ -404,7 +499,13 @@ export function DogView({
                       type="button"
                       aria-label={`Reducir mínimo de ${item.name}`}
                       disabled={item.minimumStock <= 0}
-                      onClick={() => void saveItem(item, { ...item, minimumStock: Math.max(0, item.minimumStock - 1) }, "Stock mínimo actualizado.")}
+                      onClick={() =>
+                        void saveItem(
+                          item,
+                          { ...item, minimumStock: Math.max(0, item.minimumStock - 1) },
+                          "Stock mínimo actualizado.",
+                        )
+                      }
                       className="flex size-8 items-center justify-center rounded-md bg-card disabled:opacity-40"
                     >
                       <Minus className="size-2.5" />
@@ -413,7 +514,13 @@ export function DogView({
                     <button
                       type="button"
                       aria-label={`Aumentar mínimo de ${item.name}`}
-                      onClick={() => void saveItem(item, { ...item, minimumStock: item.minimumStock + 1 }, "Stock mínimo actualizado.")}
+                      onClick={() =>
+                        void saveItem(
+                          item,
+                          { ...item, minimumStock: item.minimumStock + 1 },
+                          "Stock mínimo actualizado.",
+                        )
+                      }
                       className="flex size-8 items-center justify-center rounded-md bg-card text-primary"
                     >
                       <Plus className="size-2.5" />

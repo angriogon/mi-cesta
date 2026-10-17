@@ -1,4 +1,18 @@
-import { CalendarDays, Camera, CircleCheck, Euro, FileCheck2, Image, LoaderCircle, Pencil, Plus, ReceiptText, Trash2, TriangleAlert, Wrench } from "lucide-react";
+import {
+  CalendarDays,
+  Camera,
+  CircleCheck,
+  Euro,
+  FileCheck2,
+  Image,
+  LoaderCircle,
+  Pencil,
+  Plus,
+  ReceiptText,
+  Trash2,
+  TriangleAlert,
+  Wrench,
+} from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ApiError, type CestaApi } from "../data/api";
 import type { PriceRef, Ticket, TicketItem, TicketReview } from "../data/types";
@@ -7,18 +21,27 @@ import { compressImage, recognizeText } from "../lib/image";
 import { centsToInput, formatCents, parseEuroToCents, todayIso } from "../lib/text";
 import { Button, Input } from "../ui/primitives";
 import type { Notify } from "../ui/Toast";
+import { LOAD_FAILED, logError, notifyError, reportError } from "../lib/errors";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
 function LinesEditor({ items, onChange }: { items: TicketItem[]; onChange: (items: TicketItem[]) => void }) {
-  const update = (index: number, patch: Partial<TicketItem>) => onChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  const update = (index: number, patch: Partial<TicketItem>) =>
+    onChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   return (
     <div className="space-y-2">
       {items.map((item, index) => (
-        <div key={index} className="grid grid-cols-[1fr_3.6rem_4.9rem_2rem] items-end gap-1.5 rounded-xl bg-muted/65 p-2">
+        <div
+          key={index}
+          className="grid grid-cols-[1fr_3.6rem_4.9rem_2rem] items-end gap-1.5 rounded-xl bg-muted/65 p-2"
+        >
           <label className="min-w-0 text-[10px] font-bold text-muted-foreground">
             Producto
-            <Input value={item.description} onChange={(event) => update(index, { description: event.target.value })} className="mt-1 h-9 rounded-lg bg-card px-2 text-sm" />
+            <Input
+              value={item.description}
+              onChange={(event) => update(index, { description: event.target.value })}
+              className="mt-1 h-9 rounded-lg bg-card px-2 text-sm"
+            />
           </label>
           <label className="text-[10px] font-bold text-muted-foreground">
             Cant.
@@ -34,7 +57,11 @@ function LinesEditor({ items, onChange }: { items: TicketItem[]; onChange: (item
           </label>
           <label className="text-[10px] font-bold text-muted-foreground">
             Importe
-            <MoneyInput cents={item.lineTotalCents} onChange={(cents) => update(index, { lineTotalCents: cents })} className="mt-1 h-9 rounded-lg bg-card px-1 text-center text-sm" />
+            <MoneyInput
+              cents={item.lineTotalCents}
+              onChange={(cents) => update(index, { lineTotalCents: cents })}
+              className="mt-1 h-9 rounded-lg bg-card px-1 text-center text-sm"
+            />
           </label>
           <button
             type="button"
@@ -46,7 +73,11 @@ function LinesEditor({ items, onChange }: { items: TicketItem[]; onChange: (item
           </button>
         </div>
       ))}
-      <Button variant="outline" onClick={() => onChange([...items, { description: "", quantity: 1, lineTotalCents: 0 }])} className="h-10 w-full rounded-xl text-xs">
+      <Button
+        variant="outline"
+        onClick={() => onChange([...items, { description: "", quantity: 1, lineTotalCents: 0 }])}
+        className="h-10 w-full rounded-xl text-xs"
+      >
         <Plus className="size-3.5" /> Añadir línea
       </Button>
     </div>
@@ -54,7 +85,15 @@ function LinesEditor({ items, onChange }: { items: TicketItem[]; onChange: (item
 }
 
 /** Campo de importe que deja escribir "3,4" sin reformatear mientras se teclea. */
-function MoneyInput({ cents, onChange, className }: { cents: number; onChange: (cents: number) => void; className?: string }) {
+function MoneyInput({
+  cents,
+  onChange,
+  className,
+}: {
+  cents: number;
+  onChange: (cents: number) => void;
+  className?: string;
+}) {
   const [text, setText] = useState(centsToInput(cents));
   useEffect(() => {
     if (parseEuroToCents(text) !== cents) setText(centsToInput(cents));
@@ -76,7 +115,15 @@ function MoneyInput({ cents, onChange, className }: { cents: number; onChange: (
   );
 }
 
-export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; onStockChanged: () => void; notify: Notify }) {
+export function TicketsView({
+  api,
+  onStockChanged,
+  notify,
+}: {
+  api: CestaApi;
+  onStockChanged: () => void;
+  notify: Notify;
+}) {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [reviews, setReviews] = useState<TicketReview[]>([]);
   const [corrections, setCorrections] = useState<Record<string, string>>({});
@@ -102,16 +149,27 @@ export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; on
       const data = await api.tickets();
       setTickets(data.tickets);
       setReviews(data.reviews);
-      setCorrections(Object.fromEntries(data.reviews.map((review) => [review.id, review.suggestion.proposedName || review.description])));
-    } catch {
+      setCorrections(
+        Object.fromEntries(
+          data.reviews.map((review) => [review.id, review.suggestion.proposedName || review.description]),
+        ),
+      );
+    } catch (error) {
+      reportError(error, "tickets");
       setStatus("No se han podido cargar los tickets.");
     }
   }
 
   useEffect(() => {
     void load();
-    api.prices().then((data) => setPrices(data.prices)).catch(() => undefined);
-    api.purchaseSession().then((session) => setPlanned(session?.planned ?? [])).catch(() => undefined);
+    api
+      .prices()
+      .then((data) => setPrices(data.prices))
+      .catch(notifyError("cargar precios", LOAD_FAILED));
+    api
+      .purchaseSession()
+      .then((session) => setPlanned(session?.planned ?? []))
+      .catch(notifyError("cargar compra prevista", LOAD_FAILED));
     const unsubscribe = api.db.subscribe((table) => {
       if (table === "tickets" || table === "ticket_reviews") void load();
     });
@@ -123,7 +181,8 @@ export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; on
 
   const months = useMemo(() => {
     const map = new Map<string, number>();
-    for (const ticket of tickets) map.set(ticket.purchasedAt.slice(0, 7), (map.get(ticket.purchasedAt.slice(0, 7)) ?? 0) + ticket.totalCents);
+    for (const ticket of tickets)
+      map.set(ticket.purchasedAt.slice(0, 7), (map.get(ticket.purchasedAt.slice(0, 7)) ?? 0) + ticket.totalCents);
     return [...map.entries()].sort(([a], [b]) => b.localeCompare(a));
   }, [tickets]);
   const smartReview = useMemo(() => reviewTicketLines(lines, prices), [lines, prices]);
@@ -152,8 +211,13 @@ export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; on
       setLines(parsed.items);
       if (parsed.merchant) setMerchant(parsed.merchant);
       setProgress(100);
-      setStatus(parsed.total ? "Lectura terminada. Revisa los datos antes de guardar." : "Lectura terminada. Indica el total para guardar.");
-    } catch {
+      setStatus(
+        parsed.total
+          ? "Lectura terminada. Revisa los datos antes de guardar."
+          : "Lectura terminada. Indica el total para guardar.",
+      );
+    } catch (error) {
+      reportError(error, "tickets");
       setStatus("No se ha podido leer automáticamente. Puedes indicar la fecha, el total y las líneas a mano.");
     } finally {
       setBusy(false);
@@ -181,8 +245,15 @@ export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; on
     setBusy(true);
     setStatus("Guardando foto y gasto…");
     try {
-      const result = await api.saveTicket({ image: file && file.size ? file : null, merchant, purchasedAt: date, totalCents, rawText, items: lines });
-      void api.refreshPrices().catch(() => undefined);
+      const result = await api.saveTicket({
+        image: file && file.size ? file : null,
+        merchant,
+        purchasedAt: date,
+        totalCents,
+        rawText,
+        items: lines,
+      });
+      void api.refreshPrices().catch(logError("actualizar precios tras ticket"));
       onStockChanged();
       clearForm();
       setStatus(
@@ -190,7 +261,11 @@ export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; on
       );
       await load();
     } catch (error) {
-      setStatus(error instanceof ApiError ? error.message : "No se ha podido guardar. Comprueba la conexión y vuelve a intentarlo.");
+      setStatus(
+        error instanceof ApiError
+          ? error.message
+          : "No se ha podido guardar. Comprueba la conexión y vuelve a intentarlo.",
+      );
     } finally {
       setBusy(false);
     }
@@ -216,10 +291,13 @@ export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; on
     setBusy(true);
     try {
       await api.resolveReview(review.id, corrections[review.id] || review.description);
-      setStatus(review.issueType === "unidentified" ? "Corrección aprendida para próximos tickets." : "Revisión confirmada.");
+      setStatus(
+        review.issueType === "unidentified" ? "Corrección aprendida para próximos tickets." : "Revisión confirmada.",
+      );
       onStockChanged();
       await load();
-    } catch {
+    } catch (error) {
+      reportError(error, "tickets");
       setStatus("No se ha podido guardar la revisión.");
     } finally {
       setBusy(false);
@@ -236,7 +314,8 @@ export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; on
       await api.deleteTicket(ticket.id);
       notify("Ticket eliminado. Las existencias no se modifican.");
       await load();
-    } catch {
+    } catch (error) {
+      reportError(error, "tickets");
       notify("No se ha podido eliminar el ticket.");
     }
   }
@@ -291,7 +370,9 @@ export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; on
                   {review.issueType === "unidentified" && (
                     <Input
                       value={corrections[review.id] || ""}
-                      onChange={(event) => setCorrections((current) => ({ ...current, [review.id]: event.target.value }))}
+                      onChange={(event) =>
+                        setCorrections((current) => ({ ...current, [review.id]: event.target.value }))
+                      }
                       aria-label={`Corregir ${review.description}`}
                       className="h-9 max-w-36 rounded-lg text-xs"
                     />
@@ -312,7 +393,10 @@ export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; on
         </section>
       )}
 
-      <section className="mb-5 rounded-[22px] border border-border bg-card p-4 shadow-[0_12px_38px_rgba(32,47,38,.06)]" aria-labelledby="monthly-spend-title">
+      <section
+        className="mb-5 rounded-[22px] border border-border bg-card p-4 shadow-[0_12px_38px_rgba(32,47,38,.06)]"
+        aria-labelledby="monthly-spend-title"
+      >
         <div className="flex items-center gap-2">
           <CalendarDays className="size-4 text-primary" />
           <h2 id="monthly-spend-title" className="text-sm font-bold">
@@ -324,18 +408,25 @@ export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; on
             {months.slice(0, 6).map(([month, cents]) => (
               <div key={month} className="flex items-center justify-between rounded-xl bg-muted/70 px-3 py-2.5">
                 <span className="text-sm font-semibold capitalize">
-                  {new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${month}-01T00:00:00Z`))}
+                  {new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric", timeZone: "UTC" }).format(
+                    new Date(`${month}-01T00:00:00Z`),
+                  )}
                 </span>
                 <span className="text-sm font-bold text-primary">{formatCents(cents)}</span>
               </div>
             ))}
           </div>
         ) : (
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">Cuando guardes el primer ticket aparecerá aquí el total de su mes.</p>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            Cuando guardes el primer ticket aparecerá aquí el total de su mes.
+          </p>
         )}
       </section>
 
-      <form onSubmit={save} className="rounded-[22px] border border-border bg-card p-4 shadow-[0_12px_38px_rgba(32,47,38,.06)]">
+      <form
+        onSubmit={save}
+        className="rounded-[22px] border border-border bg-card p-4 shadow-[0_12px_38px_rgba(32,47,38,.06)]"
+      >
         <h2 className="text-base font-bold">Añadir ticket</h2>
         <label className="mt-3 flex min-h-32 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed border-primary/35 bg-[#f3f7f3] text-center text-primary dark:bg-muted">
           {preview ? (
@@ -372,11 +463,21 @@ export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; on
         {(busy || status) && (
           <div className="mt-3 rounded-xl bg-muted/75 px-3 py-2.5">
             <p className="flex items-center gap-2 text-xs font-semibold text-muted-foreground" role="status">
-              {busy ? <LoaderCircle className="size-3.5 animate-spin" /> : <FileCheck2 className="size-3.5 text-primary" />}
+              {busy ? (
+                <LoaderCircle className="size-3.5 animate-spin" />
+              ) : (
+                <FileCheck2 className="size-3.5 text-primary" />
+              )}
               {status}
             </p>
             {busy && progress > 0 && (
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-card" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+              <div
+                className="mt-2 h-1.5 overflow-hidden rounded-full bg-card"
+                role="progressbar"
+                aria-valuenow={progress}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
                 <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${progress}%` }} />
               </div>
             )}
@@ -386,11 +487,22 @@ export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; on
           <div className="mt-4 grid grid-cols-2 gap-3">
             <label className="col-span-2 text-xs font-bold text-muted-foreground">
               Supermercado
-              <Input value={merchant} onChange={(event) => setMerchant(event.target.value)} maxLength={40} className="mt-1.5 h-11 rounded-xl bg-background text-sm" />
+              <Input
+                value={merchant}
+                onChange={(event) => setMerchant(event.target.value)}
+                maxLength={40}
+                className="mt-1.5 h-11 rounded-xl bg-background text-sm"
+              />
             </label>
             <label className="text-xs font-bold text-muted-foreground">
               Fecha
-              <Input type="date" value={date} max={todayIso()} onChange={(event) => setDate(event.target.value)} className="mt-1.5 h-11 rounded-xl bg-background text-sm" />
+              <Input
+                type="date"
+                value={date}
+                max={todayIso()}
+                onChange={(event) => setDate(event.target.value)}
+                className="mt-1.5 h-11 rounded-xl bg-background text-sm"
+              />
             </label>
             <label className="text-xs font-bold text-muted-foreground">
               Total
@@ -411,7 +523,11 @@ export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; on
                   {lines.length} {lines.length === 1 ? "línea" : "líneas"}
                 </p>
                 {!control && (
-                  <button type="button" onClick={() => setControl(true)} className="flex items-center gap-1 py-1 text-[11px] font-bold text-primary">
+                  <button
+                    type="button"
+                    onClick={() => setControl(true)}
+                    className="flex items-center gap-1 py-1 text-[11px] font-bold text-primary"
+                  >
                     <Pencil className="size-3" /> Revisar textos y cantidades
                   </button>
                 )}
@@ -419,9 +535,16 @@ export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; on
               {(smartReview.duplicates.length > 0 || smartReview.unexpected.length > 0) && (
                 <div className="mb-2 rounded-xl border border-[#ead8d1] bg-[#fbf4f1] p-2 text-[10px] text-[#854936] dark:border-border dark:bg-muted dark:text-foreground">
                   <p className="font-bold">Revisión inteligente</p>
-                  {smartReview.duplicates.length > 0 && <p className="mt-1">Posibles duplicados: {smartReview.duplicates.map((item) => item.description).join(", ")}</p>}
+                  {smartReview.duplicates.length > 0 && (
+                    <p className="mt-1">
+                      Posibles duplicados: {smartReview.duplicates.map((item) => item.description).join(", ")}
+                    </p>
+                  )}
                   {smartReview.unexpected.length > 0 && (
-                    <p className="mt-1">Precio inesperado: {smartReview.unexpected.map((item) => `${item.name} (${formatCents(item.current)})`).join(", ")}</p>
+                    <p className="mt-1">
+                      Precio inesperado:{" "}
+                      {smartReview.unexpected.map((item) => `${item.name} (${formatCents(item.current)})`).join(", ")}
+                    </p>
                   )}
                 </div>
               )}
@@ -447,10 +570,15 @@ export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; on
               La lectura automática puede cometer errores: confirma siempre la fecha y el total antes de guardar.
             </p>
             <div className="col-span-2 grid grid-cols-[1fr_2fr] gap-2">
-              <Button variant="outline" onClick={() => {
-                clearForm();
-                setStatus("");
-              }} disabled={busy} className="h-12 rounded-2xl">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  clearForm();
+                  setStatus("");
+                }}
+                disabled={busy}
+                className="h-12 rounded-2xl"
+              >
                 Descartar
               </Button>
               <Button type="submit" disabled={busy || !total} className="h-12 rounded-2xl">
@@ -463,7 +591,10 @@ export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; on
 
       {tickets.length > 0 && (
         <section className="mt-6" aria-labelledby="ticket-history-title">
-          <h2 id="ticket-history-title" className="mb-2.5 px-1 text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+          <h2
+            id="ticket-history-title"
+            className="mb-2.5 px-1 text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground"
+          >
             Historial
           </h2>
           <div className="overflow-hidden rounded-[20px] border border-border bg-card">
@@ -482,7 +613,8 @@ export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; on
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-bold">{ticket.merchant}</p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
-                      {ticket.purchasedAt.split("-").reverse().join("/")} · {ticket.items.length} {ticket.items.length === 1 ? "línea" : "líneas"}
+                      {ticket.purchasedAt.split("-").reverse().join("/")} · {ticket.items.length}{" "}
+                      {ticket.items.length === 1 ? "línea" : "líneas"}
                     </p>
                   </div>
                   <span className="text-sm font-bold tabular-nums">{formatCents(ticket.totalCents)}</span>
@@ -499,7 +631,11 @@ export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; on
                       <button
                         type="button"
                         onClick={() => void remove(ticket)}
-                        aria-label={confirmDelete === ticket.id ? `Confirmar eliminar ticket de ${ticket.merchant}` : `Eliminar ticket de ${ticket.merchant}`}
+                        aria-label={
+                          confirmDelete === ticket.id
+                            ? `Confirmar eliminar ticket de ${ticket.merchant}`
+                            : `Eliminar ticket de ${ticket.merchant}`
+                        }
                         className={`flex size-9 items-center justify-center rounded-lg ${confirmDelete === ticket.id ? "bg-[#a34141] text-white" : "bg-[#fbefeb] text-[#a34141]"}`}
                       >
                         <Trash2 className="size-3.5" />
@@ -507,21 +643,40 @@ export function TicketsView({ api, onStockChanged, notify }: { api: CestaApi; on
                     </>
                   )}
                 </div>
-                {photo?.id === ticket.id && <img src={photo.url} alt={`Ticket de ${ticket.merchant}`} className="max-h-[70vh] w-full bg-muted object-contain" />}
+                {photo?.id === ticket.id && (
+                  <img
+                    src={photo.url}
+                    alt={`Ticket de ${ticket.merchant}`}
+                    className="max-h-[70vh] w-full bg-muted object-contain"
+                  />
+                )}
                 {editing?.id === ticket.id && (
                   <form onSubmit={saveEdit} className="border-t border-border/70 bg-[#f5f8f5] p-3 dark:bg-muted">
                     <div className="grid grid-cols-2 gap-2">
                       <label className="col-span-2 text-[10px] font-bold text-muted-foreground">
                         Supermercado
-                        <Input value={editing.merchant} onChange={(event) => setEditing({ ...editing, merchant: event.target.value })} className="mt-1 h-10 rounded-lg bg-card text-sm" />
+                        <Input
+                          value={editing.merchant}
+                          onChange={(event) => setEditing({ ...editing, merchant: event.target.value })}
+                          className="mt-1 h-10 rounded-lg bg-card text-sm"
+                        />
                       </label>
                       <label className="text-[10px] font-bold text-muted-foreground">
                         Fecha
-                        <Input type="date" value={editing.purchasedAt} onChange={(event) => setEditing({ ...editing, purchasedAt: event.target.value })} className="mt-1 h-10 rounded-lg bg-card text-sm" />
+                        <Input
+                          type="date"
+                          value={editing.purchasedAt}
+                          onChange={(event) => setEditing({ ...editing, purchasedAt: event.target.value })}
+                          className="mt-1 h-10 rounded-lg bg-card text-sm"
+                        />
                       </label>
                       <label className="text-[10px] font-bold text-muted-foreground">
                         Total
-                        <MoneyInput cents={editing.totalCents} onChange={(cents) => setEditing({ ...editing, totalCents: cents })} className="mt-1 h-10 rounded-lg bg-card text-sm" />
+                        <MoneyInput
+                          cents={editing.totalCents}
+                          onChange={(cents) => setEditing({ ...editing, totalCents: cents })}
+                          className="mt-1 h-10 rounded-lg bg-card text-sm"
+                        />
                       </label>
                     </div>
                     <div className="mt-3">
