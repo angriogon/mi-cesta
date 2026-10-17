@@ -5,7 +5,9 @@ import type { ExternalPrices } from "../data/api";
 export const APP_VERSION = "5.0.0";
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+/** Clave pública del proyecto: la nueva «publishable» (sb_publishable_…) o, si no hay, la antigua «anon». */
+const anonKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? import.meta.env.VITE_SUPABASE_ANON_KEY) as
+  string | undefined;
 
 const forceLocal = import.meta.env.VITE_FORCE_LOCAL === "true";
 
