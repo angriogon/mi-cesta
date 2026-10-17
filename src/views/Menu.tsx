@@ -1,4 +1,5 @@
 import {
+  Download,
   Euro,
   House,
   KeyRound,
@@ -6,10 +7,12 @@ import {
   Moon,
   PackageCheck,
   RotateCcw,
+  ScrollText,
   ShieldCheck,
   ShoppingBasket,
   Sparkles,
   Sun,
+  UserX,
   Utensils,
   X,
 } from "lucide-react";
@@ -24,8 +27,10 @@ import { HouseholdPage } from "./menu/HouseholdPage";
 import { PricesPage } from "./menu/PricesPage";
 import { PasswordPage, ResetPage } from "./menu/AccountPages";
 import { DietPage, NewsPage } from "./menu/InfoPages";
+import { DeleteAccountPage, ExportPage } from "./menu/PrivacyPages";
+import { LegalPage } from "./legal/LegalPage";
 
-type Page = "home" | "household" | "diet" | "news" | "password" | "reset" | "prices";
+type Page = "home" | "household" | "diet" | "news" | "password" | "reset" | "prices" | "export" | "delete" | "legal";
 
 export function Menu({
   api,
@@ -204,6 +209,12 @@ export function Menu({
                     Modificar contraseña
                   </MenuButton>
                 )}
+                <MenuButton tile="bg-muted-foreground" icon={<Download />} onClick={() => go("export")}>
+                  Exportar mis datos
+                </MenuButton>
+                <MenuButton tile="bg-muted-foreground" icon={<ScrollText />} onClick={() => go("legal")}>
+                  Privacidad y condiciones
+                </MenuButton>
               </MenuGroup>
               <MenuGroup>
                 <MenuButton tone="danger" icon={<RotateCcw />} onClick={() => go("reset")}>
@@ -212,6 +223,11 @@ export function Menu({
                 {account.mode === "supabase" && (
                   <MenuButton tone="danger" icon={<LogOut />} onClick={() => void account.signOut()}>
                     Cerrar sesión
+                  </MenuButton>
+                )}
+                {account.mode === "supabase" && (
+                  <MenuButton tone="danger" icon={<UserX />} onClick={() => go("delete")}>
+                    Eliminar cuenta
                   </MenuButton>
                 )}
               </MenuGroup>
@@ -234,6 +250,9 @@ export function Menu({
           {page === "diet" && household && <DietPage api={api} preferences={household.preferences} />}
           {page === "password" && <PasswordPage account={account} />}
           {page === "reset" && <ResetPage api={api} account={account} onReset={onReset} />}
+          {page === "export" && <ExportPage api={api} account={account} />}
+          {page === "delete" && <DeleteAccountPage account={account} />}
+          {page === "legal" && <LegalPage />}
         </div>
         <p className="border-t-[0.5px] border-separator pt-4 text-center text-xs font-semibold uppercase text-muted-foreground">
           Cesta · Versión {version}

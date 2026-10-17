@@ -302,3 +302,30 @@ describe("restablecer", () => {
     expect((await api.lists()).shopping).toEqual([]);
   });
 });
+
+describe("privacidad", () => {
+  it("exporta todos los datos del hogar en un archivo legible", async () => {
+    await api.createProduct({ name: "Kombucha de jengibre", category: "Bebidas" });
+    const data = await api.exportHousehold();
+    expect(data.format).toBe("cesta-export");
+    expect(data.household).toMatchObject({ id: "hogar-test" });
+    expect(data.tables.products?.length).toBe(350);
+    expect(Object.keys(data.tables)).toEqual(
+      expect.arrayContaining(["inventory_lots", "tickets", "prices", "dog_items", "dog_reminders", "stock_events"]),
+    );
+    expect(JSON.parse(JSON.stringify(data))).toEqual(data);
+  });
+});
+
+describe("alimentación especial", () => {
+  it("no guarda alergias sin consentimiento y las borra al retirarlo", async () => {
+    await expect(
+      api.savePreferences({ specialDietEnabled: true, allergens: ["gluten"], avoided: [], healthConsentAt: null }),
+    ).rejects.toThrow("consentimiento");
+    const at = "2026-10-18T10:00:00.000Z";
+    await api.savePreferences({ specialDietEnabled: true, allergens: ["gluten"], avoided: [], healthConsentAt: at });
+    expect(await api.preferences()).toMatchObject({ allergens: ["gluten"], healthConsentAt: at });
+    await api.savePreferences({ specialDietEnabled: false, allergens: [], avoided: [], healthConsentAt: null });
+    expect(await api.preferences()).toMatchObject({ allergens: [], avoided: [], healthConsentAt: null });
+  });
+});

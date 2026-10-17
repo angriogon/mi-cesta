@@ -70,6 +70,8 @@ function ocrAssets(): Plugin {
 
 export default defineConfig({
   base,
+  // Cuándo se compiló esta versión: se enseña en Novedades para saber qué versión hay instalada.
+  define: { __BUILD_TIME__: JSON.stringify(new Date().toISOString()) },
   plugins: [
     react(),
     tailwindcss(),

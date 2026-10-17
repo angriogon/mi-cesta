@@ -13,11 +13,11 @@ import type {
 } from "../types";
 import { logError } from "../../lib/errors";
 
-import { TicketsApi } from "./tickets";
+import { PrivacyApi } from "./privacy";
 import { ApiError, now } from "./shared";
 
 /** Inventario rápido, códigos de barras, mascota y ajustes del hogar. */
-export class CestaApi extends TicketsApi {
+export class CestaApi extends PrivacyApi {
   async quickInventory(): Promise<{
     sessions: QuickSession[];
     recentTicketItems: Omit<QuickItem, "id" | "source" | "confidence">[];
@@ -208,13 +208,20 @@ export class CestaApi extends TicketsApi {
     return (await this.db.getHousehold()).preferences;
   }
 
+  /** Alergias y dieta son datos de salud: solo se guardan con consentimiento explícito (RGPD, art. 9). */
   async savePreferences(preferences: Preferences): Promise<void> {
     const clean = (values: string[]) => [...new Set(values.map((value) => value.trim()).filter(Boolean))].slice(0, 30);
+    const allergens = clean(preferences.allergens);
+    const avoided = clean(preferences.avoided);
+    const healthData = allergens.length > 0 || avoided.length > 0;
+    if (healthData && !preferences.healthConsentAt)
+      throw new ApiError("Para guardar alergias o alimentos a evitar, marca tu consentimiento.");
     await this.db.updateHousehold({
       preferences: {
-        specialDietEnabled: preferences.specialDietEnabled,
-        allergens: clean(preferences.allergens),
-        avoided: clean(preferences.avoided),
+        specialDietEnabled: healthData && preferences.specialDietEnabled,
+        allergens,
+        avoided,
+        healthConsentAt: healthData ? preferences.healthConsentAt : null,
       },
     });
   }

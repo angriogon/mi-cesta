@@ -154,6 +154,50 @@ IVA BASE IMPONIBLE CUOTA
     ]);
   });
 
+  it("tolera el ruido de una foto real: bordes, «1» leído como «|», importes sin coma y pesos ilegibles", () => {
+    const noisy = `RANES EDO ut e .-
+      MERCADONA, S.A.
+S       28/09/2026 11:39 0P:2259972
+Y      Descripción         P. Unit Imp.(e)
+1 LECHE DESN P6                    4,92 |
+$     1 JAMÓN COCIDO LF                  2,00
+9 | PECHUGA PAYO 92%                 2,85
+81 SALTEADO DE VERDURAS             1,55
+1. 1 ESP VERDE FINO                   2,70
+E 1 24 HUEVOS FRESCOS                5,25
+1 CALDO POLLO                      0,755 E
+1 LIMPIAMUEBLE PARQUET            200
+2 1 REGAÑA 100% INTEGRAL             1,15
+2 HUEVOS L 12        2,30          4,60
+5     PESCADO
+A     Pota                           :
+N       1,006 kg     6,95 €/kg       6,9
+$ 1 MANGO                                   N
+N      1,118 kg     2,10 €/kg        3,02 e
+                TOTAL 1     9 y
+TARJETA BANCARIA ——— 37,73 e
+10%           61,22              6,12
+Importe: 37,78 €`;
+    const parsed = parseTicketText(noisy, NOW);
+    expect(parsed.purchasedAt).toBe("2026-09-28");
+    expect(parsed.items).toEqual([
+      { description: "LECHE DESN P6", quantity: 1, lineTotalCents: 492 },
+      { description: "JAMÓN COCIDO LF", quantity: 1, lineTotalCents: 200 },
+      { description: "PECHUGA PAYO 92%", quantity: 1, lineTotalCents: 285 },
+      { description: "SALTEADO DE VERDURAS", quantity: 1, lineTotalCents: 155 },
+      { description: "ESP VERDE FINO", quantity: 1, lineTotalCents: 270 },
+      { description: "24 HUEVOS FRESCOS", quantity: 1, lineTotalCents: 525 },
+      { description: "CALDO POLLO", quantity: 1, lineTotalCents: 75 },
+      { description: "LIMPIAMUEBLE PARQUET", quantity: 1, lineTotalCents: 200 },
+      { description: "REGAÑA 100% INTEGRAL", quantity: 1, lineTotalCents: 115 },
+      { description: "HUEVOS L 12", quantity: 2, lineTotalCents: 460 },
+      { description: "Pota", quantity: 1.006, lineTotalCents: 699 },
+      { description: "MANGO", quantity: 1.118, lineTotalCents: 302 },
+    ]);
+    // El total que cuadra con la suma de las líneas, no el que el lector estropeó ni el de impuestos.
+    expect(parsed.total).toBe("37.78");
+  });
+
   it("sin fecha usa hoy y no confunde el total con productos", () => {
     const parsed = parseTicketText("Arroz 1,20\nTotal 1,20", NOW);
     expect(parsed.purchasedAt).toBe("2026-10-17");
