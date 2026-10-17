@@ -14,7 +14,7 @@ TOTAL (€)                 3,80
 TARJETA BANCARIA          3,80
 </pre></body></html>`;
 
-/** Lectura real con Tesseract (necesita internet para descargar el idioma la primera vez). */
+/** Lectura real con Tesseract, con el motor y el idioma servidos por la propia app (sin CDN externos). */
 test("lee una foto de ticket y la guarda con sus líneas", async ({ page, browser }) => {
   test.setTimeout(150_000);
   const render = await browser.newPage({ viewport: { width: 600, height: 420 }, deviceScaleFactor: 2 });
@@ -22,6 +22,12 @@ test("lee una foto de ticket y la guarda con sus líneas", async ({ page, browse
   const image = await render.screenshot({ type: "png" });
   await render.close();
 
+  const external: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.protocol.startsWith("http") && url.hostname !== "localhost" && url.hostname !== "127.0.0.1")
+      external.push(request.url());
+  });
   await openApp(page);
   await nav(page, "Tickets").click();
   await page.locator('input[type="file"]').setInputFiles({ name: "ticket.png", mimeType: "image/png", buffer: image });
@@ -32,4 +38,5 @@ test("lee una foto de ticket y la guarda con sus líneas", async ({ page, browse
   await page.getByRole("button", { name: "Guardar ticket" }).click();
   await expect(page.getByText(/Ticket guardado\. 4 unidades añadidas/)).toBeVisible();
   await expect(page.getByText(/17\/10\/2026 · 3 líneas/)).toBeVisible();
+  expect(external, "el OCR no debe pedir nada fuera de la app").toEqual([]);
 });

@@ -118,7 +118,7 @@ export function CategorySelect({
       value={value}
       onChange={(event) => onChange(event.target.value as Category)}
       aria-label={label}
-      className="max-w-full [&_select]:h-7 [&_select]:bg-fill [&_select]:pl-2.5 [&_select]:pr-7 [&_select]:text-xs [&_select]:font-medium [&_select]:text-muted-foreground"
+      className="max-w-full [&_select]:h-7 [&_select]:bg-fill [&_select]:pl-2.5 [&_select]:pr-7 [&_select]:text-xs [&_select]:font-medium [&_select]:text-foreground"
     >
       {CATEGORIES.map((category) => (
         <option key={category} value={category}>

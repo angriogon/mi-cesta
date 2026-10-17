@@ -335,7 +335,7 @@ export function DogView({
               <p className="mt-0.5 text-xl font-semibold">{items.length}</p>
             </div>
             <div className="rounded-lg bg-primary-soft px-3 py-2.5 text-primary">
-              <p className="text-xs font-semibold opacity-70">Por reponer</p>
+              <p className="text-xs font-semibold">Por reponer</p>
               <p className="mt-0.5 text-xl font-semibold">{low}</p>
             </div>
           </section>

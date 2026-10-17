@@ -360,7 +360,7 @@ export function Stock(props: {
         <section className="mb-3 rounded-lg bg-primary-soft p-3 text-primary">
           <div className="mb-2">
             <p className="text-xs font-semibold">Mantenimiento del catálogo</p>
-            <p className="mt-0.5 text-xs opacity-75">
+            <p className="mt-0.5 text-xs">
               Agrega, elimina o ajusta existencias, mínimos y categoría de cada producto.
             </p>
           </div>
@@ -420,7 +420,7 @@ export function Stock(props: {
             {doubtful.map((item) => (
               <div key={item.id} className="flex items-center justify-between gap-2 text-xs">
                 <span className="min-w-0 truncate font-semibold">{item.name}</span>
-                <span className="shrink-0 opacity-70">{item.label}</span>
+                <span className="shrink-0">{item.label}</span>
               </div>
             ))}
           </div>
@@ -449,9 +449,9 @@ export function Stock(props: {
           <p className="text-xs text-muted-foreground">unidades en casa</p>
         </div>
         <div className="rounded-lg bg-primary-soft px-3 py-2.5 text-left text-primary">
-          <p className="text-xs font-semibold opacity-70">Necesidades</p>
+          <p className="text-xs font-semibold">Necesidades</p>
           <p className="mt-0.5 text-xl font-semibold tracking-tight">{props.needs.length}</p>
-          <p className="text-xs opacity-70">por reponer</p>
+          <p className="text-xs">por reponer</p>
         </div>
       </section>
 

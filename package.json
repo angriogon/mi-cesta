@@ -31,10 +31,12 @@
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@electric-sql/pglite": "^0.5.10",
     "@eslint/js": "^9.39.5",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.3.3",
+    "@tesseract.js-data/spa": "^1.0.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",

@@ -93,9 +93,9 @@ export function Home({
           className="flex min-h-[106px] flex-col items-center justify-center rounded-xl bg-primary-soft text-primary"
           aria-label={`Índice de tranquilidad: ${score} de 100`}
         >
-          <Gauge className="size-4 opacity-70" />
+          <Gauge className="size-4" />
           <strong className="text-[30px] leading-9">{score}</strong>
-          <span className="text-xs font-semibold uppercase opacity-65">tranquilidad</span>
+          <span className="text-xs font-semibold uppercase">tranquilidad</span>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <button type="button" onClick={onOpenExpiring} className="rounded-xl bg-card p-3 text-left">

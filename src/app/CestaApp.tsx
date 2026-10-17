@@ -28,15 +28,24 @@ import { useLists } from "./useLists";
 import { usePet } from "./usePet";
 import { useProducts } from "./useProducts";
 import { AdminAccess, useAdmin } from "../views/AdminAccess";
-import { BarcodeScanner } from "../views/BarcodeScanner";
-import { ExpiryDialog, type ExpiryItem } from "../views/ExpiryDialog";
+import type { ExpiryItem } from "../views/ExpiryDialog";
 import { Home } from "../views/Home";
-import { Menu } from "../views/Menu";
-import { Prepare, PurchaseShell, StoreList } from "../views/Purchase";
-import { Stock } from "../views/Stock";
 import { Toast, useToast } from "../ui/Toast";
 import { LOAD_FAILED, SAVE_FAILED, logError, notifyError, reportError, setErrorNotifier } from "../lib/errors";
 
+// Inicio va en el arranque; el resto de pantallas se descargan al abrirlas (y se precargan en segundo plano).
+const loadPurchase = () => import("../views/Purchase");
+const loadStock = () => import("../views/Stock");
+const loadMenu = () => import("../views/Menu");
+const PurchaseShell = lazy(() => loadPurchase().then((module) => ({ default: module.PurchaseShell })));
+const Prepare = lazy(() => loadPurchase().then((module) => ({ default: module.Prepare })));
+const StoreList = lazy(() => loadPurchase().then((module) => ({ default: module.StoreList })));
+const Stock = lazy(() => loadStock().then((module) => ({ default: module.Stock })));
+const Menu = lazy(() => loadMenu().then((module) => ({ default: module.Menu })));
+const BarcodeScanner = lazy(() =>
+  import("../views/BarcodeScanner").then((module) => ({ default: module.BarcodeScanner })),
+);
+const ExpiryDialog = lazy(() => import("../views/ExpiryDialog").then((module) => ({ default: module.ExpiryDialog })));
 const DogView = lazy(() => import("../views/Dog").then((module) => ({ default: module.DogView })));
 const TicketsView = lazy(() => import("../views/Tickets").then((module) => ({ default: module.TicketsView })));
 const RecipesView = lazy(() => import("../views/Recipes").then((module) => ({ default: module.RecipesView })));
@@ -141,6 +150,15 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
     }, 450);
     return () => window.clearTimeout(timer);
   }, [ready, api, refreshPrices]);
+
+  // Con Inicio ya visible, se descargan en segundo plano las pantallas de uso diario.
+  useEffect(() => {
+    if (!ready) return;
+    const timer = window.setTimeout(() => {
+      void Promise.all([loadPurchase(), loadStock(), loadMenu()]).catch(logError("precargar pantallas"));
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [ready]);
 
   // Actualización automática de precios cada 72 h si hay código postal y wifi (o sin información de red).
   const autoPricesStarted = useRef(false);
@@ -523,13 +541,13 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
               <span className="block text-sm font-semibold">
                 Hay {needs.length} {needs.length === 1 ? "producto" : "productos"} por reponer
               </span>
-              <span className="mt-0.5 block text-xs leading-5 opacity-75">Toca para ver lo que falta en casa.</span>
+              <span className="mt-0.5 block text-xs leading-5">Toca para ver lo que falta en casa.</span>
             </button>
             <button
               type="button"
               onClick={() => setNeedsNotice(false)}
               aria-label="Cerrar aviso"
-              className="flex size-9 items-center justify-center rounded-lg opacity-60 active:bg-fill"
+              className="flex size-9 items-center justify-center rounded-lg active:bg-fill"
             >
               <X className="size-4" />
             </button>
@@ -553,13 +571,13 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
               className="min-w-0 flex-1 text-left"
             >
               <span className="block text-sm font-semibold">Aviso de {petName}</span>
-              <span className="mt-0.5 block text-xs leading-5 opacity-75">{dogAlert.title}</span>
+              <span className="mt-0.5 block text-xs leading-5">{dogAlert.title}</span>
             </button>
             <button
               type="button"
               onClick={() => setDogAlert(null)}
               aria-label="Cerrar aviso"
-              className="flex size-9 items-center justify-center rounded-lg opacity-60 active:bg-fill"
+              className="flex size-9 items-center justify-center rounded-lg active:bg-fill"
             >
               <X className="size-4" />
             </button>
@@ -602,99 +620,103 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
             onUndo={() => void undo()}
           />
         ) : view === "purchase" ? (
-          <PurchaseShell
-            stage={stage}
-            onStageChange={setStage}
-            preparingCount={preparing}
-            storeCount={storeUnits}
-            activity={otherShoppers}
-            prepare={
-              <Prepare
-                items={shopping}
-                grouped={groupedShopping}
-                name={newName}
-                setName={setNewName}
-                stock={stock}
-                inputRef={inputRef}
-                addNamedItem={addNamed}
-                updateItem={(id, change) =>
-                  setShopping((items) => items.map((item) => (item.id === id ? change(item) : item)))
-                }
-                changeCategory={(item, category) => {
-                  setShopping((items) => items.map((entry) => (entry.id === item.id ? { ...entry, category } : entry)));
-                  remember(item.name, category);
-                }}
-                removeItem={(id) => {
-                  const removed = shopping.find((item) => item.id === id);
-                  setShopping((items) => items.filter((item) => item.id !== id));
-                  if (removed)
-                    toast.show(`${removed.name} eliminado.`, {
-                      label: "Deshacer",
-                      onClick: () => setShopping((items) => mergeByName(items, [removed])),
-                    });
-                }}
-                duplicateCount={duplicates}
-                mergeDuplicates={() => setShopping((items) => mergeDuplicates(items))}
-                generateChecklist={generateChecklist}
-                prices={prices}
-                products={products}
-                openScanner={() => setScanner("shopping")}
-                onAvoided={() => {
-                  void api.avoided().catch(notifyError("registrar compra evitada", SAVE_FAILED));
-                  setOverview(
-                    (current) =>
-                      current && {
-                        ...current,
-                        weekly: { ...current.weekly, avoidedPurchases: current.weekly.avoidedPurchases + 1 },
-                      },
-                  );
-                }}
-                suggestions={overview?.mode === "autocesta" ? overview.suggestions : []}
-                pendingSuggestions={overview?.mode === "autocesta" ? overview.pendingSuggestions : []}
-                acceptSuggestions={acceptSuggestions}
-                suppressSuggestion={(productId) =>
-                  void runAndRefresh(() => api.suppress(productId), "No se ha podido guardar.")
-                }
-                onPlanned={(productId) => {
-                  setProducts((items) =>
-                    items.map((item) => (item.id === productId ? { ...item, plannedUntil: todayIso() } : item)),
-                  );
-                  void runAndRefresh(() => api.planned(productId), "No se ha podido guardar.");
-                }}
-              />
-            }
-            store={
-              <StoreList
-                items={checklist}
-                grouped={groupedChecklist}
-                completed={completedUnits}
-                updateItem={(id, change) =>
-                  setChecklist((items) => items.map((item) => (item.id === id ? change(item) : item)))
-                }
-                removeItem={(id) => {
-                  const removed = checklist.find((item) => item.id === id);
-                  setChecklist((items) => items.filter((item) => item.id !== id));
-                  if (removed)
-                    toast.show(`${removed.name} eliminado.`, {
-                      label: "Deshacer",
-                      onClick: () => setChecklist((items) => mergeByName(items, [removed])),
-                    });
-                }}
-                clearItems={() => void clearChecklist()}
-                storePurchased={storePurchased}
-                prices={prices}
-                stock={stock}
-                rejected={rejected}
-                openScanner={() => setScanner("checklist")}
-                onSubstitution={(requestedName, productId, decision) => {
-                  if (decision === "reject") setRejected((items) => [...items, { requestedName, productId }]);
-                  void api
-                    .substitution(requestedName, productId, decision)
-                    .catch(notifyError("guardar sustitución", SAVE_FAILED));
-                }}
-              />
-            }
-          />
+          <Suspense fallback={<Loading />}>
+            <PurchaseShell
+              stage={stage}
+              onStageChange={setStage}
+              preparingCount={preparing}
+              storeCount={storeUnits}
+              activity={otherShoppers}
+              prepare={
+                <Prepare
+                  items={shopping}
+                  grouped={groupedShopping}
+                  name={newName}
+                  setName={setNewName}
+                  stock={stock}
+                  inputRef={inputRef}
+                  addNamedItem={addNamed}
+                  updateItem={(id, change) =>
+                    setShopping((items) => items.map((item) => (item.id === id ? change(item) : item)))
+                  }
+                  changeCategory={(item, category) => {
+                    setShopping((items) =>
+                      items.map((entry) => (entry.id === item.id ? { ...entry, category } : entry)),
+                    );
+                    remember(item.name, category);
+                  }}
+                  removeItem={(id) => {
+                    const removed = shopping.find((item) => item.id === id);
+                    setShopping((items) => items.filter((item) => item.id !== id));
+                    if (removed)
+                      toast.show(`${removed.name} eliminado.`, {
+                        label: "Deshacer",
+                        onClick: () => setShopping((items) => mergeByName(items, [removed])),
+                      });
+                  }}
+                  duplicateCount={duplicates}
+                  mergeDuplicates={() => setShopping((items) => mergeDuplicates(items))}
+                  generateChecklist={generateChecklist}
+                  prices={prices}
+                  products={products}
+                  openScanner={() => setScanner("shopping")}
+                  onAvoided={() => {
+                    void api.avoided().catch(notifyError("registrar compra evitada", SAVE_FAILED));
+                    setOverview(
+                      (current) =>
+                        current && {
+                          ...current,
+                          weekly: { ...current.weekly, avoidedPurchases: current.weekly.avoidedPurchases + 1 },
+                        },
+                    );
+                  }}
+                  suggestions={overview?.mode === "autocesta" ? overview.suggestions : []}
+                  pendingSuggestions={overview?.mode === "autocesta" ? overview.pendingSuggestions : []}
+                  acceptSuggestions={acceptSuggestions}
+                  suppressSuggestion={(productId) =>
+                    void runAndRefresh(() => api.suppress(productId), "No se ha podido guardar.")
+                  }
+                  onPlanned={(productId) => {
+                    setProducts((items) =>
+                      items.map((item) => (item.id === productId ? { ...item, plannedUntil: todayIso() } : item)),
+                    );
+                    void runAndRefresh(() => api.planned(productId), "No se ha podido guardar.");
+                  }}
+                />
+              }
+              store={
+                <StoreList
+                  items={checklist}
+                  grouped={groupedChecklist}
+                  completed={completedUnits}
+                  updateItem={(id, change) =>
+                    setChecklist((items) => items.map((item) => (item.id === id ? change(item) : item)))
+                  }
+                  removeItem={(id) => {
+                    const removed = checklist.find((item) => item.id === id);
+                    setChecklist((items) => items.filter((item) => item.id !== id));
+                    if (removed)
+                      toast.show(`${removed.name} eliminado.`, {
+                        label: "Deshacer",
+                        onClick: () => setChecklist((items) => mergeByName(items, [removed])),
+                      });
+                  }}
+                  clearItems={() => void clearChecklist()}
+                  storePurchased={storePurchased}
+                  prices={prices}
+                  stock={stock}
+                  rejected={rejected}
+                  openScanner={() => setScanner("checklist")}
+                  onSubstitution={(requestedName, productId, decision) => {
+                    if (decision === "reject") setRejected((items) => [...items, { requestedName, productId }]);
+                    void api
+                      .substitution(requestedName, productId, decision)
+                      .catch(notifyError("guardar sustitución", SAVE_FAILED));
+                  }}
+                />
+              }
+            />
+          </Suspense>
         ) : view === "tickets" ? (
           <Suspense fallback={<Loading />}>
             <TicketsView api={api} prices={prices} onStockChanged={() => void refreshProducts()} notify={toast.show} />
@@ -739,23 +761,25 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
             />
           </Suspense>
         ) : (
-          <Stock
-            api={api}
-            stock={stock}
-            products={products}
-            needs={needs}
-            stockUnits={stockUnits}
-            updateStock={(id, change) => void updateStock(id, change)}
-            changeCategory={(item, category) => void changeStockCategory(item, category)}
-            removeStock={(item) => removeProduct(item.id)}
-            addStockProduct={createProduct}
-            addNeedsToChecklist={addNeedsToChecklist}
-            admin={admin}
-            predictions={predictions}
-            certainty={overview?.certainty ?? []}
-            openScanner={() => setScanner("stock")}
-            notify={toast.show}
-          />
+          <Suspense fallback={<Loading />}>
+            <Stock
+              api={api}
+              stock={stock}
+              products={products}
+              needs={needs}
+              stockUnits={stockUnits}
+              updateStock={(id, change) => void updateStock(id, change)}
+              changeCategory={(item, category) => void changeStockCategory(item, category)}
+              removeStock={(item) => removeProduct(item.id)}
+              addStockProduct={createProduct}
+              addNeedsToChecklist={addNeedsToChecklist}
+              admin={admin}
+              predictions={predictions}
+              certainty={overview?.certainty ?? []}
+              openScanner={() => setScanner("stock")}
+              notify={toast.show}
+            />
+          </Suspense>
         )}
 
         {admin.requested && !admin.unlocked && (
@@ -775,48 +799,54 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
         )}
 
         {menuOpen && (
-          <Menu
-            api={api}
-            account={account}
-            version={APP_VERSION}
-            priceMeta={priceMeta}
-            onOpenRecipes={() => {
-              setView("recipes");
-              setMenuOpen(false);
-            }}
-            onOpenQuickInventory={() => {
-              setView("inventory-quick");
-              setMenuOpen(false);
-            }}
-            onRefreshPrices={async () => {
-              const result = await api.refreshPrices();
-              setPrices(result.prices);
-              setPriceMeta(result.meta);
-              return result;
-            }}
-            onPostalCodeChange={(postalCode) => setPriceMeta((meta) => ({ ...meta, postalCode }))}
-            onReset={() => window.location.reload()}
-            onClose={() => setMenuOpen(false)}
-          />
+          <Suspense fallback={null}>
+            <Menu
+              api={api}
+              account={account}
+              version={APP_VERSION}
+              priceMeta={priceMeta}
+              onOpenRecipes={() => {
+                setView("recipes");
+                setMenuOpen(false);
+              }}
+              onOpenQuickInventory={() => {
+                setView("inventory-quick");
+                setMenuOpen(false);
+              }}
+              onRefreshPrices={async () => {
+                const result = await api.refreshPrices();
+                setPrices(result.prices);
+                setPriceMeta(result.meta);
+                return result;
+              }}
+              onPostalCodeChange={(postalCode) => setPriceMeta((meta) => ({ ...meta, postalCode }))}
+              onReset={() => window.location.reload()}
+              onClose={() => setMenuOpen(false)}
+            />
+          </Suspense>
         )}
 
         {scanner && (
-          <BarcodeScanner
-            api={api}
-            onClose={() => setScanner(null)}
-            onUse={(product) => void addScannedProduct(product)}
-          />
+          <Suspense fallback={null}>
+            <BarcodeScanner
+              api={api}
+              onClose={() => setScanner(null)}
+              onUse={(product) => void addScannedProduct(product)}
+            />
+          </Suspense>
         )}
         {expiryItems.length > 0 && (
-          <ExpiryDialog
-            api={api}
-            items={expiryItems}
-            onClose={() => {
-              setExpiryItems([]);
-              inventoryChanged.emit();
-              void refreshOverview();
-            }}
-          />
+          <Suspense fallback={null}>
+            <ExpiryDialog
+              api={api}
+              items={expiryItems}
+              onClose={() => {
+                setExpiryItems([]);
+                inventoryChanged.emit();
+                void refreshOverview();
+              }}
+            />
+          </Suspense>
         )}
 
         {view !== "inventory-quick" && (
