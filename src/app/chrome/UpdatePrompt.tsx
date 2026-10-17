@@ -31,7 +31,7 @@ export function UpdatePrompt() {
   return (
     <div
       role="status"
-      className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-50 mx-auto flex w-[calc(100%-2rem)] max-w-md items-center gap-3 rounded-2xl bg-card p-3 text-sm shadow-float"
+      className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+88px)] z-50 mx-auto flex w-[calc(100%-2rem)] max-w-md items-center gap-3 rounded-2xl bg-card p-3 text-sm shadow-float"
     >
       <RefreshCw className="size-5 shrink-0 text-primary" aria-hidden />
       <span className="min-w-0 flex-1 font-semibold">Hay una versión nueva de Cesta</span>

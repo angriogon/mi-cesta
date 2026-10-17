@@ -89,7 +89,7 @@ export function Prepare(props: {
             autoCorrect="on"
             enterKeyHint="done"
             maxLength={80}
-            className="h-12 rounded-xl bg-card pl-3.5 pr-10 text-[16px] focus-visible:ring-primary/20"
+            className="h-12 rounded-xl bg-card pl-3.5 pr-10 text-[1rem] focus-visible:ring-primary/20"
           />
           {props.name && (
             <button
@@ -214,7 +214,7 @@ export function Prepare(props: {
                         className={`group flex min-h-[52px] items-center gap-1.5 px-2 ${index ? "relative before:absolute before:inset-x-0 before:left-4 before:top-0 before:h-[0.5px] before:bg-separator" : ""}`}
                       >
                         <div className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5">
-                          <span className="min-w-0 flex-1 text-left text-[13px] font-semibold">
+                          <span className="min-w-0 flex-1 text-left text-[0.8125rem] font-semibold">
                             <span className="block truncate">{item.name}</span>
                             <span className="flex flex-wrap items-center gap-1">
                               {price?.priceCents ? <PriceTag price={price} quantity={item.quantity} /> : null}

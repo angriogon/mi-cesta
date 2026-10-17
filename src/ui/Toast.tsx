@@ -39,7 +39,7 @@ export function Toast({ state, onDismiss }: { state: ToastState | null; onDismis
       <div
         role="status"
         aria-live="polite"
-        className="pointer-events-auto flex max-w-[440px] items-center gap-2 rounded-xl bg-card py-2 pr-1.5 pl-4 text-[15px] text-foreground shadow-float"
+        className="pointer-events-auto flex max-w-[440px] items-center gap-2 rounded-xl bg-card py-2 pr-1.5 pl-4 text-[0.9375rem] text-foreground shadow-float"
       >
         <span className="min-w-0 flex-1">{state.message}</span>
         {state.action && (

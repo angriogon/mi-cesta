@@ -27,7 +27,7 @@ export function MenuButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="group flex w-full items-center gap-3 pl-3.5 text-left text-[17px] active:bg-fill disabled:opacity-60"
+      className="group flex w-full items-center gap-3 pl-3.5 text-left text-[1.0625rem] active:bg-fill disabled:opacity-60"
     >
       <span
         className={`flex size-7 shrink-0 items-center justify-center rounded-md [&_svg]:size-[17px] ${tone === "danger" ? "text-danger" : `text-white ${tile ?? "bg-primary"}`}`}

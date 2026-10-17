@@ -2,6 +2,18 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Espaciados en px fijos: con Dynamic Type crece el texto (rem), no los márgenes ni las zonas de toque. */
+@theme {
+  --spacing: 4px;
+  /* Las alturas de línea sí crecen con el texto. */
+  --leading-3: 0.75rem;
+  --leading-4: 1rem;
+  --leading-5: 1.25rem;
+  --leading-6: 1.5rem;
+  --leading-8: 2rem;
+  --leading-9: 2.25rem;
+}
+
 @theme inline {
   --font-sans: var(--font-system);
   --font-mono: var(--font-system-mono);
@@ -143,7 +155,7 @@
 /* Cabecera de sección de iOS: versalitas discretas en gris secundario. */
 .eyebrow {
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 400;
   letter-spacing: 0;
   text-transform: uppercase;

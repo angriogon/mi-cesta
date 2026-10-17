@@ -25,10 +25,10 @@ const VARIANTS = {
 } as const;
 
 const SIZES = {
-  default: "h-11 gap-1.5 px-4 text-[15px]",
+  default: "h-11 gap-1.5 px-4 text-[0.9375rem]",
   xs: "h-7 gap-1 rounded-md px-2.5 text-xs",
-  sm: "h-9 gap-1 rounded-md px-3 text-[13px]",
-  lg: "h-12 gap-2 px-5 text-[17px]",
+  sm: "h-9 gap-1 rounded-md px-3 text-[0.8125rem]",
+  lg: "h-12 gap-2 px-5 text-[1.0625rem]",
   icon: "size-11",
   "icon-sm": "size-9 rounded-md",
   "icon-lg": "size-12",
@@ -69,7 +69,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
       type={type}
       data-slot="input"
       className={cn(
-        "h-11 w-full min-w-0 rounded-lg border border-transparent bg-card px-3 text-[17px] transition-shadow outline-none placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-primary/35 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2 aria-invalid:ring-destructive/50",
+        "h-11 w-full min-w-0 rounded-lg border border-transparent bg-card px-3 text-[1.0625rem] transition-shadow outline-none placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-primary/35 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2 aria-invalid:ring-destructive/50",
         className,
       )}
       {...props}
@@ -89,7 +89,7 @@ export function NativeSelect({ className, size = "default", children, ...props }
     >
       <select
         data-size={size}
-        className="h-11 w-full min-w-0 appearance-none rounded-lg bg-card py-1 pr-8 pl-3 text-[15px] outline-none select-none focus-visible:ring-2 focus-visible:ring-primary/35 disabled:pointer-events-none data-[size=sm]:h-8 data-[size=sm]:rounded-md data-[size=sm]:py-0.5"
+        className="h-11 w-full min-w-0 appearance-none rounded-lg bg-card py-1 pr-8 pl-3 text-[0.9375rem] outline-none select-none focus-visible:ring-2 focus-visible:ring-primary/35 disabled:pointer-events-none data-[size=sm]:h-8 data-[size=sm]:rounded-md data-[size=sm]:py-0.5"
         {...props}
       >
         {children}
@@ -153,7 +153,7 @@ export function Stepper({
       >
         <Minus className="size-4" />
       </button>
-      <span className="min-w-6 text-center text-[15px] font-medium tabular-nums" aria-live="polite">
+      <span className="min-w-6 text-center text-[0.9375rem] font-medium tabular-nums" aria-live="polite">
         {value}
       </span>
       <button
@@ -172,8 +172,8 @@ export function EmptyState({ icon, title, text }: { icon: ReactNode; title: stri
   return (
     <section className="flex flex-1 flex-col items-center justify-center py-14 text-center">
       <div className="mb-3 text-muted-foreground/70 [&_svg]:size-12 [&_svg]:stroke-[1.5]">{icon}</div>
-      <h2 className="text-[22px] font-bold">{title}</h2>
-      <p className="mt-1 max-w-72 text-[15px] leading-5 text-muted-foreground">{text}</p>
+      <h2 className="text-[1.375rem] font-bold">{title}</h2>
+      <p className="mt-1 max-w-72 text-[0.9375rem] leading-5 text-muted-foreground">{text}</p>
     </section>
   );
 }

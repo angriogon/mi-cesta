@@ -87,7 +87,7 @@ export function HouseholdPage({
           {members.length > 0 && (
             <div className="mt-3 rounded-xl bg-card p-4">
               <p className="text-xs font-semibold">Miembros</p>
-              <ul className="mt-2 space-y-1 text-[12px]">
+              <ul className="mt-2 space-y-1 text-[0.75rem]">
                 {members.map((member) => (
                   <li key={member.email} className="flex items-center justify-between gap-2">
                     <span className="truncate">{member.email}</span>

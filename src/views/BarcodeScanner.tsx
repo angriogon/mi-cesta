@@ -208,7 +208,7 @@ export function BarcodeScanner({
                     // Al no reconocer el código, el siguiente paso es escribir el nombre: abrir el teclado ahorra un toque.
                     // eslint-disable-next-line jsx-a11y/no-autofocus
                     autoFocus
-                    className="mt-1.5 h-11 rounded-lg text-[17px]"
+                    className="mt-1.5 h-11 rounded-lg text-[1.0625rem]"
                   />
                   <Button
                     type="submit"

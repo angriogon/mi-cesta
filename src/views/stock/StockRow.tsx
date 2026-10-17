@@ -35,7 +35,7 @@ export function StockRow({
     <div className={`px-2 py-1.5 ${separated ? SEPARATOR : ""}`}>
       {maintenance ? (
         <div className="flex min-h-10 flex-wrap items-center gap-1">
-          <p className="min-w-[8rem] flex-1 truncate text-[12px] font-semibold">{item.name}</p>
+          <p className="min-w-[8rem] flex-1 truncate text-[0.75rem] font-semibold">{item.name}</p>
           <div className="w-[6rem] shrink-0">
             <CategorySelect
               value={item.category}
@@ -71,7 +71,7 @@ export function StockRow({
         </div>
       ) : (
         <div className="flex min-h-10 items-center gap-1.5">
-          <p className="min-w-0 flex-1 truncate text-[13px] font-semibold">
+          <p className="min-w-0 flex-1 truncate text-[0.8125rem] font-semibold">
             {item.name}
             <span className="ml-1 text-xs font-normal text-muted-foreground">
               {certainty?.label && certainty.currentStock > 0 && certainty.confidence < 0.82

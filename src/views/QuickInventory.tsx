@@ -204,7 +204,7 @@ export function QuickInventory({
                 onChange={(event) => setName(event.target.value)}
                 placeholder="Producto o varios separados por comas"
                 aria-label="Producto"
-                className="h-11 rounded-xl bg-card text-[15px]"
+                className="h-11 rounded-xl bg-card text-[0.9375rem]"
               />
               <Button
                 type="submit"

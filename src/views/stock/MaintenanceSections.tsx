@@ -18,7 +18,7 @@ export function SuppressedList({ api, notify, products }: { api: CestaApi; notif
         {products.map((product) => (
           <div
             key={product.id}
-            className="flex items-center justify-between gap-2 rounded-xl bg-muted/60 px-3 py-2 text-[12px]"
+            className="flex items-center justify-between gap-2 rounded-xl bg-muted/60 px-3 py-2 text-[0.75rem]"
           >
             <span className="truncate font-semibold">{product.name}</span>
             <button

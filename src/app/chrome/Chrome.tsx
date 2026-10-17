@@ -14,7 +14,7 @@ export function Splash() {
       <div className="flex size-[76px] items-center justify-center rounded-xl bg-primary text-primary-foreground">
         <ShoppingBasket className="size-8" strokeWidth={1.8} />
       </div>
-      <p className="mt-4 text-[17px] font-semibold text-primary">Cesta</p>
+      <p className="mt-4 text-[1.0625rem] font-semibold text-primary">Cesta</p>
       <p className="absolute bottom-[calc(1.4rem+env(safe-area-inset-bottom))] text-xs font-semibold uppercase text-muted-foreground">
         Powered by AR
       </p>
@@ -59,7 +59,7 @@ export function TopBar() {
         </svg>
       </button>
       {title && (
-        <div className="pointer-events-none fixed inset-x-16 top-[calc(.7rem+env(safe-area-inset-top))] z-20 flex h-11 items-center justify-center truncate text-[17px] font-semibold text-foreground">
+        <div className="pointer-events-none fixed inset-x-16 top-[calc(.7rem+env(safe-area-inset-top))] z-20 flex h-11 items-center justify-center truncate text-[1.0625rem] font-semibold text-foreground">
           {title}
         </div>
       )}

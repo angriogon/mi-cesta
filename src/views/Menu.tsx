@@ -171,7 +171,7 @@ export function Menu({
                     Actualizar precios
                   </MenuButton>
                 </MenuGroup>
-                <p className="mt-1.5 px-4 text-[13px] leading-[18px] whitespace-normal text-muted-foreground">
+                <p className="mt-1.5 px-4 text-[0.8125rem] leading-[18px] whitespace-normal text-muted-foreground">
                   {priceMeta.lastSuccessfulAt
                     ? `Última actualización: ${new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "short" }).format(new Date(priceMeta.lastSuccessfulAt))}`
                     : "Precios aún no actualizados"}
@@ -182,7 +182,7 @@ export function Menu({
                 </p>
                 {message && (
                   <p
-                    className="mt-1 px-4 text-[13px] leading-[18px] whitespace-normal text-muted-foreground"
+                    className="mt-1 px-4 text-[0.8125rem] leading-[18px] whitespace-normal text-muted-foreground"
                     role="status"
                   >
                     {message}

@@ -39,3 +39,16 @@ test("claro por defecto aunque el iPhone esté en oscuro; el oscuro se elige en 
   await page.getByRole("switch", { name: /Cambiar a claro/ }).click();
   expect(await isDark()).toBe(false);
 });
+
+/** Con el texto más grande que sigue Cesta (Dynamic Type, 140 %), las pantallas siguen cabiendo en un iPhone SE. */
+test("con texto grande del sistema nada se sale de la pantalla", async ({ page }) => {
+  await openApp(page);
+  await page.evaluate(() => (document.documentElement.style.fontSize = "140%"));
+  await expectNoHorizontalScroll(page);
+  for (const view of ["Compra", "Necesidades", "Tickets"] as const) {
+    await nav(page, view).click();
+    await expectNoHorizontalScroll(page);
+  }
+  await nav(page, /^Mascota/).click();
+  await expectNoHorizontalScroll(page);
+});
