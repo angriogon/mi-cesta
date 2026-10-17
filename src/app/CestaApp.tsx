@@ -360,11 +360,13 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
     return () => window.clearInterval(interval);
   }, [ready, view, stage, device, api, pendingInStore]);
 
+  // El aviso de «guardado» empieza a contar cuando se cierra el diálogo de caducidades, para que se llegue a ver.
+  const expiryOpen = expiryItems.length > 0;
   useEffect(() => {
-    if (!savedCount) return;
-    const timer = window.setTimeout(() => setSavedCount(0), 2600);
+    if (!savedCount || expiryOpen) return;
+    const timer = window.setTimeout(() => setSavedCount(0), 3000);
     return () => window.clearTimeout(timer);
-  }, [savedCount]);
+  }, [savedCount, expiryOpen]);
 
   // ---- Derivados ----
   const stock = useMemo(() => products.map(toStock), [products]);
