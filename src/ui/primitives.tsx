@@ -14,24 +14,24 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Botones al estilo iOS: relleno para la acción principal, tintado para las secundarias. */
 const VARIANTS = {
-  default: "bg-primary text-primary-foreground hover:bg-primary/80",
-  outline:
-    "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
-  secondary: "bg-secondary text-secondary-foreground",
-  ghost: "hover:bg-muted hover:text-foreground dark:hover:bg-muted/50",
-  destructive: "bg-destructive/10 text-destructive hover:bg-destructive/20",
-  link: "text-primary underline-offset-4 hover:underline",
+  default: "bg-primary text-primary-foreground",
+  outline: "bg-card text-primary",
+  secondary: "bg-primary-soft text-primary",
+  ghost: "text-primary",
+  destructive: "bg-danger-soft text-danger",
+  link: "text-primary",
 } as const;
 
 const SIZES = {
-  default: "h-8 gap-1.5 px-2.5",
-  xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs",
-  sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem]",
-  lg: "h-9 gap-1.5 px-2.5",
-  icon: "size-8",
-  "icon-sm": "size-7 rounded-[min(var(--radius-md),12px)]",
-  "icon-lg": "size-9",
+  default: "h-11 gap-1.5 px-4 text-[15px]",
+  xs: "h-7 gap-1 rounded-md px-2.5 text-xs",
+  sm: "h-9 gap-1 rounded-md px-3 text-[13px]",
+  lg: "h-12 gap-2 px-5 text-[17px]",
+  icon: "size-11",
+  "icon-sm": "size-9 rounded-md",
+  "icon-lg": "size-12",
 } as const;
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -49,7 +49,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       type={type}
       data-slot="button"
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:translate-y-px disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "inline-flex shrink-0 items-center justify-center rounded-lg font-semibold whitespace-nowrap transition-opacity outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/40 active:opacity-60 disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-[18px]",
         VARIANTS[variant],
         SIZES[size],
         className,
@@ -69,7 +69,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
       type={type}
       data-slot="input"
       className={cn(
-        "h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive dark:bg-input/30",
+        "h-11 w-full min-w-0 rounded-lg border border-transparent bg-card px-3 text-[17px] transition-shadow outline-none placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-primary/35 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2 aria-invalid:ring-destructive/50",
         className,
       )}
       {...props}
@@ -89,7 +89,7 @@ export function NativeSelect({ className, size = "default", children, ...props }
     >
       <select
         data-size={size}
-        className="h-8 w-full min-w-0 appearance-none rounded-lg border border-input bg-transparent py-1 pr-8 pl-2.5 text-sm transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] data-[size=sm]:py-0.5 dark:bg-input/30"
+        className="h-11 w-full min-w-0 appearance-none rounded-lg bg-card py-1 pr-8 pl-3 text-[15px] outline-none select-none focus-visible:ring-2 focus-visible:ring-primary/35 disabled:pointer-events-none data-[size=sm]:h-8 data-[size=sm]:rounded-md data-[size=sm]:py-0.5"
         {...props}
       >
         {children}
@@ -118,7 +118,7 @@ export function CategorySelect({
       value={value}
       onChange={(event) => onChange(event.target.value as Category)}
       aria-label={label}
-      className="max-w-full [&_select]:h-6 [&_select]:border-0 [&_select]:bg-muted [&_select]:pl-2 [&_select]:pr-6 [&_select]:text-[10px] [&_select]:font-semibold [&_select]:text-muted-foreground"
+      className="max-w-full [&_select]:h-7 [&_select]:bg-fill [&_select]:pl-2.5 [&_select]:pr-7 [&_select]:text-xs [&_select]:font-medium [&_select]:text-muted-foreground"
     >
       {CATEGORIES.map((category) => (
         <option key={category} value={category}>
@@ -143,26 +143,26 @@ export function Stepper({
   minusDisabled?: boolean;
 }) {
   return (
-    <div className="flex items-center rounded-lg bg-muted p-0.5">
+    <div className="flex items-center rounded-lg bg-fill">
       <button
         type="button"
         aria-label={`Reducir ${label}`}
         onClick={onMinus}
         disabled={minusDisabled}
-        className="flex size-8 items-center justify-center rounded-md text-muted-foreground active:bg-card disabled:opacity-35"
+        className="flex h-8 w-9 items-center justify-center text-foreground active:opacity-40 disabled:opacity-30"
       >
-        <Minus className="size-3" />
+        <Minus className="size-4" />
       </button>
-      <span className="w-5 text-center text-xs font-bold tabular-nums" aria-live="polite">
+      <span className="min-w-6 text-center text-[15px] font-medium tabular-nums" aria-live="polite">
         {value}
       </span>
       <button
         type="button"
         aria-label={`Aumentar ${label}`}
         onClick={onPlus}
-        className="flex size-8 items-center justify-center rounded-md text-primary active:bg-card"
+        className="flex h-8 w-9 items-center justify-center text-foreground active:opacity-40"
       >
-        <Plus className="size-3" />
+        <Plus className="size-4" />
       </button>
     </div>
   );
@@ -171,9 +171,9 @@ export function Stepper({
 export function EmptyState({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
   return (
     <section className="flex flex-1 flex-col items-center justify-center py-14 text-center">
-      <div className="mb-4 flex size-16 items-center justify-center rounded-[22px] bg-muted text-primary">{icon}</div>
-      <h2 className="text-lg font-bold">{title}</h2>
-      <p className="mt-1 max-w-64 text-sm leading-6 text-muted-foreground">{text}</p>
+      <div className="mb-3 text-muted-foreground/70 [&_svg]:size-12 [&_svg]:stroke-[1.5]">{icon}</div>
+      <h2 className="text-[22px] font-bold">{title}</h2>
+      <p className="mt-1 max-w-72 text-[15px] leading-5 text-muted-foreground">{text}</p>
     </section>
   );
 }

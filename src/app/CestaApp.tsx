@@ -603,14 +603,14 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
     >
       {splash && (
         <div
-          className={`fixed inset-0 z-[100] flex min-h-[100dvh] flex-col items-center justify-center bg-[#f6f8f3] transition-opacity duration-300 dark:bg-background ${splashFading ? "opacity-0" : "opacity-100"}`}
+          className={`fixed inset-0 z-[100] flex min-h-[100dvh] flex-col items-center justify-center bg-card transition-opacity duration-300 ${splashFading ? "opacity-0" : "opacity-100"}`}
           aria-label="Iniciando Cesta"
         >
-          <div className="flex size-[76px] items-center justify-center rounded-[24px] bg-primary text-primary-foreground shadow-[0_18px_44px_rgba(41,91,63,.22)]">
+          <div className="flex size-[76px] items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <ShoppingBasket className="size-8" strokeWidth={1.8} />
           </div>
-          <p className="mt-4 text-[17px] font-bold tracking-[-0.02em] text-[#1f2d23] dark:text-foreground">Cesta</p>
-          <p className="absolute bottom-[calc(1.4rem+env(safe-area-inset-bottom))] text-[7px] font-semibold uppercase tracking-[0.18em] text-[#7f8a81]">
+          <p className="mt-4 text-[17px] font-semibold text-primary">Cesta</p>
+          <p className="absolute bottom-[calc(1.4rem+env(safe-area-inset-bottom))] text-xs font-semibold uppercase text-muted-foreground">
             Powered by AR
           </p>
         </div>
@@ -619,19 +619,19 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
       {/* Franja opaca detrás de la cabecera: el contenido no se transparenta al desplazarse. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 top-0 z-[19] h-[calc(3.6rem+env(safe-area-inset-top))] border-b border-border/60 bg-background"
+        className="pointer-events-none fixed inset-x-0 top-0 z-[19] h-[calc(3.6rem+env(safe-area-inset-top))] border-b-[0.5px] border-separator bg-background"
       />
       <button
         type="button"
         onClick={() => setMenuOpen(true)}
         disabled={!ready}
         aria-label="Abrir menú"
-        className="fixed left-4 top-[calc(.8rem+env(safe-area-inset-top))] z-20 flex size-10 items-center justify-center rounded-xl border border-border bg-card text-primary shadow-[0_1px_2px_rgba(32,47,38,.06)] disabled:opacity-50"
+        className="fixed left-2 top-[calc(.7rem+env(safe-area-inset-top))] z-20 flex size-11 items-center justify-center rounded-full text-primary active:opacity-40 disabled:opacity-50"
       >
         <MenuIcon />
       </button>
       {sectionTitle && (
-        <div className="fixed left-[4.1rem] top-[calc(.8rem+env(safe-area-inset-top))] z-20 flex h-10 items-center rounded-xl border border-border bg-card px-3.5 text-[12px] font-bold text-primary shadow-[0_1px_2px_rgba(32,47,38,.06)]">
+        <div className="pointer-events-none fixed inset-x-16 top-[calc(.7rem+env(safe-area-inset-top))] z-20 flex h-11 items-center justify-center truncate text-[17px] font-semibold text-foreground">
           {view === "dog" ? petName : sectionTitle}
         </div>
       )}
@@ -641,16 +641,16 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
         className="pointer-events-none fixed inset-x-0 top-0 z-30 mx-auto flex max-w-[470px] items-end justify-center overflow-hidden text-primary transition-[height]"
         style={{ height: `${pull}px` }}
       >
-        <div className="mb-2 flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-[10px] font-bold shadow-lg">
+        <div className="mb-2 flex items-center gap-2 rounded-full bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-float">
           <LoaderCircle className={`size-3.5 ${pull >= 58 ? "animate-spin" : ""}`} />
           {pull >= 58 ? "Suelta para actualizar" : "Desliza para actualizar"}
         </div>
       </div>
 
-      <div className="mx-auto flex min-h-[100dvh] w-full max-w-[520px] flex-col px-2.5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-[calc(3.8rem+env(safe-area-inset-top))] sm:px-3">
+      <div className="mx-auto flex min-h-[100dvh] w-full max-w-[520px] flex-col px-2.5 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-[calc(3.8rem+env(safe-area-inset-top))] sm:px-3">
         {needsNotice && ready && needs.length > 0 && (view === "purchase" || view === "stock") && (
           <aside
-            className="mb-5 flex items-start gap-3 rounded-[20px] border border-[#d8e5d9] bg-[#eaf3eb] p-3.5 text-[#20462f] shadow-[0_10px_30px_rgba(41,91,63,.08)] dark:border-border dark:bg-secondary dark:text-secondary-foreground"
+            className="mb-5 flex items-start gap-3 rounded-xl bg-primary-soft p-3.5 text-primary"
             aria-label="Aviso de reposición"
           >
             <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
@@ -664,7 +664,7 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
               }}
               className="min-w-0 flex-1 text-left"
             >
-              <span className="block text-sm font-bold">
+              <span className="block text-sm font-semibold">
                 Hay {needs.length} {needs.length === 1 ? "producto" : "productos"} por reponer
               </span>
               <span className="mt-0.5 block text-xs leading-5 opacity-75">Toca para ver lo que falta en casa.</span>
@@ -673,7 +673,7 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
               type="button"
               onClick={() => setNeedsNotice(false)}
               aria-label="Cerrar aviso"
-              className="flex size-9 items-center justify-center rounded-lg opacity-60 active:bg-white/60"
+              className="flex size-9 items-center justify-center rounded-lg opacity-60 active:bg-fill"
             >
               <X className="size-4" />
             </button>
@@ -682,10 +682,10 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
 
         {dogAlert && (
           <aside
-            className="mb-5 flex items-start gap-3 rounded-[20px] border border-[#ead8d1] bg-[#fbf4f1] p-3.5 text-[#713e2a] shadow-[0_10px_30px_rgba(113,62,42,.08)] dark:border-border dark:bg-card dark:text-foreground"
+            className="mb-5 flex items-start gap-3 rounded-xl bg-warning-soft p-3.5 text-danger"
             aria-label={`Aviso de ${petName}`}
           >
-            <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#a25631] text-white">
+            <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-warning text-white">
               <Bell className="size-4" />
             </div>
             <button
@@ -696,14 +696,14 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
               }}
               className="min-w-0 flex-1 text-left"
             >
-              <span className="block text-sm font-bold">Aviso de {petName}</span>
+              <span className="block text-sm font-semibold">Aviso de {petName}</span>
               <span className="mt-0.5 block text-xs leading-5 opacity-75">{dogAlert.title}</span>
             </button>
             <button
               type="button"
               onClick={() => setDogAlert(null)}
               aria-label="Cerrar aviso"
-              className="flex size-9 items-center justify-center rounded-lg opacity-60 active:bg-white/60"
+              className="flex size-9 items-center justify-center rounded-lg opacity-60 active:bg-fill"
             >
               <X className="size-4" />
             </button>
@@ -711,7 +711,7 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
         )}
 
         {savedCount > 0 && view === "purchase" && (
-          <output className="mb-5 flex items-center gap-3 rounded-[18px] border border-border bg-card p-3.5 text-sm font-semibold shadow-[0_8px_26px_rgba(32,47,38,.06)]">
+          <output className="mb-5 flex items-center gap-3 rounded-xl bg-card p-3.5 text-sm font-semibold">
             <PackageCheck className="size-5 text-primary" />{" "}
             {savedCount === 1 ? "Producto guardado" : `${savedCount} productos guardados`} en el almacén
             <button
@@ -911,7 +911,7 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
                 type="button"
                 onClick={admin.cancel}
                 aria-label="Cerrar acceso administrativo"
-                className="ml-auto flex size-10 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground"
+                className="ml-auto flex size-10 items-center justify-center rounded-xl bg-card text-muted-foreground"
               >
                 <X className="size-4" />
               </button>
@@ -968,40 +968,39 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
         {view !== "inventory-quick" && (
           <nav
             aria-label="Navegación principal"
-            className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-[520px] bg-gradient-to-t from-background from-75% to-transparent px-2.5 pb-[calc(.5rem+env(safe-area-inset-bottom))] pt-5 sm:px-3"
+            className="fixed inset-x-0 bottom-0 z-20 border-t-[0.5px] border-separator bg-card pb-[env(safe-area-inset-bottom)]"
           >
-            <div className="grid grid-cols-5 gap-0.5 rounded-[20px] border border-border bg-card/95 p-1 shadow-[0_12px_36px_rgba(32,47,38,.11)] backdrop-blur">
+            <div className="mx-auto grid h-[3.25rem] w-full max-w-[520px] grid-cols-5">
               <NavButton
                 active={view === "home"}
                 onClick={() => setView("home")}
-                icon={<House className="size-4" />}
+                icon={<House className="size-6" strokeWidth={1.8} />}
                 label="Inicio"
               />
               <NavButton
                 active={view === "purchase"}
                 onClick={() => setView("purchase")}
-                icon={<ShoppingBasket className="size-4" />}
+                icon={<ShoppingBasket className="size-6" strokeWidth={1.8} />}
                 label="Compra"
                 badge={preparing + storeUnits}
               />
               <NavButton
                 active={view === "stock"}
                 onClick={() => setView("stock")}
-                icon={<Archive className="size-4" />}
+                icon={<Archive className="size-6" strokeWidth={1.8} />}
                 label="Necesidades"
                 badge={needs.length}
-                small
               />
               <NavButton
                 active={view === "dog"}
                 onClick={() => setView("dog")}
-                icon={<Dog className="size-4" />}
+                icon={<Dog className="size-6" strokeWidth={1.8} />}
                 label={petName}
               />
               <NavButton
                 active={view === "tickets"}
                 onClick={() => setView("tickets")}
-                icon={<ReceiptText className="size-4" />}
+                icon={<ReceiptText className="size-6" strokeWidth={1.8} />}
                 label="Tickets"
               />
             </div>
@@ -1019,27 +1018,25 @@ function NavButton({
   icon,
   label,
   badge = 0,
-  small,
 }: {
   active: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
   badge?: number;
-  small?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-current={active ? "page" : undefined}
-      className={`relative flex h-12 flex-col items-center justify-center gap-0.5 rounded-[15px] font-bold transition-colors ${small ? "text-[9px]" : "text-[10px]"} ${active ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+      className={`relative flex flex-col items-center justify-center gap-0.5 pt-0.5 text-[11px] font-medium ${active ? "text-primary" : "text-muted-foreground"}`}
     >
       {icon}
       <span className="max-w-full truncate px-0.5">{label}</span>
       {badge > 0 && (
         <span
-          className={`absolute right-1 top-1 rounded-full px-1 text-[8px] ${active ? "bg-white/18" : "bg-[#e5eee6] text-primary dark:bg-muted"}`}
+          className="absolute left-1/2 top-0.5 ml-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-destructive px-1 text-xs font-medium text-white tabular-nums"
           aria-label={`${badge} pendientes`}
         >
           {badge}

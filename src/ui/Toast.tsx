@@ -35,11 +35,11 @@ export function Toast({ state, onDismiss }: { state: ToastState | null; onDismis
 
   if (!state) return null;
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(5.4rem+env(safe-area-inset-bottom))] z-[90] flex justify-center px-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-[90] flex justify-center px-4">
       <div
         role="status"
         aria-live="polite"
-        className="pointer-events-auto flex max-w-[440px] items-center gap-2 rounded-2xl bg-[#1d2b22] px-3.5 py-2.5 text-xs font-semibold text-white shadow-[0_14px_36px_rgba(20,35,25,.28)] dark:bg-card dark:text-foreground"
+        className="pointer-events-auto flex max-w-[440px] items-center gap-2 rounded-xl bg-card py-2 pr-1.5 pl-4 text-[15px] text-foreground shadow-float"
       >
         <span className="min-w-0 flex-1">{state.message}</span>
         {state.action && (
@@ -49,7 +49,7 @@ export function Toast({ state, onDismiss }: { state: ToastState | null; onDismis
               state.action?.onClick();
               onDismiss();
             }}
-            className="shrink-0 rounded-lg px-2 py-1.5 font-bold text-[#a7d7b5]"
+            className="shrink-0 rounded-lg px-2 py-1.5 font-semibold text-primary active:opacity-40"
           >
             {state.action.label}
           </button>
@@ -58,9 +58,9 @@ export function Toast({ state, onDismiss }: { state: ToastState | null; onDismis
           type="button"
           onClick={onDismiss}
           aria-label="Cerrar aviso"
-          className="flex size-7 shrink-0 items-center justify-center opacity-70"
+          className="flex size-9 shrink-0 items-center justify-center text-muted-foreground"
         >
-          <X className="size-3.5" />
+          <X className="size-4" />
         </button>
       </div>
     </div>

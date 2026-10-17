@@ -1,4 +1,5 @@
 import {
+  ChevronRight,
   Copy,
   Euro,
   House,
@@ -110,14 +111,14 @@ export function Menu({
         type="button"
         aria-label="Cerrar menú"
         tabIndex={-1}
-        className="absolute inset-0 bg-[#17251c]/30 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-overlay"
         onClick={onClose}
       />
       <aside
         role="dialog"
         aria-modal="true"
         aria-label="Menú"
-        className="flex min-h-[100dvh] w-[78%] max-w-[300px] flex-col overflow-y-auto bg-background px-3 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))] shadow-[18px_0_50px_rgba(20,35,25,.18)] relative"
+        className="flex min-h-[100dvh] w-[78%] max-w-[300px] flex-col overflow-y-auto bg-background px-3 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))] relative"
       >
         <div className="flex items-center justify-between">
           <div className="flex min-w-0 items-center gap-2.5">
@@ -125,8 +126,8 @@ export function Menu({
               <ShoppingBasket className="size-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-bold">Cesta</p>
-              {household && <p className="truncate text-[10px] text-muted-foreground">{household.name}</p>}
+              <p className="text-sm font-semibold">Cesta</p>
+              {household && <p className="truncate text-xs text-muted-foreground">{household.name}</p>}
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
@@ -142,7 +143,7 @@ export function Menu({
                 saveTheme(next);
                 setTheme(next);
               }}
-              className="flex size-10 items-center justify-center rounded-xl border border-border bg-card text-primary"
+              className="flex size-11 items-center justify-center rounded-full text-primary active:opacity-40"
             >
               {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
             </button>
@@ -150,7 +151,7 @@ export function Menu({
               type="button"
               onClick={onClose}
               aria-label="Cerrar menú"
-              className="flex size-10 items-center justify-center rounded-xl border border-border bg-card"
+              className="flex size-11 items-center justify-center rounded-full text-muted-foreground active:opacity-40"
             >
               <X className="size-4" />
             </button>
@@ -160,77 +161,70 @@ export function Menu({
           <button
             type="button"
             onClick={() => go("home")}
-            className="mt-5 self-start py-1 text-xs font-bold text-primary"
+            className="mt-5 self-start py-1 text-xs font-semibold text-primary"
           >
             ← Volver al menú
           </button>
         )}
         <div className="mt-5 flex-1">
           {page === "home" && (
-            <div className="space-y-2 [&_button]:whitespace-nowrap">
-              <MenuButton
-                tone="primary"
-                icon={<PackageCheck className="size-4 shrink-0" />}
-                onClick={onOpenQuickInventory}
-              >
-                Inventario rápido
-              </MenuButton>
-              <MenuButton icon={<Utensils className="size-4 shrink-0 text-primary" />} onClick={onOpenRecipes}>
-                Recetas con mi stock
-              </MenuButton>
-              <MenuButton
-                icon={<Euro className="size-4 shrink-0 text-primary" />}
-                onClick={() => void refreshPrices()}
-                disabled={busy}
-              >
-                Actualizar precios
-              </MenuButton>
-              <p className="px-1 text-[9px] leading-3 text-muted-foreground">
-                {priceMeta.lastSuccessfulAt
-                  ? `Última actualización: ${new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "short" }).format(new Date(priceMeta.lastSuccessfulAt))}`
-                  : "Precios aún no actualizados"}
-                {" · "}
-                <button type="button" onClick={() => go("prices")} className="font-bold text-primary">
-                  {priceMeta.postalCode ? `CP ${priceMeta.postalCode}` : "Indicar código postal"}
-                </button>
-              </p>
-              {message && (
-                <p
-                  className="rounded-lg bg-muted px-2 py-1.5 text-[10px] font-semibold whitespace-normal text-muted-foreground"
-                  role="status"
-                >
-                  {message}
+            <div className="space-y-6 [&_button]:whitespace-nowrap">
+              <div>
+                <MenuGroup>
+                  <MenuButton tile="bg-primary" icon={<PackageCheck />} onClick={onOpenQuickInventory}>
+                    Inventario rápido
+                  </MenuButton>
+                  <MenuButton tile="bg-warning" icon={<Utensils />} onClick={onOpenRecipes}>
+                    Recetas con mi stock
+                  </MenuButton>
+                  <MenuButton tile="bg-info" icon={<Euro />} onClick={() => void refreshPrices()} disabled={busy}>
+                    Actualizar precios
+                  </MenuButton>
+                </MenuGroup>
+                <p className="mt-1.5 px-4 text-[13px] leading-[18px] whitespace-normal text-muted-foreground">
+                  {priceMeta.lastSuccessfulAt
+                    ? `Última actualización: ${new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "short" }).format(new Date(priceMeta.lastSuccessfulAt))}`
+                    : "Precios aún no actualizados"}
+                  {" · "}
+                  <button type="button" onClick={() => go("prices")} className="text-primary">
+                    {priceMeta.postalCode ? `CP ${priceMeta.postalCode}` : "Indicar código postal"}
+                  </button>
                 </p>
-              )}
-              <MenuButton icon={<House className="size-4 shrink-0 text-primary" />} onClick={() => go("household")}>
-                Mi hogar
-              </MenuButton>
-              <MenuButton icon={<ShieldCheck className="size-4 shrink-0 text-primary" />} onClick={() => go("diet")}>
-                Alimentación especial
-              </MenuButton>
-              <MenuButton icon={<Sparkles className="size-4 shrink-0 text-primary" />} onClick={() => go("news")}>
-                Novedades
-              </MenuButton>
-              {account.mode === "supabase" && (
-                <MenuButton icon={<KeyRound className="size-4 shrink-0 text-primary" />} onClick={() => go("password")}>
-                  Modificar contraseña
+                {message && (
+                  <p
+                    className="mt-1 px-4 text-[13px] leading-[18px] whitespace-normal text-muted-foreground"
+                    role="status"
+                  >
+                    {message}
+                  </p>
+                )}
+              </div>
+              <MenuGroup>
+                <MenuButton tile="bg-primary" icon={<House />} onClick={() => go("household")}>
+                  Mi hogar
                 </MenuButton>
-              )}
-              <button
-                type="button"
-                onClick={() => go("reset")}
-                className="mt-6 flex h-12 w-full items-center gap-2.5 rounded-xl border border-[#edd8d3] bg-[#fbf3f1] px-3 text-left text-xs font-bold text-[#9b3f38] dark:border-border dark:bg-card"
-              >
-                <RotateCcw className="size-4 shrink-0" /> Restablecer datos del hogar
-              </button>
-              {account.mode === "supabase" && (
-                <MenuButton
-                  icon={<LogOut className="size-4 shrink-0 text-muted-foreground" />}
-                  onClick={() => void account.signOut()}
-                >
-                  Cerrar sesión
+                <MenuButton tile="bg-danger" icon={<ShieldCheck />} onClick={() => go("diet")}>
+                  Alimentación especial
                 </MenuButton>
-              )}
+                <MenuButton tile="bg-info" icon={<Sparkles />} onClick={() => go("news")}>
+                  Novedades
+                </MenuButton>
+                {account.mode === "supabase" && (
+                  <MenuButton tile="bg-muted-foreground" icon={<KeyRound />} onClick={() => go("password")}>
+                    Modificar contraseña
+                  </MenuButton>
+                )}
+              </MenuGroup>
+              <MenuGroup>
+                <MenuButton tone="danger" icon={<RotateCcw />} onClick={() => go("reset")}>
+                  Restablecer datos del hogar
+                </MenuButton>
+                {account.mode === "supabase" && (
+                  <MenuButton tone="danger" icon={<LogOut />} onClick={() => void account.signOut()}>
+                    Cerrar sesión
+                  </MenuButton>
+                )}
+              </MenuGroup>
             </div>
           )}
           {page === "household" && household && (
@@ -248,9 +242,9 @@ export function Menu({
           )}
           {page === "news" && (
             <section>
-              <h2 className="text-lg font-bold">Novedades</h2>
-              <div className="mt-4 rounded-[18px] border border-border bg-card p-4">
-                <p className="text-xs font-bold text-primary">Versión {version}</p>
+              <h2 className="text-lg font-semibold">Novedades</h2>
+              <div className="mt-4 rounded-xl bg-card p-4">
+                <p className="text-xs font-semibold text-primary">Versión {version}</p>
                 <ul className="mt-3 space-y-2 text-xs leading-5 text-muted-foreground">
                   <li>• Cuentas y hogares compartidos: toda la familia ve la misma lista al momento.</li>
                   <li>• Funciona sin conexión y se instala en la pantalla de inicio.</li>
@@ -260,8 +254,8 @@ export function Menu({
                   <li>• Modo oscuro y mejoras de accesibilidad.</li>
                 </ul>
               </div>
-              <div className="mt-3 rounded-[18px] border border-border bg-card p-4">
-                <p className="text-xs font-bold">Versión 4</p>
+              <div className="mt-3 rounded-xl bg-card p-4">
+                <p className="text-xs font-semibold">Versión 4</p>
                 <ul className="mt-3 space-y-2 text-xs leading-5 text-muted-foreground">
                   <li>• Inventario rápido por zonas, voz, tickets, cámara y fotografías.</li>
                   <li>• Memoria de consumo y caducidades estimadas.</li>
@@ -274,8 +268,8 @@ export function Menu({
           )}
           {page === "diet" && (
             <section>
-              <h2 className="text-lg font-bold">Alimentación especial</h2>
-              <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+              <h2 className="text-lg font-semibold">Alimentación especial</h2>
+              <p className="mt-1 text-xs leading-4 text-muted-foreground">
                 Con el perfil activo, las recetas marcan los ingredientes que coinciden. Desactivado no se muestra
                 ningún aviso.
               </p>
@@ -304,7 +298,7 @@ export function Menu({
                 }}
                 className="mt-4 space-y-3"
               >
-                <label className="flex items-center justify-between rounded-xl bg-muted p-3 text-xs font-bold">
+                <label className="flex items-center justify-between rounded-xl bg-muted p-3 text-xs font-semibold">
                   Activar perfil
                   <input
                     type="checkbox"
@@ -313,7 +307,7 @@ export function Menu({
                     className="size-5 accent-primary"
                   />
                 </label>
-                <label className="block text-[11px] font-bold text-muted-foreground">
+                <label className="block text-xs font-semibold text-muted-foreground">
                   Alérgenos
                   <Input
                     value={diet.allergens}
@@ -322,7 +316,7 @@ export function Menu({
                     className="mt-1 h-11 rounded-xl text-sm"
                   />
                 </label>
-                <label className="block text-[11px] font-bold text-muted-foreground">
+                <label className="block text-xs font-semibold text-muted-foreground">
                   Alimentos a evitar
                   <Input
                     value={diet.avoided}
@@ -332,7 +326,7 @@ export function Menu({
                   />
                 </label>
                 {message && (
-                  <p className="text-[11px] font-semibold text-muted-foreground" role="status">
+                  <p className="text-xs font-semibold text-muted-foreground" role="status">
                     {message}
                   </p>
                 )}
@@ -345,7 +339,7 @@ export function Menu({
           {page === "password" && <PasswordPage account={account} />}
           {page === "reset" && <ResetPage api={api} account={account} onReset={onReset} />}
         </div>
-        <p className="border-t border-border pt-4 text-center text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        <p className="border-t-[0.5px] border-separator pt-4 text-center text-xs font-semibold uppercase text-muted-foreground">
           Cesta · Versión {version}
           {account.email ? (
             <span className="mt-1 block normal-case tracking-normal">{account.email}</span>
@@ -358,27 +352,45 @@ export function Menu({
   );
 }
 
+/** Grupo de filas al estilo de Ajustes de iOS. */
+function MenuGroup({ children }: { children: ReactNode }) {
+  return <div className="overflow-hidden rounded-xl bg-card">{children}</div>;
+}
+
+/** Fila de menú: icono en cuadradito de color, texto y chevron; las destructivas van en rojo y sin icono de color. */
 function MenuButton({
   icon,
   children,
   onClick,
   disabled,
+  tile,
   tone,
 }: {
   icon: ReactNode;
   children: ReactNode;
   onClick: () => void;
   disabled?: boolean;
-  tone?: "primary";
+  tile?: string;
+  tone?: "danger";
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex h-12 w-full items-center gap-2.5 rounded-xl border px-3 text-left text-xs font-bold disabled:opacity-60 ${tone === "primary" ? "border-[#d8e5d9] bg-[#eaf3eb] text-[#20462f] dark:border-border dark:bg-secondary dark:text-secondary-foreground" : "border-border bg-card"}`}
+      className="group flex w-full items-center gap-3 pl-3.5 text-left text-[17px] active:bg-fill disabled:opacity-60"
     >
-      {disabled ? <LoaderCircle className="size-4 shrink-0 animate-spin text-primary" /> : icon} {children}
+      <span
+        className={`flex size-7 shrink-0 items-center justify-center rounded-md [&_svg]:size-[17px] ${tone === "danger" ? "text-danger" : `text-white ${tile ?? "bg-primary"}`}`}
+      >
+        {disabled ? <LoaderCircle className="animate-spin" /> : icon}
+      </span>
+      <span
+        className={`flex min-h-11 flex-1 items-center justify-between gap-2 border-separator pr-3 group-not-first:border-t-[0.5px] ${tone === "danger" ? "text-danger" : ""}`}
+      >
+        {children}
+        {tone !== "danger" && <ChevronRight className="size-4 shrink-0 text-muted-foreground/60" />}
+      </span>
     </button>
   );
 }
@@ -419,7 +431,7 @@ function HouseholdPage({
 
   return (
     <section>
-      <h2 className="text-lg font-bold">Mi hogar</h2>
+      <h2 className="text-lg font-semibold">Mi hogar</h2>
       <form
         onSubmit={async (event) => {
           event.preventDefault();
@@ -451,26 +463,24 @@ function HouseholdPage({
       </form>
       {account.mode === "supabase" ? (
         <>
-          <div className="mt-4 rounded-[18px] border border-border bg-card p-4">
-            <p className="text-xs font-bold">Invitar a alguien</p>
-            <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+          <div className="mt-4 rounded-xl bg-card p-4">
+            <p className="text-xs font-semibold">Invitar a alguien</p>
+            <p className="mt-1 text-xs leading-4 text-muted-foreground">
               Comparte el código. Al entrar con su cuenta verá la misma lista y almacén.
             </p>
-            <p className="mt-3 text-center font-mono text-2xl font-bold tracking-[.3em] text-primary">
-              {household.inviteCode}
-            </p>
+            <p className="mt-3 text-center font-mono text-2xl font-bold text-primary">{household.inviteCode}</p>
             <Button onClick={() => void share()} className="mt-3 h-11 w-full rounded-xl">
               <Copy className="size-4" /> Compartir invitación
             </Button>
           </div>
           {members.length > 0 && (
-            <div className="mt-3 rounded-[18px] border border-border bg-card p-4">
-              <p className="text-xs font-bold">Miembros</p>
+            <div className="mt-3 rounded-xl bg-card p-4">
+              <p className="text-xs font-semibold">Miembros</p>
               <ul className="mt-2 space-y-1 text-[12px]">
                 {members.map((member) => (
                   <li key={member.email} className="flex items-center justify-between gap-2">
                     <span className="truncate">{member.email}</span>
-                    <span className="shrink-0 text-[10px] text-muted-foreground">
+                    <span className="shrink-0 text-xs text-muted-foreground">
                       {member.role === "owner" ? "Creador" : "Miembro"}
                     </span>
                   </li>
@@ -481,19 +491,19 @@ function HouseholdPage({
           <button
             type="button"
             onClick={() => (confirmLeave ? void account.leaveHousehold() : setConfirmLeave(true))}
-            className="mt-4 w-full rounded-xl border border-[#edd8d3] bg-[#fbf3f1] py-3 text-xs font-bold text-[#9b3f38] dark:border-border dark:bg-card"
+            className="mt-4 w-full rounded-xl bg-danger-soft py-3 text-xs font-semibold text-danger"
           >
             {confirmLeave ? "Toca otra vez para salir del hogar" : "Salir de este hogar"}
           </button>
         </>
       ) : (
-        <p className="mt-4 rounded-[18px] border border-border bg-card p-4 text-[11px] leading-5 text-muted-foreground">
+        <p className="mt-4 rounded-xl bg-card p-4 text-xs leading-5 text-muted-foreground">
           Estás en modo local: los datos se guardan solo en este dispositivo. Para compartir la lista con tu familia,
           configura Cesta con un servidor Supabase.
         </p>
       )}
       {message && (
-        <p className="mt-3 text-[11px] font-semibold text-muted-foreground" role="status">
+        <p className="mt-3 text-xs font-semibold text-muted-foreground" role="status">
           {message}
         </p>
       )}
@@ -514,8 +524,8 @@ function PricesPage({
   const [error, setError] = useState("");
   return (
     <section>
-      <h2 className="text-lg font-bold">Precios</h2>
-      <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+      <h2 className="text-lg font-semibold">Precios</h2>
+      <p className="mt-1 text-xs leading-4 text-muted-foreground">
         Cesta aprende los precios de tus tickets. Con tu código postal también consulta los precios de fruta y verdura
         de Mercadona en tu zona.
       </p>
@@ -531,7 +541,7 @@ function PricesPage({
         }}
         className="mt-4 space-y-3"
       >
-        <label className="block text-[11px] font-bold text-muted-foreground">
+        <label className="block text-xs font-semibold text-muted-foreground">
           Código postal
           <Input
             value={value}
@@ -543,7 +553,7 @@ function PricesPage({
           />
         </label>
         {error && (
-          <p className="text-[11px] font-semibold text-[#a34141]" role="alert">
+          <p className="text-xs font-semibold text-danger" role="alert">
             {error}
           </p>
         )}
@@ -563,7 +573,7 @@ function PasswordPage({ account }: { account: Account }) {
   const [busy, setBusy] = useState(false);
   return (
     <section>
-      <h2 className="text-lg font-bold">Modificar contraseña</h2>
+      <h2 className="text-lg font-semibold">Modificar contraseña</h2>
       <form
         onSubmit={async (event) => {
           event.preventDefault();
@@ -611,7 +621,7 @@ function PasswordPage({ account }: { account: Account }) {
         />
         {message && (
           <p
-            className={`text-xs font-semibold ${message.includes("actualizada") ? "text-primary" : "text-[#a34141]"}`}
+            className={`text-xs font-semibold ${message.includes("actualizada") ? "text-primary" : "text-danger"}`}
             role="status"
           >
             {message}
@@ -632,7 +642,7 @@ function ResetPage({ api, account, onReset }: { api: CestaApi; account: Account;
   const local = account.mode === "local";
   return (
     <section>
-      <h2 className="text-lg font-bold text-[#943e37]">Restablecer datos del hogar</h2>
+      <h2 className="text-lg font-semibold text-danger">Restablecer datos del hogar</h2>
       <p className="mt-2 text-xs leading-5 text-muted-foreground">
         Se eliminarán Compra, Lista, almacén, caducidades, tickets, precios y los artículos y avisos de la mascota de
         todo el hogar. El catálogo base se conserva con existencias a cero. Esta acción no se puede deshacer.
@@ -669,14 +679,14 @@ function ResetPage({ api, account, onReset }: { api: CestaApi; account: Account;
           className="h-11 rounded-xl"
         />
         {error && (
-          <p className="text-xs font-semibold text-[#a34141]" role="alert">
+          <p className="text-xs font-semibold text-danger" role="alert">
             {error}
           </p>
         )}
         <Button
           type="submit"
           disabled={busy || !password}
-          className="h-11 w-full rounded-xl bg-[#a34141] text-white hover:bg-[#923936]"
+          className="h-11 w-full rounded-xl bg-danger text-white hover:bg-danger"
         >
           {busy ? <LoaderCircle className="size-4 animate-spin" /> : <RotateCcw className="size-4" />} Restablecer todo
         </Button>

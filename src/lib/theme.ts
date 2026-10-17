@@ -3,7 +3,7 @@ import { readText, writeText } from "./storage";
 export type Theme = "light" | "dark";
 
 const KEY = "cesta-theme";
-const BACKGROUND: Record<Theme, string> = { light: "#f5f7f3", dark: "#101712" };
+const BACKGROUND: Record<Theme, string> = { light: "#f2f2f7", dark: "#000000" };
 
 /** Tema elegido en este dispositivo; claro si no se ha elegido nunca. */
 export function storedTheme(): Theme {

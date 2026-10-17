@@ -110,14 +110,14 @@ function SupabaseRoot() {
 export function Splash() {
   return (
     <div
-      className="fixed inset-0 z-[100] flex min-h-[100dvh] flex-col items-center justify-center bg-[#f6f8f3] dark:bg-background"
+      className="fixed inset-0 z-[100] flex min-h-[100dvh] flex-col items-center justify-center bg-card"
       aria-label="Iniciando Cesta"
     >
-      <div className="flex size-[76px] items-center justify-center rounded-[24px] bg-primary text-primary-foreground shadow-[0_18px_44px_rgba(41,91,63,.22)]">
+      <div className="flex size-[76px] items-center justify-center rounded-xl bg-primary text-primary-foreground">
         <ShoppingBasket className="size-8" strokeWidth={1.8} />
       </div>
-      <p className="mt-4 text-[17px] font-bold tracking-[-0.02em] text-[#1f2d23] dark:text-foreground">Cesta</p>
-      <p className="absolute bottom-[calc(1.4rem+env(safe-area-inset-bottom))] text-[7px] font-semibold uppercase tracking-[0.18em] text-[#7f8a81]">
+      <p className="mt-4 text-[17px] font-semibold text-primary">Cesta</p>
+      <p className="absolute bottom-[calc(1.4rem+env(safe-area-inset-bottom))] text-xs font-semibold uppercase text-muted-foreground">
         Powered by AR
       </p>
     </div>
@@ -128,11 +128,11 @@ function Card({ icon, title, text, children }: { icon: ReactNode; title: string;
   return (
     <div className="min-h-[100dvh] bg-background px-4 py-[calc(1.5rem+env(safe-area-inset-top))]">
       <div className="mx-auto flex min-h-[80dvh] max-w-[420px] items-center">
-        <section className="w-full rounded-[24px] border border-border bg-card p-5 shadow-[0_18px_50px_rgba(32,47,38,.1)]">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+        <section className="w-full rounded-xl bg-card p-5">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             {icon}
           </div>
-          <h1 className="mt-4 text-center text-xl font-bold">{title}</h1>
+          <h1 className="mt-4 text-center text-xl font-semibold">{title}</h1>
           <p className="mt-2 text-center text-xs leading-5 text-muted-foreground">{text}</p>
           {children}
         </section>
@@ -200,7 +200,7 @@ function AuthScreen() {
       }
     >
       <form onSubmit={submit} className="mt-5 space-y-3" noValidate>
-        <label className="block text-xs font-bold text-muted-foreground">
+        <label className="block text-xs font-semibold text-muted-foreground">
           Email
           <Input
             type="email"
@@ -212,7 +212,7 @@ function AuthScreen() {
           />
         </label>
         {mode !== "reset" && (
-          <label className="block text-xs font-bold text-muted-foreground">
+          <label className="block text-xs font-semibold text-muted-foreground">
             Contraseña
             <Input
               type="password"
@@ -224,16 +224,16 @@ function AuthScreen() {
           </label>
         )}
         {error && (
-          <p className="text-xs font-semibold text-[#a34141]" role="alert">
+          <p className="text-xs font-semibold text-danger" role="alert">
             {error}
           </p>
         )}
         {message && (
-          <p className="rounded-xl bg-[#eaf3eb] px-3 py-2 text-xs font-semibold text-primary" role="status">
+          <p className="rounded-xl bg-muted px-3 py-2 text-xs font-semibold text-primary" role="status">
             {message}
           </p>
         )}
-        <Button type="submit" disabled={busy} className="h-12 w-full rounded-2xl">
+        <Button type="submit" disabled={busy} className="h-12 w-full rounded-xl">
           {busy ? (
             <LoaderCircle className="size-4 animate-spin" />
           ) : mode === "reset" ? (
@@ -244,7 +244,7 @@ function AuthScreen() {
           {mode === "login" ? " Entrar" : mode === "signup" ? " Crear cuenta" : " Enviar enlace"}
         </Button>
       </form>
-      <div className="mt-4 flex flex-col items-center gap-2 text-xs font-bold text-primary">
+      <div className="mt-4 flex flex-col items-center gap-2 text-xs font-semibold text-primary">
         {mode !== "login" && (
           <button type="button" onClick={() => setMode("login")}>
             Ya tengo cuenta
@@ -297,11 +297,11 @@ function NewPasswordScreen({ onDone }: { onDone: () => void }) {
           className="h-11 rounded-xl"
         />
         {error && (
-          <p className="text-xs font-semibold text-[#a34141]" role="alert">
+          <p className="text-xs font-semibold text-danger" role="alert">
             {error}
           </p>
         )}
-        <Button type="submit" disabled={busy} className="h-12 w-full rounded-2xl">
+        <Button type="submit" disabled={busy} className="h-12 w-full rounded-xl">
           Guardar contraseña
         </Button>
       </form>
@@ -338,7 +338,7 @@ function HouseholdScreen({ onReady }: { onReady: (id: string) => void }) {
       text="Crea un hogar nuevo o únete al de tu familia con su código de invitación."
     >
       {code && (
-        <p className="mt-4 rounded-xl bg-[#eaf3eb] px-3 py-2 text-center text-xs font-semibold text-primary">
+        <p className="mt-4 rounded-xl bg-muted px-3 py-2 text-center text-xs font-semibold text-primary">
           Te han invitado a un hogar. Pulsa «Unirme» para entrar.
         </p>
       )}
@@ -349,7 +349,7 @@ function HouseholdScreen({ onReady }: { onReady: (id: string) => void }) {
         }}
         className="mt-5 space-y-2"
       >
-        <label className="block text-xs font-bold text-muted-foreground">
+        <label className="block text-xs font-semibold text-muted-foreground">
           Código de invitación
           <Input
             value={code}
@@ -363,14 +363,14 @@ function HouseholdScreen({ onReady }: { onReady: (id: string) => void }) {
             }
             placeholder="ABC123"
             autoCapitalize="characters"
-            className="mt-1.5 h-11 rounded-xl text-center tracking-[.2em]"
+            className="mt-1.5 h-11 rounded-xl text-center"
           />
         </label>
         <Button type="submit" disabled={busy || code.length < 6} className="h-11 w-full rounded-xl">
           <Users className="size-4" /> Unirme
         </Button>
       </form>
-      <div className="my-5 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[.12em] text-muted-foreground">
+      <div className="my-5 flex items-center gap-3 text-xs font-semibold uppercase text-muted-foreground">
         <span className="h-px flex-1 bg-border" /> o <span className="h-px flex-1 bg-border" />
       </div>
       <form
@@ -380,7 +380,7 @@ function HouseholdScreen({ onReady }: { onReady: (id: string) => void }) {
         }}
         className="space-y-2"
       >
-        <label className="block text-xs font-bold text-muted-foreground">
+        <label className="block text-xs font-semibold text-muted-foreground">
           Nombre del hogar
           <Input
             value={name}
@@ -394,14 +394,14 @@ function HouseholdScreen({ onReady }: { onReady: (id: string) => void }) {
         </Button>
       </form>
       {error && (
-        <p className="mt-3 text-xs font-semibold text-[#a34141]" role="alert">
+        <p className="mt-3 text-xs font-semibold text-danger" role="alert">
           {error}
         </p>
       )}
       <button
         type="button"
         onClick={() => void supabase().auth.signOut()}
-        className="mt-5 w-full text-center text-xs font-bold text-muted-foreground"
+        className="mt-5 w-full text-center text-xs font-semibold text-muted-foreground"
       >
         Cerrar sesión
       </button>

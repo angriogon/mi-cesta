@@ -46,8 +46,8 @@ export function ExpiryDialog({ api, items, onClose }: { api: CestaApi; items: Ex
       aria-modal="true"
       aria-labelledby="expiry-title"
     >
-      <section className="mx-auto max-w-[420px] rounded-[22px] border border-border bg-card p-4">
-        <h2 id="expiry-title" className="text-base font-bold">
+      <section className="mx-auto max-w-[420px] rounded-xl bg-card p-4">
+        <h2 id="expiry-title" className="text-base font-semibold">
           Caducidades de la compra
         </h2>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
@@ -57,7 +57,7 @@ export function ExpiryDialog({ api, items, onClose }: { api: CestaApi; items: Ex
         <div className="mt-4 space-y-2">
           {items.map((item) => (
             <label key={item.productId} className="flex items-center gap-2 rounded-xl bg-muted/65 p-2">
-              <span className="min-w-0 flex-1 truncate text-xs font-bold">
+              <span className="min-w-0 flex-1 truncate text-xs font-semibold">
                 {item.name} · {item.quantity}
               </span>
               <input
@@ -66,7 +66,7 @@ export function ExpiryDialog({ api, items, onClose }: { api: CestaApi; items: Ex
                 value={dates[item.productId] || ""}
                 onChange={(event) => setDates((current) => ({ ...current, [item.productId]: event.target.value }))}
                 aria-label={`Caducidad de ${item.name}`}
-                className="h-10 max-w-[9.5rem] rounded-lg border border-border bg-card px-1 text-[12px] text-foreground"
+                className="h-10 max-w-[9.5rem] rounded-lg bg-card px-1 text-[12px] text-foreground"
               />
             </label>
           ))}
@@ -79,14 +79,14 @@ export function ExpiryDialog({ api, items, onClose }: { api: CestaApi; items: Ex
               onClick={() =>
                 setDates(Object.fromEntries(items.map((item) => [item.productId, addDaysIso(today, days)])))
               }
-              className="rounded-lg bg-muted px-2 py-1.5 text-[10px] font-bold text-muted-foreground"
+              className="rounded-lg bg-muted px-2 py-1.5 text-xs font-semibold text-muted-foreground"
             >
               Todo en {days} días
             </button>
           ))}
         </div>
         {error && (
-          <p className="mt-3 text-xs font-semibold text-[#a34141]" role="alert">
+          <p className="mt-3 text-xs font-semibold text-danger" role="alert">
             {error}
           </p>
         )}
@@ -95,7 +95,7 @@ export function ExpiryDialog({ api, items, onClose }: { api: CestaApi; items: Ex
             type="button"
             onClick={() => void save()}
             disabled={saving}
-            className="h-11 rounded-xl border border-border text-xs font-bold"
+            className="h-11 rounded-xl border border-border text-xs font-semibold"
           >
             Sin fechas
           </button>
@@ -103,7 +103,7 @@ export function ExpiryDialog({ api, items, onClose }: { api: CestaApi; items: Ex
             type="button"
             disabled={saving || !Object.values(dates).some(Boolean)}
             onClick={() => void save()}
-            className="h-11 rounded-xl bg-primary text-xs font-bold text-primary-foreground disabled:opacity-50"
+            className="h-11 rounded-xl bg-primary text-xs font-semibold text-primary-foreground disabled:opacity-50"
           >
             Guardar fechas
           </button>

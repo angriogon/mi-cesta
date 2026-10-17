@@ -211,19 +211,19 @@ export function QuickInventory({
             type="button"
             onClick={step === "location" ? onClose : () => setStep("location")}
             aria-label="Volver"
-            className="flex size-10 items-center justify-center rounded-xl border border-border bg-card"
+            className="flex size-10 items-center justify-center rounded-xl bg-card"
           >
             <ChevronLeft className="size-4" />
           </button>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-[.13em] text-primary">Inventario rápido</p>
-            <h1 className="truncate text-lg font-bold">{step === "location" ? "Elige una zona" : location}</h1>
+            <p className="text-xs font-semibold uppercase text-primary">Inventario rápido</p>
+            <h1 className="truncate text-lg font-semibold">{step === "location" ? "Elige una zona" : location}</h1>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Cerrar"
-            className="flex size-10 items-center justify-center rounded-xl border border-border bg-card"
+            className="flex size-10 items-center justify-center rounded-xl bg-card"
           >
             <X className="size-4" />
           </button>
@@ -247,11 +247,11 @@ export function QuickInventory({
                       setItems(session.items.map((item) => ({ ...item, id: item.id || crypto.randomUUID() })));
                       setStep("capture");
                     }}
-                    className="flex w-full items-center justify-between rounded-[16px] border border-primary/20 bg-[#eaf3eb] px-3 py-2.5 text-left dark:bg-secondary"
+                    className="flex w-full items-center justify-between rounded-lg border border-primary/20 bg-muted px-3 py-2.5 text-left"
                   >
                     <span>
                       <b className="block text-[12px] text-primary">Continuar {session.location}</b>
-                      <small className="text-[10px] text-muted-foreground">
+                      <small className="text-xs text-muted-foreground">
                         {session.items.length} productos guardados
                       </small>
                     </span>
@@ -272,10 +272,10 @@ export function QuickInventory({
                     setLocation(zone);
                     setStep("capture");
                   }}
-                  className={`min-h-20 rounded-[18px] border p-3 text-left ${zone === location ? "border-primary bg-[#eaf3eb] text-primary dark:bg-secondary" : "border-border bg-card"}`}
+                  className={`min-h-20 rounded-xl border p-3 text-left ${zone === location ? "border-primary bg-muted text-primary " : " bg-card"}`}
                 >
                   <MapPin className="size-4" />
-                  <span className="mt-2 block text-[12px] font-bold leading-4">{zone}</span>
+                  <span className="mt-2 block text-[12px] font-semibold leading-4">{zone}</span>
                 </button>
               ))}
             </div>
@@ -286,7 +286,7 @@ export function QuickInventory({
               <button
                 type="button"
                 onClick={() => setScanning(true)}
-                className="flex min-h-16 flex-col items-center justify-center rounded-[15px] border border-border bg-card text-[10px] font-bold"
+                className="flex min-h-16 flex-col items-center justify-center rounded-lg bg-card text-xs font-semibold"
               >
                 <ScanLine className="mb-1 size-4 text-primary" />
                 Escanear
@@ -295,7 +295,7 @@ export function QuickInventory({
                 type="button"
                 onClick={dictate}
                 aria-pressed={listening}
-                className={`flex min-h-16 flex-col items-center justify-center rounded-[15px] border text-[10px] font-bold ${listening ? "border-primary bg-primary text-white" : "border-border bg-card"}`}
+                className={`flex min-h-16 flex-col items-center justify-center rounded-lg border text-xs font-semibold ${listening ? "border-primary bg-primary text-white" : " bg-card"}`}
               >
                 <Mic className="mb-1 size-4" />
                 {listening ? "Escuchando" : "Dictar"}
@@ -303,7 +303,7 @@ export function QuickInventory({
               <button
                 type="button"
                 onClick={() => fileInput.current?.click()}
-                className="flex min-h-16 flex-col items-center justify-center rounded-[15px] border border-border bg-card text-[10px] font-bold"
+                className="flex min-h-16 flex-col items-center justify-center rounded-lg bg-card text-xs font-semibold"
               >
                 <Camera className="mb-1 size-4 text-primary" />
                 Foto balda
@@ -311,7 +311,7 @@ export function QuickInventory({
               <button
                 type="button"
                 onClick={() => void fromTickets()}
-                className="flex min-h-16 flex-col items-center justify-center rounded-[15px] border border-border bg-card text-[10px] font-bold"
+                className="flex min-h-16 flex-col items-center justify-center rounded-lg bg-card text-xs font-semibold"
               >
                 <ReceiptText className="mb-1 size-4 text-primary" />
                 Tickets
@@ -352,7 +352,7 @@ export function QuickInventory({
             </form>
             {(busy || status) && (
               <p
-                className="mt-3 flex items-start gap-2 rounded-xl bg-muted px-3 py-2 text-[11px] leading-4 text-muted-foreground"
+                className="mt-3 flex items-start gap-2 rounded-xl bg-muted px-3 py-2 text-xs leading-4 text-muted-foreground"
                 role="status"
               >
                 {busy ? (
@@ -366,19 +366,17 @@ export function QuickInventory({
             {items.length > 0 && (
               <section className="mt-4">
                 <div className="mb-2 flex items-center justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-[.1em] text-muted-foreground">
-                    {items.length} productos
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-xs font-semibold uppercase text-muted-foreground">{items.length} productos</p>
+                  <p className="text-xs text-muted-foreground">
                     <b className="text-primary">{counts.ready}</b> listos ·{" "}
-                    <b className="text-[#9a632b]">{counts.review}</b> revisar
+                    <b className="text-warning">{counts.review}</b> revisar
                   </p>
                 </div>
-                <div className="overflow-hidden rounded-[17px] border border-border bg-card">
+                <div className="overflow-hidden rounded-lg bg-card">
                   {items.map((item, index) => (
                     <div
                       key={item.id}
-                      className={`grid grid-cols-[1fr_4rem_2.2rem] items-center gap-1.5 px-2 py-2 ${index ? "border-t border-border/70" : ""}`}
+                      className={`grid grid-cols-[1fr_4rem_2.2rem] items-center gap-1.5 px-2 py-2 ${index ? "border-t-[0.5px] border-separator" : ""}`}
                     >
                       <div className="min-w-0">
                         <Input
@@ -398,10 +396,10 @@ export function QuickInventory({
                               ),
                             )
                           }
-                          className="h-9 border-0 bg-transparent px-1 text-[13px] font-bold shadow-none"
+                          className="h-9 border-0 bg-transparent px-1 text-[13px] font-semibold"
                         />
                         <p
-                          className={`px-1 text-[9px] font-semibold ${item.confidence >= 0.8 ? "text-primary" : "text-[#9a632b]"}`}
+                          className={`px-1 text-xs font-semibold ${item.confidence >= 0.8 ? "text-primary" : "text-warning"}`}
                         >
                           {item.confidence >= 0.8 ? "Identificado" : "Revisar"} · {item.source} · {item.category}
                         </p>
@@ -422,13 +420,13 @@ export function QuickInventory({
                             ),
                           )
                         }
-                        className="h-9 rounded-lg text-center text-sm font-bold"
+                        className="h-9 rounded-lg text-center text-sm font-semibold"
                       />
                       <button
                         type="button"
                         onClick={() => setItems((list) => list.filter((entry) => entry.id !== item.id))}
                         aria-label={`Eliminar ${item.name}`}
-                        className="flex size-9 items-center justify-center text-[#a34141]"
+                        className="flex size-9 items-center justify-center text-danger"
                       >
                         <Trash2 className="size-3.5" />
                       </button>
@@ -442,14 +440,14 @@ export function QuickInventory({
                 variant="outline"
                 disabled={busy || !items.length}
                 onClick={() => void persist("save")}
-                className="h-12 rounded-2xl text-xs"
+                className="h-12 rounded-xl text-xs"
               >
                 <Save className="size-4" /> Guardar
               </Button>
               <Button
                 disabled={busy || !items.length}
                 onClick={() => void persist("commit")}
-                className="h-12 rounded-2xl text-xs"
+                className="h-12 rounded-xl text-xs"
               >
                 <PackageCheck className="size-4" /> Incorporar al almacén
               </Button>

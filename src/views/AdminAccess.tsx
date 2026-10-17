@@ -215,13 +215,13 @@ export function AdminAccess({ admin, account }: { admin: AdminState; account: Ac
 
   return (
     <section className="flex flex-1 flex-col items-center justify-center pb-10" aria-labelledby="admin-access-title">
-      <div className="w-full rounded-[26px] border border-border bg-card p-5 shadow-[0_18px_50px_rgba(32,47,38,.08)]">
-        <div className="mx-auto flex size-16 items-center justify-center rounded-[22px] bg-[#e8f0e9] text-primary dark:bg-secondary">
+      <div className="w-full rounded-xl bg-card p-5">
+        <div className="mx-auto flex size-16 items-center justify-center rounded-xl bg-primary-soft text-primary">
           <ShieldCheck className="size-7" />
         </div>
         <div className="mt-5 text-center">
           <p className="eyebrow">ZONA ADMINISTRATIVA</p>
-          <h1 id="admin-access-title" className="mt-1.5 text-2xl font-bold tracking-[-0.035em]">
+          <h1 id="admin-access-title" className="mt-1.5 text-2xl font-bold">
             {configured ? "Abrir mantenimiento" : "Proteger mantenimiento"}
           </h1>
           <p className="mx-auto mt-2 max-w-72 text-sm leading-6 text-muted-foreground">
@@ -235,17 +235,17 @@ export function AdminAccess({ admin, account }: { admin: AdminState; account: Ac
             <Button
               onClick={() => void biometricUnlock()}
               disabled={busy}
-              className="mt-6 h-13 w-full rounded-2xl text-[15px]"
+              className="mt-6 h-13 w-full rounded-xl text-[15px]"
             >
               <FingerprintPattern className="size-5" /> Entrar con Face ID / Touch ID
             </Button>
-            <div className="my-4 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[.12em] text-muted-foreground">
+            <div className="my-4 flex items-center gap-3 text-xs font-semibold uppercase text-muted-foreground">
               <span className="h-px flex-1 bg-border" /> o con PIN <span className="h-px flex-1 bg-border" />
             </div>
           </>
         )}
         <form onSubmit={submit} className={biometric ? "" : "mt-6"}>
-          <label htmlFor="admin-pin" className="mb-2 block text-xs font-bold text-muted-foreground">
+          <label htmlFor="admin-pin" className="mb-2 block text-xs font-semibold text-muted-foreground">
             PIN del administrador
           </label>
           <div className="relative">
@@ -259,13 +259,16 @@ export function AdminAccess({ admin, account }: { admin: AdminState; account: Ac
               maxLength={8}
               value={pin}
               onChange={(event) => setPin(event.target.value.replace(/\D/g, ""))}
-              className="h-13 rounded-2xl bg-background pl-11 text-center text-lg tracking-[.25em]"
+              className="h-13 rounded-xl bg-background pl-11 text-center text-lg"
               placeholder="••••"
             />
           </div>
           {!configured && (
             <>
-              <label htmlFor="admin-pin-confirm" className="mb-2 mt-4 block text-xs font-bold text-muted-foreground">
+              <label
+                htmlFor="admin-pin-confirm"
+                className="mb-2 mt-4 block text-xs font-semibold text-muted-foreground"
+              >
                 Repetir PIN
               </label>
               <Input
@@ -277,13 +280,13 @@ export function AdminAccess({ admin, account }: { admin: AdminState; account: Ac
                 maxLength={8}
                 value={confirm}
                 onChange={(event) => setConfirm(event.target.value.replace(/\D/g, ""))}
-                className="h-13 rounded-2xl bg-background text-center text-lg tracking-[.25em]"
+                className="h-13 rounded-xl bg-background text-center text-lg"
                 placeholder="••••"
               />
             </>
           )}
           {error && (
-            <p className="mt-3 text-sm font-semibold text-[#a34141]" role="alert">
+            <p className="mt-3 text-sm font-semibold text-danger" role="alert">
               {error}
             </p>
           )}
@@ -291,14 +294,14 @@ export function AdminAccess({ admin, account }: { admin: AdminState; account: Ac
             type="submit"
             variant={biometric ? "outline" : "default"}
             disabled={busy || pin.length < 4}
-            className="mt-4 h-12 w-full rounded-2xl"
+            className="mt-4 h-12 w-full rounded-xl"
           >
             {configured ? "Entrar con PIN" : "Crear acceso de administrador"}
           </Button>
         </form>
       </div>
       {configured && !forgot && (
-        <button type="button" onClick={() => setForgot(true)} className="mt-4 py-1 text-xs font-bold text-primary">
+        <button type="button" onClick={() => setForgot(true)} className="mt-4 py-1 text-xs font-semibold text-primary">
           ¿Has olvidado el PIN?
         </button>
       )}
@@ -318,7 +321,7 @@ export function AdminAccess({ admin, account }: { admin: AdminState; account: Ac
                   : "La contraseña no es correcta.",
               );
           }}
-          className="mt-4 w-full rounded-[20px] border border-border bg-card p-4"
+          className="mt-4 w-full rounded-xl bg-card p-4"
         >
           <p className="text-xs leading-5 text-muted-foreground">
             {account.mode === "local"
