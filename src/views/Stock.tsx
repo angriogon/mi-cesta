@@ -1,221 +1,17 @@
-import {
-  Archive,
-  Bookmark,
-  CalendarClock,
-  ChevronDown,
-  CookingPot,
-  FingerprintPattern,
-  Gauge,
-  ListChecks,
-  Lock,
-  LogOut,
-  Minus,
-  PackageCheck,
-  PackageOpen,
-  Plus,
-  ScanLine,
-  ShieldCheck,
-  Snowflake,
-  Trash2,
-  Wrench,
-} from "lucide-react";
-import { useDeferredValue, useEffect, useMemo, useState, type FormEvent } from "react";
+import { ChevronDown, Gauge, ListChecks, Lock, LogOut, PackageCheck, ScanLine, Wrench } from "lucide-react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import type { CestaApi } from "../data/api";
-import type { InventoryLot, LotState, Product } from "../data/types";
-import { expiringLots, type Certainty, type Prediction } from "../domain/autocesta";
+import type { Product } from "../data/types";
+import { type Certainty, type Prediction } from "../domain/autocesta";
 import { CATEGORIES, type Category } from "../domain/categories";
 import type { StockLike } from "../domain/lists";
-import { daysUntil, normalize } from "../lib/text";
-import { readText, writeText } from "../lib/storage";
-import { Button, CategorySelect, EmptyState, Input, NativeSelect, Stepper } from "../ui/primitives";
+import { normalize } from "../lib/text";
+import { Button, EmptyState, Input, StatCard } from "../ui/primitives";
 import type { Notify } from "../ui/Toast";
-import type { AdminState } from "./AdminAccess";
-import { useLots } from "../app/useLots";
-
-export const STATE_LABEL: Record<LotState, string> = {
-  closed: "Cerrado",
-  opened: "Abierto",
-  reserved: "Reservado",
-  cooked: "Cocinado",
-  frozen: "Congelado",
-};
-const STATES = Object.keys(STATE_LABEL) as LotState[];
-const STATE_TONE: Record<LotState, string> = {
-  closed: "border-primary-line bg-muted text-primary   ",
-  opened: "border-warning-line bg-warning-soft text-warning   ",
-  reserved: "border-info-soft bg-info-soft text-info   ",
-  cooked: "border-danger-line bg-danger-soft text-danger   ",
-  frozen: "border-info-line bg-info-soft text-info   ",
-};
-
-function StateIcon({ state }: { state: LotState }) {
-  if (state === "opened") return <PackageOpen className="size-3.5" />;
-  if (state === "reserved") return <Bookmark className="size-3.5" />;
-  if (state === "cooked") return <CookingPot className="size-3.5" />;
-  if (state === "frozen") return <Snowflake className="size-3.5" />;
-  return <Archive className="size-3.5" />;
-}
-
-/** Lotes con caducidad y estado; se puede cambiar el estado, poner fecha o retirarlos. */
-function ExpiryStates({ api, notify, products }: { api: CestaApi; notify: Notify; products: Product[] }) {
-  const { lots, setState, setExpiry: saveExpiry, remove, restore } = useLots(api);
-  const [open, setOpen] = useState(true);
-  const [status, setStatus] = useState("");
-  const [help, setHelp] = useState(() => !readText("cesta-longpress-help-v1"));
-  const [editing, setEditing] = useState<string | null>(null);
-
-  // Fecha real o, si no hay, la estimada por categoría (la misma que usa Inicio).
-  const estimates = useMemo(() => new Map(expiringLots(lots, products).map((lot) => [lot.id, lot])), [lots, products]);
-  const effective = (lot: InventoryLot) => lot.expiryDate || estimates.get(lot.id)?.expiryDate || "9999";
-  const visible = useMemo(
-    () => [...lots].sort((a, b) => effective(a).localeCompare(effective(b))).slice(0, 30),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [lots, estimates],
-  );
-  const summary = useMemo(
-    () =>
-      STATES.map((state) => ({
-        state,
-        quantity: lots.filter((lot) => lot.state === state).reduce((sum, lot) => sum + lot.quantity, 0),
-      })).filter((item) => item.quantity > 0),
-    [lots],
-  );
-
-  async function cycle(lot: InventoryLot) {
-    const next = STATES[(STATES.indexOf(lot.state) + 1) % STATES.length];
-    setStatus(`${lot.productName}: ${STATE_LABEL[next]}`);
-    await setState(lot, next);
-  }
-
-  async function setExpiry(lot: InventoryLot, date: string) {
-    await saveExpiry(lot, date || null);
-  }
-
-  async function retire(lot: InventoryLot) {
-    setEditing(null);
-    if (await remove(lot))
-      notify(`${lot.productName} retirado de caducidades.`, {
-        label: "Deshacer",
-        onClick: () => void restore(lot),
-      });
-  }
-
-  if (!visible.length) return null;
-  return (
-    <section className="mb-3 overflow-hidden rounded-xl bg-card">
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        aria-expanded={open}
-        className="flex w-full items-center gap-2 px-3 py-3 text-left text-primary"
-      >
-        <CalendarClock className="size-4" />
-        <span className="min-w-0 flex-1 text-xs font-semibold">Caducidades y estados</span>
-        <ChevronDown className={`size-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      <div className="flex gap-1.5 overflow-x-auto border-t-[0.5px] border-separator px-2.5 py-2">
-        {summary.map((item) => (
-          <span
-            key={item.state}
-            className={`inline-flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-semibold ${STATE_TONE[item.state]}`}
-          >
-            <StateIcon state={item.state} />
-            {STATE_LABEL[item.state]} · {item.quantity}
-          </span>
-        ))}
-      </div>
-      {open && (
-        <div className="border-t bg-card">
-          {help && (
-            <div className="flex items-center gap-2 bg-warning-soft px-3 py-2.5 text-xs text-warning">
-              <span className="min-w-0 flex-1">
-                Toca el estado para cambiarlo y la fecha para editarla o retirar el producto. El estado no cambia las
-                unidades en existencias.
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  writeText("cesta-longpress-help-v1", "seen");
-                  setHelp(false);
-                }}
-                className="px-1 py-2 font-semibold"
-              >
-                Entendido
-              </button>
-            </div>
-          )}
-          {visible.map((lot, index) => {
-            const estimate = lot.expiryDate ? null : estimates.get(lot.id);
-            const days = lot.expiryDate ? daysUntil(lot.expiryDate) : (estimate?.daysUntil ?? null);
-            const prefix = estimate ? "≈" : "";
-            return (
-              <div key={lot.id} className={index ? "border-t-[0.5px] border-separator" : ""}>
-                <div className="flex w-full items-center gap-2 px-2.5 py-2.5">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[12px] font-semibold">{lot.productName}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {lot.quantity} {lot.quantity === 1 ? "unidad" : "unidades"}
-                      {lot.location ? ` · ${lot.location}` : ""}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void cycle(lot)}
-                    aria-label={`Cambiar estado de ${lot.productName}. Estado actual: ${STATE_LABEL[lot.state]}`}
-                    className={`inline-flex min-h-9 min-w-[6.9rem] shrink-0 items-center justify-center gap-1.5 rounded-xl border px-2.5 py-2 text-xs font-semibold ${STATE_TONE[lot.state]}`}
-                  >
-                    <StateIcon state={lot.state} />
-                    {STATE_LABEL[lot.state]}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditing(editing === lot.id ? null : lot.id)}
-                    aria-expanded={editing === lot.id}
-                    aria-label={`Editar fecha de ${lot.productName}${estimate ? " (fecha estimada)" : ""}`}
-                    className={`min-h-9 min-w-[3.6rem] shrink-0 rounded-lg px-1.5 py-1.5 text-center text-xs font-semibold ${days !== null && days <= 2 ? "bg-danger-soft text-danger " : "bg-warning-soft text-warning "}`}
-                  >
-                    {days === null
-                      ? "Sin fecha"
-                      : days < 0
-                        ? "Caducado"
-                        : days === 0
-                          ? `${prefix}Hoy`
-                          : `${prefix}${days} d`}
-                  </button>
-                </div>
-                {editing === lot.id && (
-                  <div className="flex items-center gap-2 bg-muted/60 px-2.5 py-2">
-                    <label className="flex min-w-0 flex-1 items-center gap-2 text-xs font-semibold text-muted-foreground">
-                      Caduca
-                      <input
-                        type="date"
-                        value={lot.expiryDate ?? ""}
-                        onChange={(event) => void setExpiry(lot, event.target.value)}
-                        className="h-9 min-w-0 flex-1 rounded-lg bg-card px-2 text-[12px] text-foreground"
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => void retire(lot)}
-                      className="flex h-9 items-center gap-1 rounded-lg bg-danger-soft px-2.5 text-xs font-semibold text-danger"
-                    >
-                      <Trash2 className="size-3.5" /> Retirar
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          {status && (
-            <p className="border-t-[0.5px] border-separator px-3 py-2 text-xs font-semibold text-primary" role="status">
-              {status}
-            </p>
-          )}
-        </div>
-      )}
-    </section>
-  );
-}
+import type { AdminState } from "./admin/useAdmin";
+import { ExpiryStates } from "./stock/ExpiryStates";
+import { AdminSection, MaintenancePanel, SuppressedList } from "./stock/MaintenanceSections";
+import { StockRow } from "./stock/StockRow";
 
 export function Stock(props: {
   api: CestaApi;
@@ -235,14 +31,11 @@ export function Stock(props: {
   notify: Notify;
 }) {
   const { admin } = props;
-  const [biometricStatus, setBiometricStatus] = useState("");
   const [search, setSearch] = useState("");
   const query = useDeferredValue(search);
   const [maintenance, setMaintenance] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  const [newName, setNewName] = useState("");
-  const [newCategory, setNewCategory] = useState<Category>("Despensa");
   const [status, setStatus] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [onlyStocked, setOnlyStocked] = useState(false);
@@ -302,21 +95,19 @@ export function Stock(props: {
     });
   }
 
-  async function add(event: FormEvent) {
-    event.preventDefault();
-    if (!newName.trim()) return;
+  async function add(name: string, category: Category): Promise<boolean> {
     setStatus("Agregando…");
-    const result = await props.addStockProduct(newName.trim(), newCategory);
+    const result = await props.addStockProduct(name, category);
     setStatus(result.ok ? "Producto agregado al almacén." : result.error || "No se ha podido agregar.");
     if (result.ok) {
-      setNewName("");
-      setSearch(newName.trim());
+      setSearch(name);
       setCollapsed((current) => {
         const next = new Set(current);
-        next.delete(newCategory);
+        next.delete(category);
         return next;
       });
     }
+    return result.ok;
   }
 
   async function remove(item: StockLike) {
@@ -357,56 +148,13 @@ export function Stock(props: {
       </div>
 
       {maintenance && (
-        <section className="mb-3 rounded-lg bg-primary-soft p-3 text-primary">
-          <div className="mb-2">
-            <p className="text-xs font-semibold">Mantenimiento del catálogo</p>
-            <p className="mt-0.5 text-xs">
-              Agrega, elimina o ajusta existencias, mínimos y categoría de cada producto.
-            </p>
-          </div>
-          <form onSubmit={add} className="grid grid-cols-[1fr_auto] gap-2">
-            <Input
-              value={newName}
-              onChange={(event) => setNewName(event.target.value)}
-              placeholder="Nombre del producto"
-              maxLength={80}
-              className="h-10 rounded-lg bg-card text-sm"
-            />
-            <Button type="submit" disabled={!newName.trim()} className="h-10 rounded-lg px-3 text-xs">
-              <Plus className="size-3.5" /> Añadir
-            </Button>
-            <NativeSelect
-              value={newCategory}
-              onChange={(event) => setNewCategory(event.target.value as Category)}
-              className="col-span-2 w-full [&_select]:h-10 [&_select]:rounded-lg [&_select]:bg-card [&_select]:text-xs"
-            >
-              {CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </NativeSelect>
-          </form>
-          <label className="mt-2 flex items-center gap-2 text-xs font-semibold">
-            <input
-              type="checkbox"
-              checked={onlyStocked}
-              onChange={(event) => setOnlyStocked(event.target.checked)}
-              className="size-4 accent-primary"
-            />
-            Mostrar solo productos con existencias o mínimo
-          </label>
-          {status && (
-            <p className="mt-2 text-xs font-semibold" role="status">
-              {status}
-            </p>
-          )}
-          {error && (
-            <p className="mt-2 text-xs font-semibold text-danger" role="alert">
-              {error}
-            </p>
-          )}
-        </section>
+        <MaintenancePanel
+          onAdd={add}
+          onlyStocked={onlyStocked}
+          setOnlyStocked={setOnlyStocked}
+          status={status}
+          error={error}
+        />
       )}
 
       {!maintenance && <ExpiryStates api={props.api} notify={props.notify} products={props.products} />}
@@ -441,18 +189,12 @@ export function Stock(props: {
       )}
 
       <section className="mb-3 grid grid-cols-2 gap-2" aria-label="Resumen del almacén">
-        <div className="rounded-lg bg-card px-3 py-2.5">
-          <p className="text-xs font-semibold text-muted-foreground">Existencias</p>
-          <p className="mt-0.5 text-xl font-semibold tracking-tight">
-            {Number.isInteger(props.stockUnits) ? props.stockUnits : props.stockUnits.toFixed(1)}
-          </p>
-          <p className="text-xs text-muted-foreground">unidades en casa</p>
-        </div>
-        <div className="rounded-lg bg-primary-soft px-3 py-2.5 text-left text-primary">
-          <p className="text-xs font-semibold">Necesidades</p>
-          <p className="mt-0.5 text-xl font-semibold tracking-tight">{props.needs.length}</p>
-          <p className="text-xs">por reponer</p>
-        </div>
+        <StatCard
+          label="Existencias"
+          value={Number.isInteger(props.stockUnits) ? props.stockUnits : props.stockUnits.toFixed(1)}
+          hint="unidades en casa"
+        />
+        <StatCard label="Necesidades" value={props.needs.length} hint="por reponer" tone="primary" />
       </section>
 
       <label htmlFor="stock-search" className="sr-only">
@@ -513,99 +255,19 @@ export function Stock(props: {
               </button>
               {(!collapsed.has(group.category) || Boolean(normalize(query))) && (
                 <div className="overflow-hidden rounded-lg bg-card">
-                  {group.items.map((item, index) => {
-                    const missing = Math.max(0, item.minimum - item.quantity);
-                    const certainty = props.certainty.find((entry) => entry.id === item.id);
-                    const prediction = props.predictions.find((entry) => entry.productId === item.id);
-                    return (
-                      <div
-                        key={item.id}
-                        className={`px-2 py-1.5 ${index ? "relative before:absolute before:inset-x-0 before:left-4 before:top-0 before:h-[0.5px] before:bg-separator" : ""}`}
-                      >
-                        {maintenance ? (
-                          <div className="flex min-h-10 flex-wrap items-center gap-1">
-                            <p className="min-w-[8rem] flex-1 truncate text-[12px] font-semibold">{item.name}</p>
-                            <div className="w-[6rem] shrink-0">
-                              <CategorySelect
-                                value={item.category}
-                                onChange={(category) => props.changeCategory(item, category)}
-                                label={`Cambiar categoría de ${item.name}`}
-                              />
-                            </div>
-                            <Stepper
-                              value={item.quantity}
-                              label={`existencias de ${item.name}`}
-                              minusDisabled={item.quantity <= 0}
-                              onMinus={() =>
-                                props.updateStock(item.id, (entry) => ({
-                                  ...entry,
-                                  quantity: Math.max(0, entry.quantity - 1),
-                                }))
-                              }
-                              onPlus={() =>
-                                props.updateStock(item.id, (entry) => ({ ...entry, quantity: entry.quantity + 1 }))
-                              }
-                            />
-                            <div className="flex shrink-0 items-center" aria-label={`Mínimo de ${item.name}`}>
-                              <span className="mr-0.5 text-xs font-semibold text-muted-foreground">MÍN.</span>
-                              <button
-                                type="button"
-                                aria-label={`Reducir mínimo de ${item.name}`}
-                                disabled={item.minimum <= 0}
-                                onClick={() =>
-                                  props.updateStock(item.id, (entry) => ({
-                                    ...entry,
-                                    minimum: Math.max(0, entry.minimum - 1),
-                                  }))
-                                }
-                                className="flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground disabled:opacity-40"
-                              >
-                                <Minus className="size-2.5" />
-                              </button>
-                              <span className="w-5 text-center text-xs font-semibold tabular-nums">{item.minimum}</span>
-                              <button
-                                type="button"
-                                aria-label={`Aumentar mínimo de ${item.name}`}
-                                onClick={() =>
-                                  props.updateStock(item.id, (entry) => ({ ...entry, minimum: entry.minimum + 1 }))
-                                }
-                                className="flex size-7 items-center justify-center rounded-md bg-muted text-primary"
-                              >
-                                <Plus className="size-2.5" />
-                              </button>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => void remove(item)}
-                              aria-label={`Eliminar ${item.name} del almacén`}
-                              className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-danger-soft text-danger active:bg-danger-soft"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex min-h-10 items-center gap-1.5">
-                            <p className="min-w-0 flex-1 truncate text-[13px] font-semibold">
-                              {item.name}
-                              <span className="ml-1 text-xs font-normal text-muted-foreground">
-                                {certainty?.label && certainty.currentStock > 0 && certainty.confidence < 0.82
-                                  ? certainty.label
-                                  : prediction
-                                    ? `cada ${prediction.averageDays} d`
-                                    : ""}
-                              </span>
-                            </p>
-                            <span className="max-w-[7.4rem] shrink truncate rounded-lg bg-muted px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                              {item.quantity} de {item.minimum}
-                            </span>
-                            <span className="shrink-0 rounded-lg bg-muted px-2.5 py-1.5 text-xs font-semibold tabular-nums text-primary">
-                              Faltan {missing}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {group.items.map((item, index) => (
+                    <StockRow
+                      key={item.id}
+                      item={item}
+                      separated={index > 0}
+                      maintenance={maintenance}
+                      certainty={props.certainty.find((entry) => entry.id === item.id)}
+                      prediction={props.predictions.find((entry) => entry.productId === item.id)}
+                      updateStock={props.updateStock}
+                      changeCategory={props.changeCategory}
+                      onRemove={() => void remove(item)}
+                    />
+                  ))}
                 </div>
               )}
             </section>
@@ -619,89 +281,9 @@ export function Stock(props: {
         </Button>
       )}
 
-      {maintenance && suppressed.length > 0 && (
-        <section className="mt-6 rounded-xl bg-card p-4">
-          <h2 className="text-sm font-semibold">Productos que AutoCesta no sugiere</h2>
-          <div className="mt-2 space-y-1">
-            {suppressed.map((product) => (
-              <div
-                key={product.id}
-                className="flex items-center justify-between gap-2 rounded-xl bg-muted/60 px-3 py-2 text-[12px]"
-              >
-                <span className="truncate font-semibold">{product.name}</span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    void props.api
-                      .unsuppress(product.id)
-                      .then(() => props.notify(`${product.name} vuelve a poder sugerirse.`))
-                      .catch(() => props.notify("No se ha podido guardar."))
-                  }
-                  className="shrink-0 px-1 py-1.5 text-xs font-semibold text-primary"
-                >
-                  Volver a sugerir
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      {maintenance && <SuppressedList api={props.api} notify={props.notify} products={suppressed} />}
 
-      {maintenance && (
-        <section className="mt-6 rounded-xl bg-card p-4" aria-labelledby="stock-security-title">
-          <div className="flex items-start gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-primary">
-              <ShieldCheck className="size-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2 id="stock-security-title" className="text-sm font-semibold">
-                Acceso de administrador
-              </h2>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                El stock y los mínimos solo pueden editarse después de identificarse en este dispositivo.
-              </p>
-            </div>
-          </div>
-          <div className="mt-4 flex items-center justify-between rounded-xl bg-muted/75 px-3 py-2.5">
-            <div className="flex items-center gap-2 text-xs font-semibold">
-              <FingerprintPattern className="size-4 text-primary" /> Face ID / Touch ID
-            </div>
-            <span
-              className={`rounded-full px-2 py-1 text-xs font-semibold ${admin.biometricEnabled ? "bg-primary-soft text-primary" : "bg-card text-muted-foreground"}`}
-            >
-              {admin.biometricEnabled ? "ACTIVA" : "NO ACTIVA"}
-            </span>
-          </div>
-          {!admin.biometricEnabled && admin.biometricAvailable && (
-            <Button
-              variant="outline"
-              onClick={async () =>
-                setBiometricStatus(
-                  (await admin.enableBiometrics())
-                    ? "Biometría activada correctamente."
-                    : "No se pudo activar. Comprueba la configuración del dispositivo.",
-                )
-              }
-              className="mt-3 h-11 w-full rounded-xl"
-            >
-              <FingerprintPattern className="size-4" /> Activar biometría
-            </Button>
-          )}
-          {!admin.biometricAvailable && (
-            <p className="mt-3 text-xs leading-5 text-muted-foreground">
-              La biometría no está disponible en este navegador. El acceso seguirá protegido mediante PIN.
-            </p>
-          )}
-          {biometricStatus && (
-            <p className="mt-3 text-xs font-semibold text-muted-foreground" role="status">
-              {biometricStatus}
-            </p>
-          )}
-          <Button variant="ghost" onClick={admin.lock} className="mt-2 h-10 w-full rounded-xl text-muted-foreground">
-            <Lock className="size-4" /> Bloquear ahora
-          </Button>
-        </section>
-      )}
+      {maintenance && <AdminSection admin={admin} />}
     </>
   );
 }

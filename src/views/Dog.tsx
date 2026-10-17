@@ -1,9 +1,11 @@
-import { Bell, Dog, LoaderCircle, Lock, LogOut, Minus, Pencil, Plus, Trash2, Wrench } from "lucide-react";
+import { Bell, LoaderCircle, Lock, LogOut, Plus, Wrench } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import type { DogItem, DogReminder } from "../data/types";
-import { Button, Input, Stepper } from "../ui/primitives";
+import { Button, Input, StatCard } from "../ui/primitives";
 import type { PetState } from "../app/usePet";
 import { errorMessage } from "../app/errorMessage";
+import { PetItemRow } from "./dog/PetItemRow";
+import { ReminderEditor } from "./dog/ReminderEditor";
 
 async function askNotifications(): Promise<NotificationPermission | "unavailable"> {
   if (!("Notification" in window)) return "unavailable";
@@ -35,11 +37,6 @@ export function DogView({
 }) {
   const { items, reminders, petName, loading } = pet;
   const [nameDraft, setNameDraft] = useState(petName);
-  const [title, setTitle] = useState("");
-  const [time, setTime] = useState("21:00");
-  const [editing, setEditing] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState("");
-  const [editTime, setEditTime] = useState("21:00");
   const [status, setStatus] = useState("");
   const [maintenance, setMaintenance] = useState(false);
   const [pending, setPending] = useState(false);
@@ -103,13 +100,10 @@ export function DogView({
     }
   }
 
-  async function addReminder(event: FormEvent) {
-    event.preventDefault();
-    if (!title.trim()) return;
+  async function addReminder(title: string, time: string): Promise<boolean> {
     const permission = await askNotifications();
     try {
       await pet.addReminder(title, time);
-      setTitle("");
       setStatus(
         permission === "granted"
           ? "Aviso programado."
@@ -117,8 +111,10 @@ export function DogView({
             ? "Aviso programado. Se mostrará al abrir Cesta; permite las notificaciones en Ajustes para verlo también fuera."
             : "Aviso programado dentro de Cesta. Añade Cesta a la pantalla de inicio para recibir notificaciones en iPhone.",
       );
+      return true;
     } catch (error) {
       setStatus(errorMessage(error, "No se ha podido programar el aviso."));
+      return false;
     }
   }
 
@@ -126,10 +122,11 @@ export function DogView({
     if (patch.enabled) await askNotifications();
     try {
       await pet.updateReminder(reminder.id, patch);
-      setEditing(null);
       setStatus(message);
+      return true;
     } catch (error) {
       setStatus(errorMessage(error, "No se ha podido actualizar el aviso."));
+      return false;
     }
   }
 
@@ -220,124 +217,19 @@ export function DogView({
               </Button>
             </form>
           </section>
-          <section className="mb-3 rounded-lg bg-card p-3">
-            <div className="flex items-center gap-2">
-              <Bell className="size-4 text-primary" />
-              <p className="text-xs font-semibold">Programar avisos</p>
-            </div>
-            <form onSubmit={addReminder} className="mt-3 grid grid-cols-[1fr_5.6rem] gap-2">
-              <Input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                maxLength={80}
-                placeholder="Ej. Dar snack"
-                aria-label="Texto del aviso"
-                className="h-10 rounded-lg text-sm"
-              />
-              <Input
-                type="time"
-                value={time}
-                onChange={(event) => setTime(event.target.value)}
-                aria-label="Hora del aviso"
-                className="h-10 rounded-lg px-1.5 text-sm"
-              />
-              <Button type="submit" disabled={!title.trim()} className="col-span-2 h-10 rounded-lg text-xs">
-                <Plus className="size-3.5" /> Añadir aviso
-              </Button>
-            </form>
-            <div className="mt-3 space-y-1.5">
-              {reminders.map((reminder) =>
-                editing === reminder.id ? (
-                  <form
-                    key={reminder.id}
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      void updateReminder(reminder, { title: editTitle, reminderTime: editTime }, "Aviso actualizado.");
-                    }}
-                    className="grid grid-cols-[1fr_5.6rem] gap-1.5 rounded-xl bg-muted/60 p-2"
-                  >
-                    <Input
-                      value={editTitle}
-                      onChange={(event) => setEditTitle(event.target.value)}
-                      aria-label="Texto del aviso"
-                      className="h-9 rounded-lg bg-card px-2 text-xs"
-                    />
-                    <Input
-                      type="time"
-                      value={editTime}
-                      onChange={(event) => setEditTime(event.target.value)}
-                      aria-label="Hora del aviso"
-                      className="h-9 rounded-lg bg-card px-1 text-xs"
-                    />
-                    <div className="col-span-2 grid grid-cols-2 gap-1.5">
-                      <Button variant="outline" onClick={() => setEditing(null)} className="h-9 rounded-lg text-xs">
-                        Cancelar
-                      </Button>
-                      <Button type="submit" className="h-9 rounded-lg text-xs">
-                        Guardar
-                      </Button>
-                    </div>
-                  </form>
-                ) : (
-                  <div key={reminder.id} className="flex min-h-10 items-center gap-1.5 rounded-xl bg-muted/60 px-2">
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={reminder.enabled}
-                      onClick={() =>
-                        void updateReminder(
-                          reminder,
-                          { enabled: !reminder.enabled },
-                          reminder.enabled ? "Aviso pausado." : "Aviso activado.",
-                        )
-                      }
-                      aria-label={reminder.enabled ? `Pausar ${reminder.title}` : `Activar ${reminder.title}`}
-                      className="-m-1 flex size-8 shrink-0 items-center justify-center"
-                    >
-                      <span
-                        className={`size-3 rounded-full ${reminder.enabled ? "bg-primary" : "bg-muted-foreground/35"}`}
-                      />
-                    </button>
-                    <span className="w-10 shrink-0 text-xs font-semibold tabular-nums">{reminder.reminderTime}</span>
-                    <span className="min-w-0 flex-1 truncate text-xs font-semibold">{reminder.title}</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditing(reminder.id);
-                        setEditTitle(reminder.title);
-                        setEditTime(reminder.reminderTime);
-                      }}
-                      aria-label={`Editar ${reminder.title}`}
-                      className="flex size-8 items-center justify-center rounded-lg bg-card text-primary"
-                    >
-                      <Pencil className="size-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void deleteReminder(reminder)}
-                      aria-label={`Eliminar ${reminder.title}`}
-                      className="flex size-8 items-center justify-center rounded-lg bg-danger-soft text-danger"
-                    >
-                      <Trash2 className="size-3" />
-                    </button>
-                  </div>
-                ),
-              )}
-            </div>
-          </section>
+          <ReminderEditor
+            reminders={reminders}
+            onAdd={addReminder}
+            onUpdate={updateReminder}
+            onDelete={(reminder) => void deleteReminder(reminder)}
+          />
         </>
       ) : (
         <>
           <p className="mb-2 px-1 text-xs font-semibold uppercase text-muted-foreground">Control de {petName}</p>
           <section className="mb-3 grid grid-cols-2 gap-2">
-            <div className="rounded-lg bg-card px-3 py-2.5">
-              <p className="text-xs font-semibold text-muted-foreground">Artículos</p>
-              <p className="mt-0.5 text-xl font-semibold">{items.length}</p>
-            </div>
-            <div className="rounded-lg bg-primary-soft px-3 py-2.5 text-primary">
-              <p className="text-xs font-semibold">Por reponer</p>
-              <p className="mt-0.5 text-xl font-semibold">{low}</p>
-            </div>
+            <StatCard label="Artículos" value={items.length} />
+            <StatCard label="Por reponer" value={low} tone="primary" />
           </section>
           <section className="mb-3 rounded-lg bg-card p-2.5">
             <div className="flex items-center gap-2">
@@ -378,110 +270,16 @@ export function DogView({
         </div>
       ) : (
         <div className="space-y-2">
-          {items.map((item) => {
-            const lowStock = item.currentStock <= item.minimumStock;
-            return (
-              <section
-                key={item.id}
-                className={`rounded-lg border px-2.5 py-2 ${lowStock ? "border-danger-line bg-warning-soft " : " bg-card"}`}
-              >
-                <div className="flex min-h-10 items-center gap-1.5">
-                  <Dog className="size-4 shrink-0 text-primary" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-semibold">{item.name}</p>
-                    <p className={`text-xs font-semibold ${lowStock ? "text-warning" : "text-muted-foreground"}`}>
-                      {lowStock ? `Reponer · mínimo ${item.minimumStock}` : `Mínimo ${item.minimumStock}`}
-                    </p>
-                  </div>
-                  {maintenance ? (
-                    <>
-                      <Stepper
-                        value={item.currentStock}
-                        label={`existencias de ${item.name}`}
-                        minusDisabled={item.currentStock <= 0}
-                        onMinus={() =>
-                          void saveItem(
-                            item,
-                            { ...item, currentStock: Math.max(0, item.currentStock - 1) },
-                            "Existencias actualizadas.",
-                          )
-                        }
-                        onPlus={() =>
-                          void saveItem(
-                            item,
-                            { ...item, currentStock: item.currentStock + 1 },
-                            "Existencias actualizadas.",
-                          )
-                        }
-                      />
-                      <button
-                        type="button"
-                        onClick={() => void deleteItem(item)}
-                        aria-label={`Eliminar ${item.name}`}
-                        className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${confirmDelete === item.id ? "bg-danger text-white" : "bg-danger-soft text-danger"}`}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="rounded-lg bg-muted px-2.5 py-1.5 text-xs font-semibold tabular-nums">
-                        {item.currentStock}
-                      </span>
-                      <Button
-                        disabled={item.currentStock === 0}
-                        onClick={() =>
-                          void saveItem(
-                            item,
-                            { ...item, currentStock: Math.max(0, item.currentStock - 1) },
-                            `1 unidad de ${item.name} descontada.`,
-                          )
-                        }
-                        className="h-10 rounded-xl px-3 text-xs"
-                      >
-                        Dar 1
-                      </Button>
-                    </>
-                  )}
-                </div>
-                {maintenance && (
-                  <div className="mt-1.5 flex items-center justify-end gap-1 rounded-lg bg-muted/70 px-2 py-1">
-                    <span className="mr-auto text-xs font-medium text-muted-foreground">Stock mínimo</span>
-                    <button
-                      type="button"
-                      aria-label={`Reducir mínimo de ${item.name}`}
-                      disabled={item.minimumStock <= 0}
-                      onClick={() =>
-                        void saveItem(
-                          item,
-                          { ...item, minimumStock: Math.max(0, item.minimumStock - 1) },
-                          "Stock mínimo actualizado.",
-                        )
-                      }
-                      className="flex size-8 items-center justify-center rounded-md bg-card disabled:opacity-40"
-                    >
-                      <Minus className="size-2.5" />
-                    </button>
-                    <span className="w-5 text-center text-xs font-semibold">{item.minimumStock}</span>
-                    <button
-                      type="button"
-                      aria-label={`Aumentar mínimo de ${item.name}`}
-                      onClick={() =>
-                        void saveItem(
-                          item,
-                          { ...item, minimumStock: item.minimumStock + 1 },
-                          "Stock mínimo actualizado.",
-                        )
-                      }
-                      className="flex size-8 items-center justify-center rounded-md bg-card text-primary"
-                    >
-                      <Plus className="size-2.5" />
-                    </button>
-                  </div>
-                )}
-              </section>
-            );
-          })}
+          {items.map((item) => (
+            <PetItemRow
+              key={item.id}
+              item={item}
+              maintenance={maintenance}
+              confirmingDelete={confirmDelete === item.id}
+              onSave={(previous, next, message) => void saveItem(previous, next, message)}
+              onDelete={() => void deleteItem(item)}
+            />
+          ))}
         </div>
       )}
       {status && (

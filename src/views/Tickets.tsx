@@ -1,121 +1,19 @@
-import {
-  CalendarDays,
-  Camera,
-  CircleCheck,
-  Euro,
-  FileCheck2,
-  Image,
-  LoaderCircle,
-  Pencil,
-  Plus,
-  ReceiptText,
-  Trash2,
-  TriangleAlert,
-  Wrench,
-} from "lucide-react";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { Camera, Euro, FileCheck2, LoaderCircle, Pencil, Wrench } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
 import type { CestaApi } from "../data/api";
 import { errorMessage } from "../app/errorMessage";
 import { useTickets } from "../app/useTickets";
-import type { PriceRef, Ticket, TicketItem, TicketReview } from "../data/types";
-import { compareWithPlan, parseTicketText, reviewTicketLines } from "../domain/tickets";
+import type { PriceRef, TicketItem } from "../data/types";
+import { parseTicketText } from "../domain/tickets";
 import { compressImage, recognizeText } from "../lib/image";
-import { centsToInput, formatCents, parseEuroToCents, todayIso } from "../lib/text";
+import { parseEuroToCents, todayIso } from "../lib/text";
 import { Button, Input } from "../ui/primitives";
 import type { Notify } from "../ui/Toast";
 import { reportError } from "../lib/errors";
+import { LineChecks, LinesEditor } from "./tickets/fields";
+import { MonthlySpend, ReviewsPanel, TicketHistory } from "./tickets/TicketLists";
 
 const MAX_BYTES = 10 * 1024 * 1024;
-
-function LinesEditor({ items, onChange }: { items: TicketItem[]; onChange: (items: TicketItem[]) => void }) {
-  const update = (index: number, patch: Partial<TicketItem>) =>
-    onChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
-  return (
-    <div className="space-y-2">
-      {items.map((item, index) => (
-        <div
-          key={index}
-          className="grid grid-cols-[1fr_3.6rem_4.9rem_2rem] items-end gap-1.5 rounded-xl bg-muted/65 p-2"
-        >
-          <label className="min-w-0 text-xs font-semibold text-muted-foreground">
-            Producto
-            <Input
-              value={item.description}
-              onChange={(event) => update(index, { description: event.target.value })}
-              className="mt-1 h-9 rounded-lg bg-card px-2 text-sm"
-            />
-          </label>
-          <label className="text-xs font-semibold text-muted-foreground">
-            Cant.
-            <Input
-              type="number"
-              min="0"
-              step="0.001"
-              inputMode="decimal"
-              value={item.quantity}
-              onChange={(event) => update(index, { quantity: Math.max(0, Number(event.target.value) || 0) })}
-              className="mt-1 h-9 rounded-lg bg-card px-1 text-center text-sm"
-            />
-          </label>
-          <label className="text-xs font-semibold text-muted-foreground">
-            Importe
-            <MoneyInput
-              cents={item.lineTotalCents}
-              onChange={(cents) => update(index, { lineTotalCents: cents })}
-              className="mt-1 h-9 rounded-lg bg-card px-1 text-center text-sm"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={() => onChange(items.filter((_, i) => i !== index))}
-            aria-label={`Eliminar línea ${item.description}`}
-            className="mb-0.5 flex size-8 items-center justify-center rounded-lg text-danger active:bg-red-50"
-          >
-            <Trash2 className="size-3.5" />
-          </button>
-        </div>
-      ))}
-      <Button
-        variant="outline"
-        onClick={() => onChange([...items, { description: "", quantity: 1, lineTotalCents: 0 }])}
-        className="h-10 w-full rounded-xl text-xs"
-      >
-        <Plus className="size-3.5" /> Añadir línea
-      </Button>
-    </div>
-  );
-}
-
-/** Campo de importe que deja escribir "3,4" sin reformatear mientras se teclea. */
-function MoneyInput({
-  cents,
-  onChange,
-  className,
-}: {
-  cents: number;
-  onChange: (cents: number) => void;
-  className?: string;
-}) {
-  const [text, setText] = useState(centsToInput(cents));
-  useEffect(() => {
-    if (parseEuroToCents(text) !== cents) setText(centsToInput(cents));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cents]);
-  return (
-    <Input
-      inputMode="decimal"
-      value={text}
-      onChange={(event) => {
-        const value = event.target.value.replace(/[^0-9.,]/g, "");
-        setText(value);
-        const parsed = parseEuroToCents(value);
-        if (parsed !== null) onChange(parsed);
-      }}
-      onBlur={() => setText(centsToInput(cents))}
-      className={className}
-    />
-  );
-}
 
 export function TicketsView({
   api,
@@ -130,7 +28,6 @@ export function TicketsView({
 }) {
   const ticketsState = useTickets(api, onStockChanged);
   const { tickets, reviews, planned, months } = ticketsState;
-  const [corrections, setCorrections] = useState<Record<string, string>>({});
   const [file, setFile] = useState<Blob | null>(null);
   const [preview, setPreview] = useState("");
   const [merchant, setMerchant] = useState("Mercadona");
@@ -142,21 +39,8 @@ export function TicketsView({
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [control, setControl] = useState(false);
-  const [editing, setEditing] = useState<Ticket | null>(null);
-  const [photo, setPhoto] = useState<{ id: string; url: string } | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-
-  // Propuesta de corrección por revisión; se rehace cuando llegan revisiones nuevas.
-  useEffect(() => {
-    setCorrections(
-      Object.fromEntries(reviews.map((review) => [review.id, review.suggestion.proposedName || review.description])),
-    );
-  }, [reviews]);
 
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview]);
-
-  const smartReview = useMemo(() => reviewTicketLines(lines, prices), [lines, prices]);
-  const plan = useMemo(() => compareWithPlan(planned, lines), [planned, lines]);
 
   async function pick(selected: File | null) {
     if (!selected) return;
@@ -234,66 +118,12 @@ export function TicketsView({
     }
   }
 
-  async function saveEdit(event: FormEvent) {
-    event.preventDefault();
-    if (!editing) return;
-    setBusy(true);
-    try {
-      await ticketsState.update(editing);
-      setEditing(null);
-      setStatus("Cambios guardados correctamente.");
-    } catch (error) {
-      setStatus(errorMessage(error, "No se han podido guardar los cambios."));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function resolve(review: TicketReview) {
-    setBusy(true);
-    try {
-      await ticketsState.resolveReview(review, corrections[review.id] || review.description);
-      setStatus(
-        review.issueType === "unidentified" ? "Corrección aprendida para próximos tickets." : "Revisión confirmada.",
-      );
-    } catch {
-      setStatus("No se ha podido guardar la revisión.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function remove(ticket: Ticket) {
-    if (confirmDelete !== ticket.id) {
-      setConfirmDelete(ticket.id);
-      return;
-    }
-    setConfirmDelete(null);
-    try {
-      await ticketsState.remove(ticket.id);
-      notify("Ticket eliminado. Las existencias no se modifican.");
-    } catch {
-      notify("No se ha podido eliminar el ticket.");
-    }
-  }
-
-  async function showPhoto(ticket: Ticket) {
-    if (!ticket.imagePath) return;
-    if (photo?.id === ticket.id) return setPhoto(null);
-    const url = await ticketsState.photoUrl(ticket);
-    if (url) setPhoto({ id: ticket.id, url });
-    else notify("No se ha podido abrir la foto.");
-  }
-
   return (
     <>
       <div className="mb-3 flex justify-end">
         <button
           type="button"
-          onClick={() => {
-            setControl((value) => !value);
-            setEditing(null);
-          }}
+          onClick={() => setControl((value) => !value)}
           aria-pressed={control}
           className={`flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-colors ${control ? "bg-primary text-primary-foreground" : " bg-card text-primary"}`}
         >
@@ -301,81 +131,9 @@ export function TicketsView({
         </button>
       </div>
 
-      {reviews.length > 0 && (
-        <section className="mb-4 rounded-xl bg-warning-soft p-3">
-          <div className="flex items-center gap-2 text-warning">
-            <TriangleAlert className="size-4" />
-            <div className="min-w-0 flex-1">
-              <h2 className="text-xs font-semibold">Solo hay que revisar {reviews.length}</h2>
-              <p className="text-xs">El resto del ticket ya se procesó automáticamente.</p>
-            </div>
-          </div>
-          <div className="mt-2 space-y-2">
-            {reviews.slice(0, 8).map((review) => (
-              <div key={review.id} className="rounded-xl bg-card p-2">
-                <div className="flex items-center gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-semibold">{review.description}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {review.issueType === "unidentified"
-                        ? "Producto sin identificar · escribe cómo se llama"
-                        : review.issueType === "possible_duplicate"
-                          ? "Posible duplicado"
-                          : `Precio distinto al habitual${review.suggestion.previousPriceCents ? ` · antes ${formatCents(review.suggestion.previousPriceCents)}` : ""}`}
-                    </p>
-                  </div>
-                  {review.issueType === "unidentified" && (
-                    <Input
-                      value={corrections[review.id] || ""}
-                      onChange={(event) =>
-                        setCorrections((current) => ({ ...current, [review.id]: event.target.value }))
-                      }
-                      aria-label={`Corregir ${review.description}`}
-                      className="h-9 max-w-36 rounded-lg text-xs"
-                    />
-                  )}
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void resolve(review)}
-                    className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-primary"
-                    aria-label="Confirmar revisión"
-                  >
-                    <CircleCheck className="size-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      <ReviewsPanel reviews={reviews} resolveReview={ticketsState.resolveReview} onStatus={setStatus} />
 
-      <section className="mb-5 rounded-xl bg-card p-4" aria-labelledby="monthly-spend-title">
-        <div className="flex items-center gap-2">
-          <CalendarDays className="size-4 text-primary" />
-          <h2 id="monthly-spend-title" className="text-sm font-semibold">
-            Gasto por meses
-          </h2>
-        </div>
-        {months.length ? (
-          <div className="mt-3 space-y-2">
-            {months.slice(0, 6).map(([month, cents]) => (
-              <div key={month} className="flex items-center justify-between rounded-xl bg-muted/70 px-3 py-2.5">
-                <span className="text-sm font-semibold capitalize">
-                  {new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric", timeZone: "UTC" }).format(
-                    new Date(`${month}-01T00:00:00Z`),
-                  )}
-                </span>
-                <span className="text-sm font-semibold text-primary">{formatCents(cents)}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Cuando guardes el primer ticket aparecerá aquí el total de su mes.
-          </p>
-        )}
-      </section>
+      <MonthlySpend months={months} />
 
       <form onSubmit={save} className="rounded-xl bg-card p-4">
         <h2 className="text-base font-semibold">Añadir ticket</h2>
@@ -483,38 +241,7 @@ export function TicketsView({
                   </button>
                 )}
               </div>
-              {(smartReview.duplicates.length > 0 || smartReview.unexpected.length > 0) && (
-                <div className="mb-2 rounded-xl bg-warning-soft p-2 text-xs text-danger">
-                  <p className="font-semibold">Revisión inteligente</p>
-                  {smartReview.duplicates.length > 0 && (
-                    <p className="mt-1">
-                      Posibles duplicados: {smartReview.duplicates.map((item) => item.description).join(", ")}
-                    </p>
-                  )}
-                  {smartReview.unexpected.length > 0 && (
-                    <p className="mt-1">
-                      Precio inesperado:{" "}
-                      {smartReview.unexpected.map((item) => `${item.name} (${formatCents(item.current)})`).join(", ")}
-                    </p>
-                  )}
-                </div>
-              )}
-              {plan && (
-                <div className="mb-2 grid grid-cols-3 gap-1 rounded-xl bg-muted p-2 text-center text-primary">
-                  <div>
-                    <b className="block text-sm">{plan.planned}</b>
-                    <span className="text-xs">Planeados</span>
-                  </div>
-                  <div>
-                    <b className="block text-sm">{plan.found}</b>
-                    <span className="text-xs">Verificados</span>
-                  </div>
-                  <div>
-                    <b className="block text-sm">{plan.missing}</b>
-                    <span className="text-xs">No vistos</span>
-                  </div>
-                </div>
-              )}
+              <LineChecks lines={lines} prices={prices} planned={planned} />
               {control && <LinesEditor items={lines} onChange={setLines} />}
             </div>
             <p className="col-span-2 text-xs leading-5 text-muted-foreground">
@@ -540,114 +267,13 @@ export function TicketsView({
         )}
       </form>
 
-      {tickets.length > 0 && (
-        <section className="mt-6" aria-labelledby="ticket-history-title">
-          <h2
-            id="ticket-history-title"
-            className="mb-2.5 px-1 text-[12px] font-semibold uppercase text-muted-foreground"
-          >
-            Historial
-          </h2>
-          <div className="overflow-hidden rounded-xl bg-card">
-            {tickets.slice(0, 30).map((ticket, index) => (
-              <div key={ticket.id} className={index ? "border-t-[0.5px] border-separator" : ""}>
-                <div className="flex items-center gap-3 px-3 py-3">
-                  <button
-                    type="button"
-                    onClick={() => void showPhoto(ticket)}
-                    disabled={!ticket.imagePath}
-                    aria-label={ticket.imagePath ? `Ver foto del ticket de ${ticket.merchant}` : undefined}
-                    className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-primary disabled:opacity-100"
-                  >
-                    {ticket.imagePath ? <Image className="size-4" /> : <ReceiptText className="size-4" />}
-                  </button>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{ticket.merchant}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {ticket.purchasedAt.split("-").reverse().join("/")} · {ticket.items.length}{" "}
-                      {ticket.items.length === 1 ? "línea" : "líneas"}
-                    </p>
-                  </div>
-                  <span className="text-sm font-semibold tabular-nums">{formatCents(ticket.totalCents)}</span>
-                  {control && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setEditing({ ...ticket, items: ticket.items.map((item) => ({ ...item })) })}
-                        aria-label={`Editar ticket de ${ticket.merchant}`}
-                        className="flex size-9 items-center justify-center rounded-lg bg-muted text-primary"
-                      >
-                        <Pencil className="size-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void remove(ticket)}
-                        aria-label={
-                          confirmDelete === ticket.id
-                            ? `Confirmar eliminar ticket de ${ticket.merchant}`
-                            : `Eliminar ticket de ${ticket.merchant}`
-                        }
-                        className={`flex size-9 items-center justify-center rounded-lg ${confirmDelete === ticket.id ? "bg-danger text-white" : "bg-danger-soft text-danger"}`}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    </>
-                  )}
-                </div>
-                {photo?.id === ticket.id && (
-                  <img
-                    src={photo.url}
-                    alt={`Ticket de ${ticket.merchant}`}
-                    className="max-h-[70vh] w-full bg-muted object-contain"
-                  />
-                )}
-                {editing?.id === ticket.id && (
-                  <form onSubmit={saveEdit} className="border-t-[0.5px] border-separator bg-card p-3">
-                    <div className="grid grid-cols-2 gap-2">
-                      <label className="col-span-2 text-xs font-semibold text-muted-foreground">
-                        Supermercado
-                        <Input
-                          value={editing.merchant}
-                          onChange={(event) => setEditing({ ...editing, merchant: event.target.value })}
-                          className="mt-1 h-10 rounded-lg bg-card text-sm"
-                        />
-                      </label>
-                      <label className="text-xs font-semibold text-muted-foreground">
-                        Fecha
-                        <Input
-                          type="date"
-                          value={editing.purchasedAt}
-                          onChange={(event) => setEditing({ ...editing, purchasedAt: event.target.value })}
-                          className="mt-1 h-10 rounded-lg bg-card text-sm"
-                        />
-                      </label>
-                      <label className="text-xs font-semibold text-muted-foreground">
-                        Total
-                        <MoneyInput
-                          cents={editing.totalCents}
-                          onChange={(cents) => setEditing({ ...editing, totalCents: cents })}
-                          className="mt-1 h-10 rounded-lg bg-card text-sm"
-                        />
-                      </label>
-                    </div>
-                    <div className="mt-3">
-                      <LinesEditor items={editing.items} onChange={(items) => setEditing({ ...editing, items })} />
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <Button variant="outline" onClick={() => setEditing(null)} className="h-11 rounded-xl text-xs">
-                        Cancelar
-                      </Button>
-                      <Button type="submit" disabled={busy} className="h-11 rounded-xl text-xs">
-                        Guardar cambios
-                      </Button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      <TicketHistory
+        tickets={tickets}
+        control={control}
+        ticketsState={ticketsState}
+        notify={notify}
+        onStatus={setStatus}
+      />
     </>
   );
 }
