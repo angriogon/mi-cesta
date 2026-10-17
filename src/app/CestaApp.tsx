@@ -11,7 +11,7 @@ import {
   type TouchEvent,
 } from "react";
 import { ApiError, type CestaApi } from "../data/api";
-import type { DogReminder, ListItem, PriceMeta, PriceRef, Product } from "../data/types";
+import type { DogReminder, PriceMeta, PriceRef, Product } from "../data/types";
 import type { Overview, Prediction } from "../domain/autocesta";
 import type { Category } from "../domain/categories";
 import { PERISHABLE, guessCategory } from "../domain/categories";
@@ -32,6 +32,8 @@ import { deviceId, deviceName, readJson, writeJson } from "../lib/storage";
 import type { BarcodeProduct } from "../data/types";
 import type { Account } from "./account";
 import { APP_VERSION } from "./config";
+import { inventoryChanged } from "./events";
+import { useLists } from "./useLists";
 import { AdminAccess, useAdmin } from "../views/AdminAccess";
 import { BarcodeScanner } from "../views/BarcodeScanner";
 import { ExpiryDialog, type ExpiryItem } from "../views/ExpiryDialog";
@@ -71,12 +73,11 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
   const memoryKey = `cesta-category-memory-v1:${householdId}`;
   const [view, setView] = useState<View>("home");
   const [stage, setStage] = useState<"prepare" | "store">("prepare");
-  const [shopping, setShopping] = useState<ListItem[]>([]);
-  const [checklist, setChecklist] = useState<ListItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [memory, setMemory] = useState<Record<string, string>>(() => readJson(memoryKey, {}));
   const [newName, setNewName] = useState("");
   const [ready, setReady] = useState(false);
+  const { shopping, checklist, setShopping, setChecklist, pullLists, shoppingRef } = useLists(api, ready);
   const [splash, setSplash] = useState(true);
   const [splashFading, setSplashFading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -109,72 +110,6 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
   const writes = useRef(new Map<string, Promise<unknown>>());
   const device = useMemo(() => deviceId(), []);
 
-  // ---- Sincronización de listas (revisión + mezcla por nombre, como la versión original) ----
-  const revision = useRef(0);
-  const loaded = useRef(false);
-  const dirty = useRef(false);
-  const fromRemote = useRef(false);
-  const saveTimer = useRef<number | null>(null);
-  const shoppingRef = useRef(shopping);
-  const checklistRef = useRef(checklist);
-  shoppingRef.current = shopping;
-  checklistRef.current = checklist;
-
-  const pushLists = useCallback(async () => {
-    if (!loaded.current) return;
-    const localShopping = shoppingRef.current;
-    const localChecklist = checklistRef.current;
-    try {
-      const saved = await api.saveLists(localShopping, localChecklist, revision.current, (remote) => ({
-        ...remote,
-        shopping: mergeByName(remote.shopping, localShopping),
-        checklist: mergeByName(remote.checklist, localChecklist),
-      }));
-      const changed = saved.revision !== revision.current + 1;
-      revision.current = saved.revision;
-      dirty.current = false;
-      if (changed) {
-        fromRemote.current = true;
-        setShopping(saved.shopping);
-        setChecklist(saved.checklist);
-      }
-    } catch (error) {
-      dirty.current = true;
-      reportError(error, "guardar listas", "Sin conexión: la lista se guardará en cuanto vuelva.");
-    }
-  }, [api]);
-
-  const pullLists = useCallback(async () => {
-    if (dirty.current) return void pushLists();
-    try {
-      const lists = await api.lists();
-      if (lists.revision > revision.current || !loaded.current) {
-        revision.current = lists.revision;
-        fromRemote.current = true;
-        setShopping(lists.shopping);
-        setChecklist(lists.checklist);
-      }
-      loaded.current = true;
-    } catch (error) {
-      loaded.current = true;
-      reportError(error, "cargar listas", LOAD_FAILED);
-    }
-  }, [api, pushLists]);
-
-  useEffect(() => {
-    if (!ready || !loaded.current) return;
-    if (fromRemote.current) {
-      fromRemote.current = false;
-      return;
-    }
-    dirty.current = true;
-    if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(() => void pushLists(), 650);
-    return () => {
-      if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
-    };
-  }, [shopping, checklist, ready, pushLists]);
-
   // ---- Carga de datos ----
   const refreshOverview = useCallback(async () => {
     try {
@@ -183,7 +118,7 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
       // Se reintenta en el siguiente refresco.
       reportError(error, "cargar resumen", LOAD_FAILED);
     }
-  }, [api]);
+  }, [api, shoppingRef]);
 
   const refreshProducts = useCallback(async () => {
     try {
@@ -558,7 +493,7 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
       toast.show(errorMessage(error, "No se ha podido deshacer."));
     }
     await refreshProducts();
-    window.dispatchEvent(new Event("cesta-inventory-refresh"));
+    inventoryChanged.emit();
   }
 
   // ---- Deslizar para actualizar ----
@@ -579,7 +514,7 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
         refreshPrices().catch(notifyError("cargar precios", LOAD_FAILED)),
       ]);
       api.reminders().then(setReminders).catch(notifyError("cargar avisos", LOAD_FAILED));
-      window.dispatchEvent(new Event("cesta-inventory-refresh"));
+      inventoryChanged.emit();
     }
     setPull(0);
   }
@@ -866,7 +801,7 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
                 try {
                   await api.cook(title, ingredients, servings);
                   await refreshProducts();
-                  window.dispatchEvent(new Event("cesta-inventory-refresh"));
+                  inventoryChanged.emit();
                   return true;
                 } catch (error) {
                   reportError(error, "cocinar receta");
@@ -882,7 +817,7 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
               onClose={() => setView("home")}
               onCommitted={async () => {
                 await refreshProducts();
-                window.dispatchEvent(new Event("cesta-inventory-refresh"));
+                inventoryChanged.emit();
               }}
             />
           </Suspense>
@@ -961,7 +896,7 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
             items={expiryItems}
             onClose={() => {
               setExpiryItems([]);
-              window.dispatchEvent(new Event("cesta-inventory-refresh"));
+              inventoryChanged.emit();
               void refreshOverview();
             }}
           />
