@@ -1,7 +1,7 @@
 import { Bell, LoaderCircle, Lock, LogOut, Plus, Wrench } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import type { DogItem, DogReminder } from "../data/types";
-import { Button, Input } from "../ui/primitives";
+import { Button, Input, StatCard } from "../ui/primitives";
 import type { PetState } from "../app/usePet";
 import { errorMessage } from "../app/errorMessage";
 import { PetItemRow } from "./dog/PetItemRow";
@@ -228,14 +228,8 @@ export function DogView({
         <>
           <p className="mb-2 px-1 text-xs font-semibold uppercase text-muted-foreground">Control de {petName}</p>
           <section className="mb-3 grid grid-cols-2 gap-2">
-            <div className="rounded-lg bg-card px-3 py-2.5">
-              <p className="text-xs font-semibold text-muted-foreground">Artículos</p>
-              <p className="mt-0.5 text-xl font-semibold">{items.length}</p>
-            </div>
-            <div className="rounded-lg bg-primary-soft px-3 py-2.5 text-primary">
-              <p className="text-xs font-semibold">Por reponer</p>
-              <p className="mt-0.5 text-xl font-semibold">{low}</p>
-            </div>
+            <StatCard label="Artículos" value={items.length} />
+            <StatCard label="Por reponer" value={low} tone="primary" />
           </section>
           <section className="mb-3 rounded-lg bg-card p-2.5">
             <div className="flex items-center gap-2">

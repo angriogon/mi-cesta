@@ -181,3 +181,25 @@ export function EmptyState({ icon, title, text }: { icon: ReactNode; title: stri
 export function CheckIcon({ className }: { className?: string }) {
   return <Check className={className} />;
 }
+
+/** Tarjeta de una cifra con su etiqueta (resúmenes de Despensa, Mascota…). `tone="primary"` la destaca. */
+export function StatCard({
+  label,
+  value,
+  hint,
+  tone = "neutral",
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: string;
+  tone?: "neutral" | "primary";
+}) {
+  const primary = tone === "primary";
+  return (
+    <div className={cn("rounded-lg px-3 py-2.5", primary ? "bg-primary-soft text-primary" : "bg-card")}>
+      <p className={cn("text-xs font-semibold", !primary && "text-muted-foreground")}>{label}</p>
+      <p className="mt-0.5 text-xl font-semibold tracking-tight">{value}</p>
+      {hint && <p className={cn("text-xs", !primary && "text-muted-foreground")}>{hint}</p>}
+    </div>
+  );
+}

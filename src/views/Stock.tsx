@@ -6,7 +6,7 @@ import { type Certainty, type Prediction } from "../domain/autocesta";
 import { CATEGORIES, type Category } from "../domain/categories";
 import type { StockLike } from "../domain/lists";
 import { normalize } from "../lib/text";
-import { Button, EmptyState, Input } from "../ui/primitives";
+import { Button, EmptyState, Input, StatCard } from "../ui/primitives";
 import type { Notify } from "../ui/Toast";
 import type { AdminState } from "./AdminAccess";
 import { ExpiryStates } from "./stock/ExpiryStates";
@@ -189,18 +189,12 @@ export function Stock(props: {
       )}
 
       <section className="mb-3 grid grid-cols-2 gap-2" aria-label="Resumen del almacén">
-        <div className="rounded-lg bg-card px-3 py-2.5">
-          <p className="text-xs font-semibold text-muted-foreground">Existencias</p>
-          <p className="mt-0.5 text-xl font-semibold tracking-tight">
-            {Number.isInteger(props.stockUnits) ? props.stockUnits : props.stockUnits.toFixed(1)}
-          </p>
-          <p className="text-xs text-muted-foreground">unidades en casa</p>
-        </div>
-        <div className="rounded-lg bg-primary-soft px-3 py-2.5 text-left text-primary">
-          <p className="text-xs font-semibold">Necesidades</p>
-          <p className="mt-0.5 text-xl font-semibold tracking-tight">{props.needs.length}</p>
-          <p className="text-xs">por reponer</p>
-        </div>
+        <StatCard
+          label="Existencias"
+          value={Number.isInteger(props.stockUnits) ? props.stockUnits : props.stockUnits.toFixed(1)}
+          hint="unidades en casa"
+        />
+        <StatCard label="Necesidades" value={props.needs.length} hint="por reponer" tone="primary" />
       </section>
 
       <label htmlFor="stock-search" className="sr-only">
