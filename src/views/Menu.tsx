@@ -1,8 +1,9 @@
-import { Copy, Euro, House, KeyRound, LoaderCircle, LogOut, PackageCheck, RotateCcw, ShieldCheck, ShoppingBasket, Sparkles, Utensils, X } from "lucide-react";
+import { Copy, Euro, House, KeyRound, LoaderCircle, LogOut, Moon, PackageCheck, RotateCcw, ShieldCheck, ShoppingBasket, Sparkles, Sun, Utensils, X } from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import type { CestaApi } from "../data/api";
 import type { Household, PriceMeta } from "../data/types";
 import { LOCAL_RESET_PHRASE, type Account } from "../app/account";
+import { saveTheme, storedTheme, type Theme } from "../lib/theme";
 import { Button, Input } from "../ui/primitives";
 
 type Page = "home" | "household" | "diet" | "news" | "password" | "reset" | "prices";
@@ -35,6 +36,7 @@ export function Menu({
   const [busy, setBusy] = useState(false);
   const [household, setHousehold] = useState<Household | null>(null);
   const [diet, setDiet] = useState({ enabled: false, allergens: "", avoided: "" });
+  const [theme, setTheme] = useState<Theme>(storedTheme);
 
   useEffect(() => {
     api
@@ -103,9 +105,25 @@ export function Menu({
               {household && <p className="truncate text-[10px] text-muted-foreground">{household.name}</p>}
             </div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Cerrar menú" className="flex size-10 items-center justify-center rounded-xl border border-border bg-card">
-            <X className="size-4" />
-          </button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={theme === "dark"}
+              aria-label={theme === "dark" ? "Modo oscuro activado. Cambiar a claro" : "Modo claro activado. Cambiar a oscuro"}
+              onClick={() => {
+                const next: Theme = theme === "dark" ? "light" : "dark";
+                saveTheme(next);
+                setTheme(next);
+              }}
+              className="flex size-10 items-center justify-center rounded-xl border border-border bg-card text-primary"
+            >
+              {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            </button>
+            <button type="button" onClick={onClose} aria-label="Cerrar menú" className="flex size-10 items-center justify-center rounded-xl border border-border bg-card">
+              <X className="size-4" />
+            </button>
+          </div>
         </div>
         {page !== "home" && (
           <button type="button" onClick={() => go("home")} className="mt-5 self-start py-1 text-xs font-bold text-primary">
