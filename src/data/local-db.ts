@@ -176,6 +176,11 @@ export class LocalDb implements Db {
     return this.data.images[path] ?? null;
   }
 
+  async removeTicketImages(paths: string[]): Promise<void> {
+    for (const path of paths) delete this.data.images[path];
+    this.persist("tickets");
+  }
+
   subscribe(onChange: (table: TableName | "lists") => void): () => void {
     this.listeners.add(onChange);
     return () => this.listeners.delete(onChange);

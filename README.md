@@ -30,16 +30,23 @@ npm run test:all     # tipos + unitarias + base de datos + extremo a extremo en 
 
 Sin variables de entorno la app funciona en **modo local**: los datos se guardan solo en ese dispositivo. Es útil para probar y para las pruebas automáticas.
 
-## Puesta en marcha con Supabase (cuentas y hogar compartido)
+## Supabase (cuentas y hogar compartido)
 
-1. Crea un proyecto en [supabase.com](https://supabase.com) (región Europa).
-2. En **SQL Editor**, ejecuta `supabase/migrations/20261017000000_cesta.sql`. También puedes usar `supabase db push` con la CLI.
-3. En **Authentication → URL Configuration**, pon como *Site URL* `https://angriogon.github.io/mi-cesta/` y añádela también a *Redirect URLs*.
-4. (Opcional) Despliega la función de precios: `supabase functions deploy mercadona-prices`.
-5. En GitHub, en **Settings → Secrets and variables → Actions → Variables**, crea `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (la clave pública *anon*, nunca la *service_role*).
-6. Haz push a `main`: el workflow pasa las pruebas, compila y publica en GitHub Pages.
+El proyecto de producción es **Cesta** (`ykptjovevwmzxzuejhzp`, región París) en la organización RIOS VEGA HOUSE. Ya tiene aplicadas la migración, el catálogo base, las fotos privadas de tickets, el tiempo real, la función `mercadona-prices` y las URL de autenticación (`https://angriogon.github.io/mi-cesta/`).
 
-En local, copia `.env.example` a `.env.local` y rellena las mismas variables.
+La URL y la clave pública *anon* están en `.env.production`: es una clave pensada para ir en la app, y la seguridad la dan los permisos de la base de datos. Nunca añadas la clave *service_role*.
+
+Para montar otro proyecto desde cero:
+1. Ejecuta `supabase/migrations/20261017000000_cesta.sql` en el SQL Editor (o `supabase db push`).
+2. En **Authentication → URL Configuration**, pon la URL de la app como *Site URL* y en *Redirect URLs*.
+3. Despliega la función: `supabase functions deploy mercadona-prices`.
+4. Cambia la URL y la clave en `.env.production`.
+
+Prueba de integración contra un proyecto real (necesita tres usuarios de prueba confirmados):
+
+```bash
+CESTA_IT_URL=… CESTA_IT_KEY=… CESTA_IT_EMAILS=a@x,b@x,c@x CESTA_IT_PASSWORD=… npx vitest run src/data/supabase.integration.test.ts
+```
 
 ## Estructura
 

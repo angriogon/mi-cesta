@@ -6,12 +6,12 @@
 |---|---|---|
 | Unitarias (Vitest) | 39/39 | Listas, emparejamiento de nombres, lectura de tickets de Mercadona (incluido el peso), recetas, inventario rápido, AutoCesta y toda la API (compra → almacén → ticket sin duplicar, deshacer, cocinar, revisiones que aprenden, precios, mascota, códigos de barras, restablecer) |
 | Base de datos (PGlite) | 20/20 | Migración completa, aislamiento entre hogares, invitaciones, listas que no se pisan, fotos privadas, salir de un hogar |
+| Integración con Supabase real | 1/1 | Dos cuentas comparten hogar con tiempo real, mezcla de listas, almacén, ticket con foto (y su borrado), deshacer y restablecer; una tercera cuenta no ve ni escribe nada |
 | Extremo a extremo (Playwright, WebKit) | 19/19 (estable en 2 repeticiones) | Todas las pantallas en iPhone 14 e iPhone SE: compra, tienda, caducidades, mantenimiento con PIN y recuperación, AutoCesta, tickets a mano y con **OCR real**, mascota, recetas, inventario rápido, códigos de barras, menú, restablecer, persistencia, modo oscuro y que nada se salga de la pantalla |
 
 ### Qué no está probado todavía
 - **Un iPhone real.** WebKit en ordenador no prueba la cámara, Face ID, las notificaciones, el teclado ni la app instalada en la pantalla de inicio.
-- **El modo con Supabase de verdad.** Las funciones SQL y los permisos están probados en un Postgres embebido. El registro, el email de confirmación, el tiempo real y la subida de fotos necesitan un proyecto real.
-- **La función de precios de Mercadona desplegada.** El formato de la tienda online se comprobó a mano el 17/10/2026.
+- **El registro desde la pantalla y el email de confirmación** con un correo real (los datos, el tiempo real, las fotos y los permisos ya están probados contra el proyecto de producción).
 
 ## Fallos del original corregidos
 1. Lo caducado aparecía como «hoy» en Inicio.
@@ -26,7 +26,7 @@
 
 ## Imprescindible antes de lanzar
 1. **Prueba en iPhones reales** (iOS 17 y 18, Safari y app instalada): cámara del escáner, lectura de tickets con fotos reales de Mercadona, Lidl, Carrefour y Dia, Face ID, safe areas y teclado.
-2. **Supabase en producción**: ejecutar la migración y probar con 2 cuentas en 2 dispositivos (invitación, tiempo real, conflicto de listas, fotos). Configurar **SMTP propio** (el de Supabase solo envía unos pocos emails por hora) y plantillas de email en español.
+2. **Correo de Supabase**: configurar **SMTP propio** (el de Supabase solo envía unos pocos emails por hora) y plantillas de email en español.
 3. **Eliminar cuenta y exportar datos.** Es la única función nueva que falta de verdad: la exige el RGPD (derechos de supresión y portabilidad) y Apple, si se publica en la App Store.
 4. **Legal**: política de privacidad, términos y aviso de cookies. Ojo: el perfil de alérgenos y la dieta pueden considerarse **datos de salud** (categoría especial del RGPD), así que hace falta consentimiento explícito o no guardarlos en el servidor.
 5. **Precios de Mercadona**: usa su tienda online sin API oficial. Para un producto comercial hay riesgo legal (condiciones de uso) y puede romperse en cualquier momento. Recomiendo desactivarlo de lanzamiento y quedarse con los precios aprendidos de los tickets, o buscar un acuerdo o fuente con licencia.

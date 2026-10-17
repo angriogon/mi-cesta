@@ -366,6 +366,8 @@ export class CestaApi {
       } else if (step.kind === "deleteLot") await this.db.remove("inventory_lots", [step.lotId]);
       else if (step.kind === "restoreLot") await this.db.insert("inventory_lots", [step.lot]);
       else if (step.kind === "deleteTicket") {
+        const ticket = (await this.db.list("tickets")).find((item) => item.id === step.ticketId);
+        if (ticket?.imagePath) await this.db.removeTicketImages([ticket.imagePath]).catch(() => undefined);
         await this.db.remove("tickets", [step.ticketId]);
         const reviews = (await this.db.list("ticket_reviews")).filter((review) => review.ticketId === step.ticketId);
         await this.db.remove("ticket_reviews", reviews.map((review) => review.id));
@@ -618,6 +620,8 @@ export class CestaApi {
   }
 
   async deleteTicket(id: string): Promise<void> {
+    const ticket = (await this.db.list("tickets")).find((item) => item.id === id);
+    if (ticket?.imagePath) await this.db.removeTicketImages([ticket.imagePath]).catch(() => undefined);
     await this.db.remove("tickets", [id]);
     const reviews = (await this.db.list("ticket_reviews")).filter((review) => review.ticketId === id);
     await this.db.remove("ticket_reviews", reviews.map((review) => review.id));
@@ -877,6 +881,8 @@ export class CestaApi {
       "quick_sessions",
       "barcodes",
     ] as const;
+    const images = (await this.db.list("tickets")).flatMap((ticket) => (ticket.imagePath ? [ticket.imagePath] : []));
+    await this.db.removeTicketImages(images).catch(() => undefined);
     for (const table of tables) await this.db.removeAll(table);
     const products = await this.db.list("products");
     const custom = products.filter((product) => product.sku.startsWith("custom-"));

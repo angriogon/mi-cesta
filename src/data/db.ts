@@ -21,6 +21,7 @@ export interface Db {
   casLists(shopping: ListItem[], checklist: ListItem[], revision: number): Promise<CasResult>;
   uploadTicketImage(ticketId: string, file: Blob): Promise<string | null>;
   ticketImageUrl(path: string): Promise<string | null>;
+  removeTicketImages(paths: string[]): Promise<void>;
   /** Avisa cuando otro dispositivo cambia datos del hogar. */
   subscribe(onChange: (table: TableName | "lists") => void): () => void;
 }

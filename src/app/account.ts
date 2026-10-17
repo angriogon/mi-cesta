@@ -61,6 +61,17 @@ export function supabaseAccount(email: string, householdId: string, onLeave: () 
       await supabase().auth.signOut();
     },
     async leaveHousehold() {
+      // Si es el último miembro, el hogar se borra: antes se borran sus fotos de tickets.
+      const { data: members } = await supabase().rpc("household_members_list", { p_household_id: householdId });
+      if (Array.isArray(members) && members.length <= 1) {
+        const bucket = supabase().storage.from("ticket-images");
+        for (;;) {
+          const { data: files } = await bucket.list(householdId, { limit: 1000 });
+          if (!files?.length) break;
+          const { error: removeError } = await bucket.remove(files.map((file) => `${householdId}/${file.name}`));
+          if (removeError) break;
+        }
+      }
       const { error } = await supabase().rpc("leave_household", { p_household_id: householdId });
       if (error) throw new Error(error.message);
       onLeave();

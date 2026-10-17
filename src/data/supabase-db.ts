@@ -131,6 +131,12 @@ export class SupabaseDb implements Db {
     return data?.signedUrl ?? null;
   }
 
+  async removeTicketImages(paths: string[]): Promise<void> {
+    if (!paths.length) return;
+    const { error } = await this.client.storage.from("ticket-images").remove(paths);
+    this.fail(error, "Borrar fotos de tickets");
+  }
+
   subscribe(onChange: (table: TableName | "lists") => void): () => void {
     const channel: RealtimeChannel = this.client.channel(`household:${this.householdId}`);
     for (const table of REALTIME_TABLES) {

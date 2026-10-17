@@ -25,6 +25,7 @@ create table public.household_members (
   primary key (household_id, user_id)
 );
 create index household_members_user on public.household_members (user_id);
+create index households_created_by on public.households (created_by);
 
 create or replace function public.is_member(p_household_id uuid)
 returns boolean
@@ -666,6 +667,7 @@ on conflict (sku) do nothing;
 create or replace function public.new_invite_code()
 returns text
 language plpgsql
+set search_path = public
 as $$
 declare
   alphabet constant text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -756,7 +758,6 @@ begin
   -- Un hogar sin miembros se borra con todos sus datos.
   if not exists (select 1 from public.household_members where household_id = p_household_id) then
     delete from public.households where id = p_household_id;
-    delete from storage.objects where bucket_id = 'ticket-images' and name like p_household_id::text || '/%';
   elsif not exists (select 1 from public.household_members where household_id = p_household_id and role = 'owner') then
     update public.household_members set role = 'owner'
     where household_id = p_household_id
@@ -805,6 +806,9 @@ begin
 end;
 $$;
 
+revoke execute on function public.new_invite_code() from anon, authenticated, public;
+revoke execute on function public.is_member(uuid) from anon, public;
+grant execute on function public.is_member(uuid) to authenticated;
 revoke execute on function public.create_household(text) from anon, public;
 revoke execute on function public.join_household(text) from anon, public;
 revoke execute on function public.my_households() from anon, public;

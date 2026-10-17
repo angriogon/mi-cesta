@@ -1,5 +1,5 @@
-// Edge Function: precios de referencia de fruta y verdura de Mercadona según el código postal.
-// Usa la tienda online pública de Mercadona (sin API oficial): si cambia su formato, responde
+// Edge Function: precios de referencia de fruta y verdura de Mercadona segun el codigo postal.
+// Usa la tienda online publica de Mercadona (sin API oficial): si cambia su formato, responde
 // { prices: [] } y la app sigue funcionando con los precios aprendidos de los tickets.
 // Despliegue: supabase functions deploy mercadona-prices
 
@@ -22,11 +22,12 @@ interface MercadonaCategory {
   products?: MercadonaProduct[];
 }
 
+// Solo caracteres ASCII en el codigo: el despliegue no siempre conserva bien los literales acentuados.
 function normalize(value: string): string {
   return value
-    .toLocaleLowerCase("es")
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/\p{M}/gu, "")
     .replace(/[^a-z0-9 ]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -38,7 +39,7 @@ async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-/** El almacén (wh) que abastece a un código postal determina los precios. */
+/** El almacen (wh) que abastece a un codigo postal determina los precios. */
 async function warehouseFor(postalCode: string): Promise<string | null> {
   const response = await fetch(`${BASE}/postal-codes/actions/change-pc/`, {
     method: "PUT",
@@ -81,9 +82,9 @@ Deno.serve(async (request) => {
       }
     }
 
-    // Para cada producto del hogar, el artículo de Mercadona cuyo nombre empieza igual (o lo contiene).
+    // Para cada producto del hogar, el articulo de Mercadona cuyo nombre empieza igual (o lo contiene).
     const prices = wanted.flatMap(({ name, key }) => {
-      // "Plátanos" debe encontrar "Plátano de Canarias": se prueba también en singular.
+      // "Platanos" debe encontrar "Platano de Canarias": se prueba tambien en singular.
       const singular = key.replace(/(?:es|s)\b/g, "");
       const match =
         catalog.find((item) => item.key === key) ??

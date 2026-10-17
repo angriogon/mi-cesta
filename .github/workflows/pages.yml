@@ -49,9 +49,7 @@ jobs:
         run: npm run build
         env:
           CESTA_BASE: /${{ github.event.repository.name }}/
-          # Sin estas variables la app se publica en modo local (datos solo en cada dispositivo).
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          # El proyecto Supabase se toma de .env.production.
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
