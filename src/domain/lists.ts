@@ -92,7 +92,12 @@ export function addNeeds(checklist: ListItem[], needs: StockLike[]): ListItem[] 
     const missing = need.minimum - need.quantity;
     const index = next.findIndex((item) => normalize(item.name) === normalize(need.name));
     if (index >= 0)
-      next[index] = { ...next[index], quantity: Math.max(next[index].quantity, missing), category: need.category, done: false };
+      next[index] = {
+        ...next[index],
+        quantity: Math.max(next[index].quantity, missing),
+        category: need.category,
+        done: false,
+      };
     else next.push({ id: uid(), name: need.name, quantity: missing, category: need.category, done: false });
   }
   return next;
@@ -132,7 +137,8 @@ export function addSuggestions(
   for (const suggestion of suggestions) {
     const product = stock.find((item) => item.id === suggestion.productId);
     const index = next.findIndex((item) => normalize(item.name) === normalize(suggestion.productName));
-    if (index >= 0) next[index] = { ...next[index], quantity: Math.max(next[index].quantity, suggestion.quantity), done: false };
+    if (index >= 0)
+      next[index] = { ...next[index], quantity: Math.max(next[index].quantity, suggestion.quantity), done: false };
     else
       next.push({
         id: uid(),

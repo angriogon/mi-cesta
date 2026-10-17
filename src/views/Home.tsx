@@ -57,11 +57,16 @@ export function Home({
         : undefined;
 
   return (
-    <section className="flex min-h-[calc(100dvh-10.2rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col gap-3 pt-1" aria-label="Resumen de Cesta">
+    <section
+      className="flex min-h-[calc(100dvh-10.2rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col gap-3 pt-1"
+      aria-label="Resumen de Cesta"
+    >
       <div className="flex items-end justify-between gap-2">
         <div className="min-w-0">
           <p className="text-[9px] font-bold uppercase tracking-[.14em] text-primary">Resumen de hoy</p>
-          <h1 className="mt-1 truncate text-[21px] font-bold tracking-[-.045em]">{data?.tranquility.label || "Preparando tu hogar…"}</h1>
+          <h1 className="mt-1 truncate text-[21px] font-bold tracking-[-.045em]">
+            {data?.tranquility.label || "Preparando tu hogar…"}
+          </h1>
         </div>
         <div className="flex shrink-0 rounded-xl bg-muted p-1" role="group" aria-label="Modo de funcionamiento">
           <button
@@ -93,16 +98,32 @@ export function Home({
           <span className="text-[8px] font-bold uppercase tracking-[.08em] opacity-65">tranquilidad</span>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={onOpenExpiring} className="rounded-[18px] border border-border bg-card p-3 text-left">
-            <span className="text-[9px] font-semibold text-muted-foreground">{next && next.daysUntil < 0 ? "Caducado" : "Próximo a caducar"}</span>
-            <strong className="mt-2 line-clamp-2 block text-[12px] leading-4">{next?.productName || "Nada urgente"}</strong>
-            <span className={`mt-1.5 block text-[9px] font-bold ${next && next.daysUntil <= 1 ? "text-[#a34141]" : "text-primary"}`}>
+          <button
+            type="button"
+            onClick={onOpenExpiring}
+            className="rounded-[18px] border border-border bg-card p-3 text-left"
+          >
+            <span className="text-[9px] font-semibold text-muted-foreground">
+              {next && next.daysUntil < 0 ? "Caducado" : "Próximo a caducar"}
+            </span>
+            <strong className="mt-2 line-clamp-2 block text-[12px] leading-4">
+              {next?.productName || "Nada urgente"}
+            </strong>
+            <span
+              className={`mt-1.5 block text-[9px] font-bold ${next && next.daysUntil <= 1 ? "text-[#a34141]" : "text-primary"}`}
+            >
               {next ? expiryText(next) : "Todo en orden"}
             </span>
           </button>
-          <button type="button" onClick={onOpenStock} className="rounded-[18px] border border-border bg-card p-3 text-left">
+          <button
+            type="button"
+            onClick={onOpenStock}
+            className="rounded-[18px] border border-border bg-card p-3 text-left"
+          >
             <span className="text-[9px] font-semibold text-muted-foreground">Existencias totales</span>
-            <strong className="mt-1 block text-[25px] leading-8">{Number.isInteger(units) ? units : units.toFixed(1)}</strong>
+            <strong className="mt-1 block text-[25px] leading-8">
+              {Number.isInteger(units) ? units : units.toFixed(1)}
+            </strong>
             <span className="text-[9px] font-bold text-primary">Incluye todos los estados</span>
           </button>
         </div>
@@ -111,13 +132,15 @@ export function Home({
       <section className="rounded-[18px] border border-[#e6dfcf] bg-[#faf7ef] p-3 dark:border-border dark:bg-card">
         <button
           type="button"
-          onClick={question ? undefined : recommendationAction ?? onOpenPurchase}
+          onClick={question ? undefined : (recommendationAction ?? onOpenPurchase)}
           disabled={Boolean(question)}
           className="flex w-full items-start gap-2 text-left disabled:opacity-100"
         >
           <Sparkles className="mt-0.5 size-4 shrink-0 text-[#8b672f]" />
           <div className="min-w-0 flex-1">
-            <p className="line-clamp-2 text-[12px] font-bold leading-4">{question?.prompt || recommendation?.title || "Todo bajo control"}</p>
+            <p className="line-clamp-2 text-[12px] font-bold leading-4">
+              {question?.prompt || recommendation?.title || "Todo bajo control"}
+            </p>
             <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-[#76582b] dark:text-muted-foreground">
               {question?.reason || recommendation?.reason || "No hay decisiones urgentes."}
             </p>
@@ -125,16 +148,32 @@ export function Home({
         </button>
         {question && (
           <div className="mt-2 grid grid-cols-4 gap-1.5">
-            <button type="button" onClick={() => onAnswer(question.productId, "yes")} className="h-10 rounded-lg bg-card text-[11px] font-bold dark:bg-muted">
+            <button
+              type="button"
+              onClick={() => onAnswer(question.productId, "yes")}
+              className="h-10 rounded-lg bg-card text-[11px] font-bold dark:bg-muted"
+            >
               Sí
             </button>
-            <button type="button" onClick={() => onAnswer(question.productId, "little")} className="h-10 rounded-lg bg-card text-[11px] font-bold dark:bg-muted">
+            <button
+              type="button"
+              onClick={() => onAnswer(question.productId, "little")}
+              className="h-10 rounded-lg bg-card text-[11px] font-bold dark:bg-muted"
+            >
               Poco
             </button>
-            <button type="button" onClick={() => onAnswer(question.productId, "no")} className="h-10 rounded-lg bg-[#f8e8e4] text-[11px] font-bold text-[#983e38]">
+            <button
+              type="button"
+              onClick={() => onAnswer(question.productId, "no")}
+              className="h-10 rounded-lg bg-[#f8e8e4] text-[11px] font-bold text-[#983e38]"
+            >
               No
             </button>
-            <button type="button" onClick={() => onAnswer(question.productId, "unknown")} className="h-10 rounded-lg bg-muted text-[10px] font-bold">
+            <button
+              type="button"
+              onClick={() => onAnswer(question.productId, "unknown")}
+              className="h-10 rounded-lg bg-muted text-[10px] font-bold"
+            >
               No sé
             </button>
           </div>
@@ -194,7 +233,8 @@ export function Home({
           className="rounded-[18px] border border-dashed border-primary/35 bg-[#f3f7f3] p-3 text-left text-[11px] leading-4 text-primary dark:bg-card"
         >
           <b className="block">Empieza en 3 pasos</b>
-          Añade lo que necesitas en Compra, guárdalo en el almacén al terminar y fotografía el ticket. Con eso Cesta aprende sola.
+          Añade lo que necesitas en Compra, guárdalo en el almacén al terminar y fotografía el ticket. Con eso Cesta
+          aprende sola.
         </button>
       )}
       {data?.undo && (

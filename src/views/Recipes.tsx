@@ -1,4 +1,18 @@
-import { Check, ChevronDown, Clock, CookingPot, Leaf, Link2, ListPlus, PackageCheck, Search, ThumbsDown, TriangleAlert, Utensils, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Clock,
+  CookingPot,
+  Leaf,
+  Link2,
+  ListPlus,
+  PackageCheck,
+  Search,
+  ThumbsDown,
+  TriangleAlert,
+  Utensils,
+  X,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { CestaApi } from "../data/api";
 import type { InventoryLot, Preferences } from "../data/types";
@@ -15,6 +29,7 @@ import {
   type RecipeGoal,
 } from "../domain/recipes";
 import { Button, Input, NativeSelect } from "../ui/primitives";
+import { LOAD_FAILED, SAVE_FAILED, notifyError } from "../lib/errors";
 
 function NutrientBars({ nutrients }: { nutrients: Nutrients }) {
   const rows: [string, number, number, string][] = [
@@ -34,7 +49,10 @@ function NutrientBars({ nutrients }: { nutrients: Nutrients }) {
           <div key={label} className="grid grid-cols-[4.2rem_1fr_2.7rem] items-center gap-2">
             <span className="text-[10px] font-semibold text-muted-foreground">{label}</span>
             <div className="h-1.5 overflow-hidden rounded-full bg-card" role="presentation">
-              <div className="h-full rounded-full" style={{ width: `${Math.min(100, (value / daily) * 100)}%`, backgroundColor: color }} />
+              <div
+                className="h-full rounded-full"
+                style={{ width: `${Math.min(100, (value / daily) * 100)}%`, backgroundColor: color }}
+              />
             </div>
             <span className="text-right text-[11px] font-bold tabular-nums">{Math.round(value)} g</span>
           </div>
@@ -64,15 +82,22 @@ export function RecipesView({
   const [message, setMessage] = useState("");
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
   const [lots, setLots] = useState<InventoryLot[]>([]);
-  const [preferences, setPreferences] = useState<Preferences>({ specialDietEnabled: false, allergens: [], avoided: [] });
+  const [preferences, setPreferences] = useState<Preferences>({
+    specialDietEnabled: false,
+    allergens: [],
+    avoided: [],
+  });
 
   useEffect(() => {
-    api.preferences().then(setPreferences).catch(() => undefined);
-    api.lots().then(setLots).catch(() => undefined);
-    api.skippedRecipes().then(setSkipped).catch(() => undefined);
+    api.preferences().then(setPreferences).catch(notifyError("cargar preferencias", LOAD_FAILED));
+    api.lots().then(setLots).catch(notifyError("cargar existencias", LOAD_FAILED));
+    api.skippedRecipes().then(setSkipped).catch(notifyError("cargar recetas descartadas", LOAD_FAILED));
   }, [api]);
 
-  const scored = useMemo(() => scoreRecipes(stock.map((item) => ({ name: item.name, category: item.category, quantity: item.quantity }))), [stock]);
+  const scored = useMemo(
+    () => scoreRecipes(stock.map((item) => ({ name: item.name, category: item.category, quantity: item.quantity }))),
+    [stock],
+  );
   const visible = filterRecipes(scored, { filter, goal, query, skipped, lots });
   const plan = useMemo(() => chainedPlan(scored, skipped), [scored, skipped]);
   const ready = scored.filter((recipe) => !recipe.missing.length).length;
@@ -83,15 +108,19 @@ export function RecipesView({
     const ok = await onCook(recipe.title, recipe.present, servings);
     setCooking(null);
     const left = Math.max(0, servings - 1);
-    setMessage(ok ? `Despensa actualizada · ${left} ${left === 1 ? "ración guardada" : "raciones guardadas"}.` : "No se ha podido actualizar la despensa.");
-    if (ok) api.lots().then(setLots).catch(() => undefined);
+    setMessage(
+      ok
+        ? `Despensa actualizada · ${left} ${left === 1 ? "ración guardada" : "raciones guardadas"}.`
+        : "No se ha podido actualizar la despensa.",
+    );
+    if (ok) api.lots().then(setLots).catch(notifyError("cargar existencias", LOAD_FAILED));
   }
 
   function skip(id: string) {
     setSkipped((current) => new Set([...current, id]));
     setOpen(null);
     setMessage("Te propondré otra opción y recordaré esta preferencia.");
-    void api.recipeSkip(id).catch(() => undefined);
+    void api.recipeSkip(id).catch(notifyError("descartar receta", SAVE_FAILED));
   }
 
   return (
@@ -139,11 +168,19 @@ export function RecipesView({
           </p>
           <div className="mt-2 flex gap-3">
             {plan.missing.length > 0 && (
-              <button type="button" onClick={() => onAddMissing(plan.missing)} className="flex items-center gap-1 py-1 text-[10px] font-bold text-primary">
+              <button
+                type="button"
+                onClick={() => onAddMissing(plan.missing)}
+                className="flex items-center gap-1 py-1 text-[10px] font-bold text-primary"
+              >
                 <ListPlus className="size-3" /> Añadir lo que falta
               </button>
             )}
-            <button type="button" onClick={() => skip(plan.first.id)} className="flex items-center gap-1 py-1 text-[10px] font-bold text-[#76582b] dark:text-muted-foreground">
+            <button
+              type="button"
+              onClick={() => skip(plan.first.id)}
+              className="flex items-center gap-1 py-1 text-[10px] font-bold text-[#76582b] dark:text-muted-foreground"
+            >
               <ThumbsDown className="size-3" /> No me apetece
             </button>
           </div>
@@ -183,7 +220,10 @@ export function RecipesView({
         ))}
       </div>
       {message && (
-        <p className="mb-2 rounded-xl bg-[#eaf3eb] px-3 py-2 text-[10px] font-bold text-primary dark:bg-secondary" role="status">
+        <p
+          className="mb-2 rounded-xl bg-[#eaf3eb] px-3 py-2 text-[10px] font-bold text-primary dark:bg-secondary"
+          role="status"
+        >
           {message}
         </p>
       )}
@@ -201,19 +241,38 @@ export function RecipesView({
             const conflicts = dietConflicts(recipe.ingredients, preferences);
             return (
               <section key={recipe.id} className="overflow-hidden rounded-[17px] border border-border bg-card">
-                <button type="button" onClick={() => setOpen(expanded ? null : recipe.id)} aria-expanded={expanded} className="flex w-full items-center gap-2.5 p-3 text-left">
+                <button
+                  type="button"
+                  onClick={() => setOpen(expanded ? null : recipe.id)}
+                  aria-expanded={expanded}
+                  className="flex w-full items-center gap-2.5 p-3 text-left"
+                >
                   <div
                     className={`flex size-8 shrink-0 items-center justify-center rounded-full ${recipe.missing.length ? (recipe.score >= 50 ? "bg-[#f5ead6] text-[#94642b]" : "bg-[#f7dfdb] text-[#9b3f38]") : "bg-[#dcebdd] text-[#285a3d]"}`}
                   >
-                    {recipe.missing.length ? recipe.score >= 50 ? <Leaf className="size-3.5" /> : <X className="size-3.5" /> : <Check className="size-3.5" />}
+                    {recipe.missing.length ? (
+                      recipe.score >= 50 ? (
+                        <Leaf className="size-3.5" />
+                      ) : (
+                        <X className="size-3.5" />
+                      )
+                    ) : (
+                      <Check className="size-3.5" />
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[13px] font-bold">{recipe.title}</p>
                     <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
-                      {recipe.meal} · {recipe.missing.length ? `Faltan ${recipe.missing.length}` : "Lista para cocinar"} · <Clock className="size-2.5" /> {recipe.minutes} min
+                      {recipe.meal} · {recipe.missing.length ? `Faltan ${recipe.missing.length}` : "Lista para cocinar"}{" "}
+                      · <Clock className="size-2.5" /> {recipe.minutes} min
                     </p>
                   </div>
-                  {conflicts.length > 0 && <TriangleAlert className="size-3.5 text-[#a34141]" aria-label="Contiene ingredientes de tu perfil" />}
+                  {conflicts.length > 0 && (
+                    <TriangleAlert
+                      className="size-3.5 text-[#a34141]"
+                      aria-label="Contiene ingredientes de tu perfil"
+                    />
+                  )}
                   <ChevronDown className={`size-4 text-muted-foreground ${expanded ? "rotate-180" : ""}`} />
                 </button>
                 {expanded && (
@@ -223,7 +282,9 @@ export function RecipesView({
                       {goalReason(goal, recipe)}
                     </p>
                     {conflicts.length > 0 && (
-                      <p className="mt-2 rounded-lg bg-[#fbefeb] px-2 py-1.5 text-[10px] font-bold text-[#9b3f38]">Revisa tu perfil: {conflicts.join(", ")}</p>
+                      <p className="mt-2 rounded-lg bg-[#fbefeb] px-2 py-1.5 text-[10px] font-bold text-[#9b3f38]">
+                        Revisa tu perfil: {conflicts.join(", ")}
+                      </p>
                     )}
                     <div className="mt-3 flex flex-wrap gap-1">
                       {recipe.ingredients.map((ingredient) => {
@@ -240,7 +301,11 @@ export function RecipesView({
                       })}
                     </div>
                     {recipe.missing.length > 0 && (
-                      <Button variant="outline" onClick={() => onAddMissing(recipe.missing)} className="mt-3 h-10 w-full rounded-xl text-[11px]">
+                      <Button
+                        variant="outline"
+                        onClick={() => onAddMissing(recipe.missing)}
+                        className="mt-3 h-10 w-full rounded-xl text-[11px]"
+                      >
                         <ListPlus className="size-3.5" /> Añadir ingredientes a la lista
                       </Button>
                     )}
@@ -248,7 +313,9 @@ export function RecipesView({
                     <ol className="mt-3 space-y-1.5">
                       {recipeSteps(recipe).map((step, index) => (
                         <li key={step} className="flex gap-2 text-[11px] leading-4">
-                          <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">{index + 1}</span>
+                          <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                            {index + 1}
+                          </span>
                           {step}
                         </li>
                       ))}
@@ -266,14 +333,25 @@ export function RecipesView({
                           </option>
                         ))}
                       </NativeSelect>
-                      <Button disabled={cooking === recipe.id || recipe.present.length === 0} onClick={() => void cook(recipe)} className="h-10 rounded-xl text-[11px]">
-                        <PackageCheck className="size-3.5" /> {cooking === recipe.id ? "Actualizando…" : "Ya la he cocinado"}
+                      <Button
+                        disabled={cooking === recipe.id || recipe.present.length === 0}
+                        onClick={() => void cook(recipe)}
+                        className="h-10 rounded-xl text-[11px]"
+                      >
+                        <PackageCheck className="size-3.5" />{" "}
+                        {cooking === recipe.id ? "Actualizando…" : "Ya la he cocinado"}
                       </Button>
                     </div>
-                    <button type="button" onClick={() => skip(recipe.id)} className="mt-2 flex items-center gap-1 py-1 text-[10px] font-bold text-muted-foreground">
+                    <button
+                      type="button"
+                      onClick={() => skip(recipe.id)}
+                      className="mt-2 flex items-center gap-1 py-1 text-[10px] font-bold text-muted-foreground"
+                    >
                       <ThumbsDown className="size-3" /> No me apetece
                     </button>
-                    <p className="mt-2 text-[9px] text-muted-foreground">Se descuenta una unidad de cada ingrediente usado y las raciones sobrantes pasan al almacén.</p>
+                    <p className="mt-2 text-[9px] text-muted-foreground">
+                      Se descuenta una unidad de cada ingrediente usado y las raciones sobrantes pasan al almacén.
+                    </p>
                   </div>
                 )}
               </section>

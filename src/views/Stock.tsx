@@ -30,6 +30,7 @@ import { readText, writeText } from "../lib/storage";
 import { Button, CategorySelect, EmptyState, Input, NativeSelect, Stepper } from "../ui/primitives";
 import type { Notify } from "../ui/Toast";
 import type { AdminState } from "./AdminAccess";
+import { LOAD_FAILED, reportError } from "../lib/errors";
 
 export const STATE_LABEL: Record<LotState, string> = {
   closed: "Cerrado",
@@ -66,8 +67,9 @@ function ExpiryStates({ api, notify, products }: { api: CestaApi; notify: Notify
   async function load() {
     try {
       setLots(await api.lots());
-    } catch {
+    } catch (error) {
       // Se reintenta con el siguiente refresco.
+      reportError(error, "cargar existencias", LOAD_FAILED);
     }
   }
 
@@ -95,9 +97,10 @@ function ExpiryStates({ api, notify, products }: { api: CestaApi; notify: Notify
   );
   const summary = useMemo(
     () =>
-      STATES.map((state) => ({ state, quantity: lots.filter((lot) => lot.state === state).reduce((sum, lot) => sum + lot.quantity, 0) })).filter(
-        (item) => item.quantity > 0,
-      ),
+      STATES.map((state) => ({
+        state,
+        quantity: lots.filter((lot) => lot.state === state).reduce((sum, lot) => sum + lot.quantity, 0),
+      })).filter((item) => item.quantity > 0),
     [lots],
   );
 
@@ -124,7 +127,8 @@ function ExpiryStates({ api, notify, products }: { api: CestaApi; notify: Notify
           void api.addLot(lot).then(() => load());
         },
       });
-    } catch {
+    } catch (error) {
+      reportError(error, "despensa");
       notify("No se ha podido retirar.");
       void load();
     }
@@ -145,7 +149,10 @@ function ExpiryStates({ api, notify, products }: { api: CestaApi; notify: Notify
       </button>
       <div className="flex gap-1.5 overflow-x-auto border-t border-border/60 px-2.5 py-2">
         {summary.map((item) => (
-          <span key={item.state} className={`inline-flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1.5 text-[10px] font-bold ${STATE_TONE[item.state]}`}>
+          <span
+            key={item.state}
+            className={`inline-flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1.5 text-[10px] font-bold ${STATE_TONE[item.state]}`}
+          >
             <StateIcon state={item.state} />
             {STATE_LABEL[item.state]} · {item.quantity}
           </span>
@@ -156,7 +163,8 @@ function ExpiryStates({ api, notify, products }: { api: CestaApi; notify: Notify
           {help && (
             <div className="flex items-center gap-2 bg-[#faf7ef] px-3 py-2.5 text-[11px] text-[#76582b] dark:bg-muted dark:text-muted-foreground">
               <span className="min-w-0 flex-1">
-                Toca el estado para cambiarlo y la fecha para editarla o retirar el producto. El estado no cambia las unidades en existencias.
+                Toca el estado para cambiarlo y la fecha para editarla o retirar el producto. El estado no cambia las
+                unidades en existencias.
               </span>
               <button
                 type="button"
@@ -200,7 +208,13 @@ function ExpiryStates({ api, notify, products }: { api: CestaApi; notify: Notify
                     aria-label={`Editar fecha de ${lot.productName}${estimate ? " (fecha estimada)" : ""}`}
                     className={`min-h-9 min-w-[3.6rem] shrink-0 rounded-lg px-1.5 py-1.5 text-center text-[10px] font-bold ${days !== null && days <= 2 ? "bg-[#f8dfda] text-[#9b3f38] dark:bg-[#3a1f1c] dark:text-[#f0a49b]" : "bg-[#f3eadc] text-[#8b622b] dark:bg-[#2d271c] dark:text-[#e2c08a]"}`}
                   >
-                    {days === null ? "Sin fecha" : days < 0 ? "Caducado" : days === 0 ? `${prefix}Hoy` : `${prefix}${days} d`}
+                    {days === null
+                      ? "Sin fecha"
+                      : days < 0
+                        ? "Caducado"
+                        : days === 0
+                          ? `${prefix}Hoy`
+                          : `${prefix}${days} d`}
                   </button>
                 </div>
                 {editing === lot.id && (
@@ -226,7 +240,11 @@ function ExpiryStates({ api, notify, products }: { api: CestaApi; notify: Notify
               </div>
             );
           })}
-          {status && <p className="border-t border-border/60 px-3 py-2 text-[10px] font-semibold text-primary" role="status">{status}</p>}
+          {status && (
+            <p className="border-t border-border/60 px-3 py-2 text-[10px] font-semibold text-primary" role="status">
+              {status}
+            </p>
+          )}
         </div>
       )}
     </section>
@@ -266,10 +284,14 @@ export function Stock(props: {
 
   const groups = useMemo(() => {
     const key = normalize(query);
-    const source = maintenance ? props.stock.filter((item) => !onlyStocked || item.quantity > 0 || item.minimum > 0) : props.needs;
+    const source = maintenance
+      ? props.stock.filter((item) => !onlyStocked || item.quantity > 0 || item.minimum > 0)
+      : props.needs;
     let budget = key ? 60 : Infinity;
     return CATEGORIES.map((category) => {
-      const items = source.filter((item) => item.category === category && (!key || normalize(item.name).includes(key))).slice(0, budget);
+      const items = source
+        .filter((item) => item.category === category && (!key || normalize(item.name).includes(key)))
+        .slice(0, budget);
       budget -= items.length;
       return { category, items };
     }).filter((group) => group.items.length > 0);
@@ -353,7 +375,8 @@ export function Stock(props: {
           aria-pressed={maintenance}
           className={`flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-[11px] font-bold transition-colors ${maintenance ? "bg-primary text-primary-foreground" : "border border-border bg-card text-primary"}`}
         >
-          {admin.unlocked || maintenance ? <Wrench className="size-3.5" /> : <Lock className="size-3.5" />} {maintenance ? "Listo" : "Mantenimiento"}
+          {admin.unlocked || maintenance ? <Wrench className="size-3.5" /> : <Lock className="size-3.5" />}{" "}
+          {maintenance ? "Listo" : "Mantenimiento"}
         </button>
         {maintenance && (
           <button
@@ -371,7 +394,9 @@ export function Stock(props: {
         <section className="mb-3 rounded-[16px] border border-[#d8e5d9] bg-[#edf4ee] p-3 text-[#20462f] dark:border-border dark:bg-card dark:text-foreground">
           <div className="mb-2">
             <p className="text-xs font-bold">Mantenimiento del catálogo</p>
-            <p className="mt-0.5 text-[11px] opacity-75">Agrega, elimina o ajusta existencias, mínimos y categoría de cada producto.</p>
+            <p className="mt-0.5 text-[11px] opacity-75">
+              Agrega, elimina o ajusta existencias, mínimos y categoría de cada producto.
+            </p>
           </div>
           <form onSubmit={add} className="grid grid-cols-[1fr_auto] gap-2">
             <Input
@@ -384,7 +409,11 @@ export function Stock(props: {
             <Button type="submit" disabled={!newName.trim()} className="h-10 rounded-lg px-3 text-xs">
               <Plus className="size-3.5" /> Añadir
             </Button>
-            <NativeSelect value={newCategory} onChange={(event) => setNewCategory(event.target.value as Category)} className="col-span-2 w-full [&_select]:h-10 [&_select]:rounded-lg [&_select]:bg-card [&_select]:text-xs">
+            <NativeSelect
+              value={newCategory}
+              onChange={(event) => setNewCategory(event.target.value as Category)}
+              className="col-span-2 w-full [&_select]:h-10 [&_select]:rounded-lg [&_select]:bg-card [&_select]:text-xs"
+            >
               {CATEGORIES.map((category) => (
                 <option key={category} value={category}>
                   {category}
@@ -393,7 +422,12 @@ export function Stock(props: {
             </NativeSelect>
           </form>
           <label className="mt-2 flex items-center gap-2 text-[11px] font-semibold">
-            <input type="checkbox" checked={onlyStocked} onChange={(event) => setOnlyStocked(event.target.checked)} className="size-4 accent-primary" />
+            <input
+              type="checkbox"
+              checked={onlyStocked}
+              onChange={(event) => setOnlyStocked(event.target.checked)}
+              className="size-4 accent-primary"
+            />
             Mostrar solo productos con existencias o mínimo
           </label>
           {status && (
@@ -432,7 +466,10 @@ export function Stock(props: {
           <p className="text-[10px] font-bold uppercase tracking-[.08em] text-[#8b672f]">Stock predictivo</p>
           <div className="mt-1.5 flex flex-wrap gap-1">
             {upcoming.map((item) => (
-              <span key={item.productId} className="rounded-lg bg-card px-2 py-1 text-[10px] font-semibold dark:bg-muted">
+              <span
+                key={item.productId}
+                className="rounded-lg bg-card px-2 py-1 text-[10px] font-semibold dark:bg-muted"
+              >
                 {item.productName} · {item.daysUntil <= 0 ? "toca reponer" : `${item.daysUntil} d`}
               </span>
             ))}
@@ -443,7 +480,9 @@ export function Stock(props: {
       <section className="mb-3 grid grid-cols-2 gap-2" aria-label="Resumen del almacén">
         <div className="rounded-[16px] border border-border bg-card px-3 py-2.5 shadow-[0_8px_24px_rgba(32,47,38,.045)]">
           <p className="text-[10px] font-semibold text-muted-foreground">Existencias</p>
-          <p className="mt-0.5 text-xl font-bold tracking-tight">{Number.isInteger(props.stockUnits) ? props.stockUnits : props.stockUnits.toFixed(1)}</p>
+          <p className="mt-0.5 text-xl font-bold tracking-tight">
+            {Number.isInteger(props.stockUnits) ? props.stockUnits : props.stockUnits.toFixed(1)}
+          </p>
           <p className="text-[10px] text-muted-foreground">unidades en casa</p>
         </div>
         <div className="rounded-[16px] border border-[#d8e5d9] bg-[#eaf3eb] px-3 py-2.5 text-left text-[#20462f] shadow-[0_8px_24px_rgba(41,91,63,.05)] dark:border-border dark:bg-secondary dark:text-secondary-foreground">
@@ -502,10 +541,15 @@ export function Stock(props: {
                 aria-expanded={!collapsed.has(group.category) || Boolean(normalize(query))}
                 className="mb-1.5 flex w-full items-center justify-between px-1 py-1"
               >
-                <h2 id={`stock-${group.category}`} className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                <h2
+                  id={`stock-${group.category}`}
+                  className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground"
+                >
                   {group.category} · {group.items.length}
                 </h2>
-                <ChevronDown className={`size-3.5 text-muted-foreground/70 transition-transform ${collapsed.has(group.category) && !normalize(query) ? "-rotate-90" : ""}`} />
+                <ChevronDown
+                  className={`size-3.5 text-muted-foreground/70 transition-transform ${collapsed.has(group.category) && !normalize(query) ? "-rotate-90" : ""}`}
+                />
               </button>
               {(!collapsed.has(group.category) || Boolean(normalize(query))) && (
                 <div className="overflow-hidden rounded-[16px] border border-border bg-card shadow-[0_8px_24px_rgba(32,47,38,.045)]">
@@ -519,14 +563,25 @@ export function Stock(props: {
                           <div className="flex min-h-10 flex-wrap items-center gap-1">
                             <p className="min-w-[8rem] flex-1 truncate text-[12px] font-semibold">{item.name}</p>
                             <div className="w-[6rem] shrink-0">
-                              <CategorySelect value={item.category} onChange={(category) => props.changeCategory(item, category)} label={`Cambiar categoría de ${item.name}`} />
+                              <CategorySelect
+                                value={item.category}
+                                onChange={(category) => props.changeCategory(item, category)}
+                                label={`Cambiar categoría de ${item.name}`}
+                              />
                             </div>
                             <Stepper
                               value={item.quantity}
                               label={`existencias de ${item.name}`}
                               minusDisabled={item.quantity <= 0}
-                              onMinus={() => props.updateStock(item.id, (entry) => ({ ...entry, quantity: Math.max(0, entry.quantity - 1) }))}
-                              onPlus={() => props.updateStock(item.id, (entry) => ({ ...entry, quantity: entry.quantity + 1 }))}
+                              onMinus={() =>
+                                props.updateStock(item.id, (entry) => ({
+                                  ...entry,
+                                  quantity: Math.max(0, entry.quantity - 1),
+                                }))
+                              }
+                              onPlus={() =>
+                                props.updateStock(item.id, (entry) => ({ ...entry, quantity: entry.quantity + 1 }))
+                              }
                             />
                             <div className="flex shrink-0 items-center" aria-label={`Mínimo de ${item.name}`}>
                               <span className="mr-0.5 text-[8px] font-bold text-muted-foreground">MÍN.</span>
@@ -534,7 +589,12 @@ export function Stock(props: {
                                 type="button"
                                 aria-label={`Reducir mínimo de ${item.name}`}
                                 disabled={item.minimum <= 0}
-                                onClick={() => props.updateStock(item.id, (entry) => ({ ...entry, minimum: Math.max(0, entry.minimum - 1) }))}
+                                onClick={() =>
+                                  props.updateStock(item.id, (entry) => ({
+                                    ...entry,
+                                    minimum: Math.max(0, entry.minimum - 1),
+                                  }))
+                                }
                                 className="flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground disabled:opacity-40"
                               >
                                 <Minus className="size-2.5" />
@@ -543,7 +603,9 @@ export function Stock(props: {
                               <button
                                 type="button"
                                 aria-label={`Aumentar mínimo de ${item.name}`}
-                                onClick={() => props.updateStock(item.id, (entry) => ({ ...entry, minimum: entry.minimum + 1 }))}
+                                onClick={() =>
+                                  props.updateStock(item.id, (entry) => ({ ...entry, minimum: entry.minimum + 1 }))
+                                }
                                 className="flex size-7 items-center justify-center rounded-md bg-muted text-primary"
                               >
                                 <Plus className="size-2.5" />
@@ -589,7 +651,10 @@ export function Stock(props: {
       )}
 
       {!maintenance && props.needs.length > 0 && (
-        <Button onClick={props.addNeedsToChecklist} className="mt-6 h-13 w-full rounded-2xl text-[15px] shadow-[0_10px_24px_rgba(41,91,63,.16)]">
+        <Button
+          onClick={props.addNeedsToChecklist}
+          className="mt-6 h-13 w-full rounded-2xl text-[15px] shadow-[0_10px_24px_rgba(41,91,63,.16)]"
+        >
           <ListChecks className="size-5" /> Añadir necesidades a la lista
         </Button>
       )}
@@ -599,7 +664,10 @@ export function Stock(props: {
           <h2 className="text-sm font-bold">Productos que AutoCesta no sugiere</h2>
           <div className="mt-2 space-y-1">
             {suppressed.map((product) => (
-              <div key={product.id} className="flex items-center justify-between gap-2 rounded-xl bg-muted/60 px-3 py-2 text-[12px]">
+              <div
+                key={product.id}
+                className="flex items-center justify-between gap-2 rounded-xl bg-muted/60 px-3 py-2 text-[12px]"
+              >
                 <span className="truncate font-semibold">{product.name}</span>
                 <button
                   type="button"
@@ -620,7 +688,10 @@ export function Stock(props: {
       )}
 
       {maintenance && (
-        <section className="mt-6 rounded-[20px] border border-border bg-card p-4 shadow-[0_10px_30px_rgba(32,47,38,.05)]" aria-labelledby="stock-security-title">
+        <section
+          className="mt-6 rounded-[20px] border border-border bg-card p-4 shadow-[0_10px_30px_rgba(32,47,38,.05)]"
+          aria-labelledby="stock-security-title"
+        >
           <div className="flex items-start gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-primary">
               <ShieldCheck className="size-5" />
@@ -629,7 +700,9 @@ export function Stock(props: {
               <h2 id="stock-security-title" className="text-sm font-bold">
                 Acceso de administrador
               </h2>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">El stock y los mínimos solo pueden editarse después de identificarse en este dispositivo.</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                El stock y los mínimos solo pueden editarse después de identificarse en este dispositivo.
+              </p>
             </div>
           </div>
           <div className="mt-4 flex items-center justify-between rounded-xl bg-muted/75 px-3 py-2.5">
@@ -647,7 +720,9 @@ export function Stock(props: {
               variant="outline"
               onClick={async () =>
                 setBiometricStatus(
-                  (await admin.enableBiometrics()) ? "Biometría activada correctamente." : "No se pudo activar. Comprueba la configuración del dispositivo.",
+                  (await admin.enableBiometrics())
+                    ? "Biometría activada correctamente."
+                    : "No se pudo activar. Comprueba la configuración del dispositivo.",
                 )
               }
               className="mt-3 h-11 w-full rounded-xl"

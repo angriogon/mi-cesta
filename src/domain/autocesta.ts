@@ -268,7 +268,8 @@ export function buildOverview(input: OverviewInput): Overview {
   const tickets = [...input.tickets].sort((a, b) => a.purchasedAt.localeCompare(b.purchasedAt));
   let nextPurchaseDays = 7;
   if (tickets.length >= 2) {
-    const span = (new Date(tickets[tickets.length - 1].purchasedAt).getTime() - new Date(tickets[0].purchasedAt).getTime()) / DAY;
+    const span =
+      (new Date(tickets[tickets.length - 1].purchasedAt).getTime() - new Date(tickets[0].purchasedAt).getTime()) / DAY;
     const interval = Math.max(2, Math.round(span / (tickets.length - 1)));
     nextPurchaseDays = Math.max(0, interval - Math.max(0, -daysUntil(tickets[tickets.length - 1].purchasedAt, now)));
   }
@@ -295,7 +296,11 @@ export function buildOverview(input: OverviewInput): Overview {
           reason: "Stock dudoso: confirma antes de añadirlo.",
           confidence: info.confidence,
         });
-      } else if (prediction && prediction.daysUntil <= nextPurchaseDays && product.currentStock <= Math.max(1, product.minimumStock)) {
+      } else if (
+        prediction &&
+        prediction.daysUntil <= nextPurchaseDays &&
+        product.currentStock <= Math.max(1, product.minimumStock)
+      ) {
         suggestions.push({
           productId: product.id,
           productName: product.name,
@@ -313,11 +318,15 @@ export function buildOverview(input: OverviewInput): Overview {
   const weekAgo = now.getTime() - 7 * DAY;
   const weekTickets = input.tickets.filter((ticket) => new Date(`${ticket.purchasedAt}T12:00:00`).getTime() >= weekAgo);
   const priceFor = (name: string) =>
-    input.prices.filter((price) => similarNames(price.productName, name)).sort((a, b) => b.observedAt.localeCompare(a.observedAt))[0];
+    input.prices
+      .filter((price) => similarNames(price.productName, name))
+      .sort((a, b) => b.observedAt.localeCompare(a.observedAt))[0];
   const estimatedBudgetCents = input.shopping
     .filter((item) => !item.done)
     .reduce((sum, item) => sum + (priceFor(item.name)?.priceCents ?? 0) * item.quantity, 0);
-  const avoided = input.events.filter((event) => event.kind === "avoided" && new Date(event.createdAt).getTime() >= weekAgo);
+  const avoided = input.events.filter(
+    (event) => event.kind === "avoided" && new Date(event.createdAt).getTime() >= weekAgo,
+  );
   const averagePrice = input.prices.length
     ? Math.round(input.prices.reduce((sum, price) => sum + price.priceCents, 0) / input.prices.length)
     : 0;
@@ -340,7 +349,9 @@ export function buildOverview(input: OverviewInput): Overview {
     mainRecommendation = {
       type: "expiry",
       title: `Consume ${lowerFirst(soon[0].productName)}`,
-      reason: soon[0].estimated ? "Según la fecha estimada, conviene gastarlo pronto." : "Su fecha de caducidad está próxima.",
+      reason: soon[0].estimated
+        ? "Según la fecha estimada, conviene gastarlo pronto."
+        : "Su fecha de caducidad está próxima.",
     };
   else if (needs.length)
     mainRecommendation = {

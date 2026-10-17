@@ -107,8 +107,10 @@ function ingredientNutrients(ingredient: string): Nutrients {
   if (/carne|lomo|hamburguesa/.test(t)) return { protein: 21, carbs: 0, fat: 7, fiber: 0, kcal: 150 };
   if (/huevo/.test(t)) return { protein: 7, carbs: 1, fat: 5, fiber: 0, kcal: 75 };
   if (/queso|mozzarella|cottage/.test(t)) return { protein: 7, carbs: 2, fat: 4, fiber: 0, kcal: 75 };
-  if (/arroz|pasta|espagueti|quinoa|fideo|noodle/.test(t)) return { protein: 4, carbs: 26, fat: 1, fiber: 2, kcal: 130 };
-  if (/patata|boniato|pan|tortilla|fajita|arepa/.test(t)) return { protein: 3, carbs: 20, fat: 1.5, fiber: 2, kcal: 105 };
+  if (/arroz|pasta|espagueti|quinoa|fideo|noodle/.test(t))
+    return { protein: 4, carbs: 26, fat: 1, fiber: 2, kcal: 130 };
+  if (/patata|boniato|pan|tortilla|fajita|arepa/.test(t))
+    return { protein: 3, carbs: 20, fat: 1.5, fiber: 2, kcal: 105 };
   if (/aguacate|guacamole|anacardo|aceituna/.test(t)) return { protein: 2, carbs: 4, fat: 7, fiber: 4, kcal: 85 };
   return { protein: 1.5, carbs: 5, fat: 0.4, fiber: 2, kcal: 30 };
 }
@@ -227,11 +229,15 @@ export function goalReason(goal: RecipeGoal, recipe: ScoredRecipe): string {
     case "freeze":
       return "Puedes guardar una ración en el congelador.";
     case "cheap":
-      return recipe.missing.length === 1 ? "Solo falta 1 ingrediente." : `Solo faltan ${recipe.missing.length} ingredientes.`;
-    default:
+      return recipe.missing.length === 1
+        ? "Solo falta 1 ingrediente."
+        : `Solo faltan ${recipe.missing.length} ingredientes.`;
+    case "all":
       if (recipe.missing.length === 0) return "Ya tienes todos los ingredientes.";
       if (recipe.present.length === 0) return "Aún no tienes ninguno de sus ingredientes en casa.";
-      return recipe.present.length === 1 ? "Aprovecha 1 producto de tu almacén." : `Aprovecha ${recipe.present.length} productos de tu almacén.`;
+      return recipe.present.length === 1
+        ? "Aprovecha 1 producto de tu almacén."
+        : `Aprovecha ${recipe.present.length} productos de tu almacén.`;
   }
 }
 
@@ -241,7 +247,14 @@ function overlaps(names: string[], ingredients: string[]): boolean {
 
 export function filterRecipes(
   scored: ScoredRecipe[],
-  options: { filter: RecipeFilter; goal: RecipeGoal; query: string; skipped: Set<string>; lots: InventoryLot[]; now?: Date },
+  options: {
+    filter: RecipeFilter;
+    goal: RecipeGoal;
+    query: string;
+    skipped: Set<string>;
+    lots: InventoryLot[];
+    now?: Date;
+  },
 ): ScoredRecipe[] {
   const now = options.now ?? new Date();
   const expiring = options.lots
@@ -278,7 +291,9 @@ export function filterRecipes(
 export function chainedPlan(scored: ScoredRecipe[], skipped: Set<string>) {
   const candidates = scored.filter((recipe) => recipe.score >= 50 && !skipped.has(recipe.id)).slice(0, 18);
   for (const first of candidates) {
-    for (const second of scored.filter((other) => other.id !== first.id && other.meal !== first.meal && !skipped.has(other.id)).slice(0, 24)) {
+    for (const second of scored
+      .filter((other) => other.id !== first.id && other.meal !== first.meal && !skipped.has(other.id))
+      .slice(0, 24)) {
       const shared = first.ingredients.filter((ingredient) =>
         second.ingredients.some((other) => normalizeWords(other) === normalizeWords(ingredient)),
       );

@@ -1,10 +1,6 @@
 /** Normaliza un nombre para comparar: minúsculas, sin acentos y sin espacios sobrantes. */
 export function normalize(value: string): string {
-  return value
-    .trim()
-    .toLocaleLowerCase("es")
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "");
+  return value.trim().toLocaleLowerCase("es").normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
 
 /** Como `normalize`, pero además elimina signos y colapsa espacios. */

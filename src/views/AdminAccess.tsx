@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import { readJson, removeKey, writeJson } from "../lib/storage";
 import { LOCAL_RESET_PHRASE, type Account } from "../app/account";
 import { Button, Input } from "../ui/primitives";
+import { reportError } from "../lib/errors";
 
 interface AdminSettings {
   salt: string;
@@ -19,7 +20,11 @@ const randomBase64 = (length: number) => toBase64(crypto.getRandomValues(new Uin
 async function hashPin(pin: string, salt: string): Promise<string> {
   // PBKDF2 para que un PIN corto no se pueda probar por fuerza bruta a partir del hash guardado.
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(pin), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: fromBase64(salt), iterations: 150_000 }, key, 256);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt: fromBase64(salt), iterations: 150_000 },
+    key,
+    256,
+  );
   return toBase64(new Uint8Array(bits));
 }
 
@@ -38,7 +43,10 @@ export function useAdmin(householdId: string) {
 
   useEffect(() => {
     const credential = window.PublicKeyCredential as typeof PublicKeyCredential | undefined;
-    credential?.isUserVerifyingPlatformAuthenticatorAvailable?.().then(setBiometricAvailable).catch(() => setBiometricAvailable(false));
+    credential
+      ?.isUserVerifyingPlatformAuthenticatorAvailable?.()
+      .then(setBiometricAvailable)
+      .catch(() => setBiometricAvailable(false));
   }, []);
 
   useEffect(() => {
@@ -82,7 +90,11 @@ export function useAdmin(householdId: string) {
         return "ok";
       }
       const failures = (settings.failures ?? 0) + 1;
-      save({ ...settings, failures, lockedUntil: failures >= 5 ? Date.now() + 60_000 * Math.min(30, 2 ** (failures - 5)) : undefined });
+      save({
+        ...settings,
+        failures,
+        lockedUntil: failures >= 5 ? Date.now() + 60_000 * Math.min(30, 2 ** (failures - 5)) : undefined,
+      });
       return failures >= 5 ? "locked" : "wrong";
     },
     [settings, save],
@@ -95,12 +107,20 @@ export function useAdmin(householdId: string) {
         publicKey: {
           challenge: fromBase64(randomBase64(32)),
           rp: { name: "Cesta" },
-          user: { id: fromBase64(randomBase64(16)), name: "administrador-cesta", displayName: "Administrador de Cesta" },
+          user: {
+            id: fromBase64(randomBase64(16)),
+            name: "administrador-cesta",
+            displayName: "Administrador de Cesta",
+          },
           pubKeyCredParams: [
             { type: "public-key", alg: -7 },
             { type: "public-key", alg: -257 },
           ],
-          authenticatorSelection: { authenticatorAttachment: "platform", residentKey: "preferred", userVerification: "required" },
+          authenticatorSelection: {
+            authenticatorAttachment: "platform",
+            residentKey: "preferred",
+            userVerification: "required",
+          },
           timeout: 60_000,
           attestation: "none",
         },
@@ -108,7 +128,8 @@ export function useAdmin(householdId: string) {
       if (!credential) return false;
       save({ ...settings, credentialId: toBase64(new Uint8Array(credential.rawId)) });
       return true;
-    } catch {
+    } catch (error) {
+      reportError(error, "registrar Face ID");
       return false;
     }
   }, [settings, biometricAvailable, save]);
@@ -127,7 +148,8 @@ export function useAdmin(householdId: string) {
       if (!assertion) return false;
       setUnlocked(true);
       return true;
-    } catch {
+    } catch (error) {
+      reportError(error, "desbloquear con Face ID");
       return false;
     }
   }, [settings, biometricAvailable]);
@@ -210,7 +232,11 @@ export function AdminAccess({ admin, account }: { admin: AdminState; account: Ac
         </div>
         {biometric && (
           <>
-            <Button onClick={() => void biometricUnlock()} disabled={busy} className="mt-6 h-13 w-full rounded-2xl text-[15px]">
+            <Button
+              onClick={() => void biometricUnlock()}
+              disabled={busy}
+              className="mt-6 h-13 w-full rounded-2xl text-[15px]"
+            >
               <FingerprintPattern className="size-5" /> Entrar con Face ID / Touch ID
             </Button>
             <div className="my-4 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[.12em] text-muted-foreground">
@@ -261,7 +287,12 @@ export function AdminAccess({ admin, account }: { admin: AdminState; account: Ac
               {error}
             </p>
           )}
-          <Button type="submit" variant={biometric ? "outline" : "default"} disabled={busy || pin.length < 4} className="mt-4 h-12 w-full rounded-2xl">
+          <Button
+            type="submit"
+            variant={biometric ? "outline" : "default"}
+            disabled={busy || pin.length < 4}
+            className="mt-4 h-12 w-full rounded-2xl"
+          >
             {configured ? "Entrar con PIN" : "Crear acceso de administrador"}
           </Button>
         </form>
@@ -280,12 +311,19 @@ export function AdminAccess({ admin, account }: { admin: AdminState; account: Ac
               admin.forget();
               setForgot(false);
               setSecret("");
-            } else setError(account.mode === "local" ? `Escribe ${LOCAL_RESET_PHRASE} para confirmar.` : "La contraseña no es correcta.");
+            } else
+              setError(
+                account.mode === "local"
+                  ? `Escribe ${LOCAL_RESET_PHRASE} para confirmar.`
+                  : "La contraseña no es correcta.",
+              );
           }}
           className="mt-4 w-full rounded-[20px] border border-border bg-card p-4"
         >
           <p className="text-xs leading-5 text-muted-foreground">
-            {account.mode === "local" ? `Escribe ${LOCAL_RESET_PHRASE} para borrar el PIN de este dispositivo y crear uno nuevo.` : "Confirma con la contraseña de tu cuenta para crear un PIN nuevo en este dispositivo."}
+            {account.mode === "local"
+              ? `Escribe ${LOCAL_RESET_PHRASE} para borrar el PIN de este dispositivo y crear uno nuevo.`
+              : "Confirma con la contraseña de tu cuenta para crear un PIN nuevo en este dispositivo."}
           </p>
           <Input
             type={account.mode === "local" ? "text" : "password"}

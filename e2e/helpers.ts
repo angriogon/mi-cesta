@@ -6,7 +6,9 @@ export async function openApp(page: Page) {
 }
 
 export function nav(page: Page, name: "Inicio" | "Compra" | "Necesidades" | "Tickets" | RegExp) {
-  return page.getByRole("navigation", { name: "Navegación principal" }).getByRole("button", { name: typeof name === "string" ? new RegExp(`^${name}`) : name });
+  return page
+    .getByRole("navigation", { name: "Navegación principal" })
+    .getByRole("button", { name: typeof name === "string" ? new RegExp(`^${name}`) : name });
 }
 
 export async function addToPrepare(page: Page, name: string) {
@@ -24,7 +26,12 @@ export async function unlockMaintenance(page: Page, pin = "1234") {
     await page.locator("#admin-pin").fill(pin);
     await page.locator("#admin-pin-confirm").fill(pin);
     await create.click();
-  } else if (await page.locator("#admin-pin").isVisible().catch(() => false)) {
+  } else if (
+    await page
+      .locator("#admin-pin")
+      .isVisible()
+      .catch(() => false)
+  ) {
     await page.locator("#admin-pin").fill(pin);
     await page.getByRole("button", { name: "Entrar con PIN" }).click();
   }

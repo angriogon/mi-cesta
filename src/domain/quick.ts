@@ -12,7 +12,19 @@ export const LOCATIONS = [
 ] as const;
 
 const NUMBER_WORDS: Record<string, number> = {
-  un: 1, una: 1, uno: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10, doce: 12,
+  un: 1,
+  una: 1,
+  uno: 1,
+  dos: 2,
+  tres: 3,
+  cuatro: 4,
+  cinco: 5,
+  seis: 6,
+  siete: 7,
+  ocho: 8,
+  nueve: 9,
+  diez: 10,
+  doce: 12,
 };
 
 const LEADING_QUANTITY =
@@ -63,7 +75,12 @@ export function parseSpokenList(text: string, location: string, source: string, 
 export function labelsFromOcr(text: string, location: string): QuickItem[] {
   return text
     .split(/\r?\n/)
-    .map((line) => line.replace(/[^\p{L}\p{N} .,'-]/gu, " ").replace(/\s+/g, " ").trim())
+    .map((line) =>
+      line
+        .replace(/[^\p{L}\p{N} .,'-]/gu, " ")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
     .filter((line) => line.length >= 3 && line.length <= 48 && /[a-záéíóúñ]{3}/i.test(line))
     .slice(0, 30)
     .map((line) => ({

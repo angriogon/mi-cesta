@@ -1,10 +1,11 @@
 // @vitest-environment node
 import { createClient } from "@supabase/supabase-js";
+import type { Database } from "./database.types";
 import { afterEach, describe, expect, it } from "vitest";
 import { SupabaseDb } from "./supabase-db";
 
 // Cliente real de supabase-js apuntando a un servidor inexistente: no hace falta red para esta prueba.
-const client = createClient("http://127.0.0.1:9", "clave-de-prueba", { auth: { persistSession: false } });
+const client = createClient<Database>("http://127.0.0.1:9", "clave-de-prueba", { auth: { persistSession: false } });
 
 afterEach(async () => {
   await client.removeAllChannels();

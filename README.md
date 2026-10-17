@@ -22,11 +22,18 @@ npm run dev          # http://localhost:5173 (modo local si no hay Supabase conf
 npm run test:all     # tipos + unitarias + base de datos + extremo a extremo en WebKit
 ```
 
-| Orden | Qué comprueba |
-|---|---|
-| `npm test` | Lógica de dominio y API (Vitest) |
-| `npm run test:db` | Migración, permisos entre hogares y funciones en un Postgres embebido (PGlite) |
+| Orden              | Qué comprueba                                                                                                                      |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `npm test`         | Lógica de dominio y API (Vitest)                                                                                                   |
+| `npm run test:db`  | Migración, permisos entre hogares y funciones en un Postgres embebido (PGlite)                                                     |
 | `npm run test:e2e` | Todas las pantallas en WebKit con tamaño de iPhone 14 y iPhone SE (Playwright). La prueba de OCR descarga el idioma la primera vez |
+
+### Calidad de código
+
+- `npm run check` = tipos (TypeScript 7) + ESLint + Prettier. Se ejecuta en CI antes de las pruebas.
+- **TypeScript 6 y 7 conviven a propósito**: la app se compila con TypeScript 7 (paquete `typescript-7`), pero typescript-eslint aún necesita la API de TypeScript 6 (paquete `typescript`). Cuando typescript-eslint admita la 7, sobra el alias.
+- **Errores**: ningún `catch` se queda vacío. Usa `src/lib/errors.ts`: `notifyError` para lo que el usuario espera ver (cargar, guardar) y `logError` para tareas opcionales. Los avisos repetidos se agrupan en uno.
+- **Tipos de Supabase**: `src/data/database.types.ts` se genera con `npm run gen:types` (requiere la CLI de Supabase). `src/data/schema.ts` hace fallar la compilación si los tipos de la app y las columnas reales dejan de coincidir.
 
 Sin variables de entorno la app funciona en **modo local**: los datos se guardan solo en ese dispositivo. Es útil para probar y para las pruebas automáticas.
 
@@ -34,11 +41,12 @@ Sin variables de entorno la app funciona en **modo local**: los datos se guardan
 
 El proyecto de producción es **Cesta** (`ykptjovevwmzxzuejhzp`, región París) en la organización RIOS VEGA HOUSE. Ya tiene aplicadas la migración, el catálogo base, las fotos privadas de tickets, el tiempo real, la función `mercadona-prices` y las URL de autenticación (`https://angriogon.github.io/mi-cesta/`).
 
-La URL y la clave pública *anon* están en `.env.production`: es una clave pensada para ir en la app, y la seguridad la dan los permisos de la base de datos. Nunca añadas la clave *service_role*.
+La URL y la clave pública _anon_ están en `.env.production`: es una clave pensada para ir en la app, y la seguridad la dan los permisos de la base de datos. Nunca añadas la clave _service_role_.
 
 Para montar otro proyecto desde cero:
+
 1. Ejecuta `supabase/migrations/20261017000000_cesta.sql` en el SQL Editor (o `supabase db push`).
-2. En **Authentication → URL Configuration**, pon la URL de la app como *Site URL* y en *Redirect URLs*.
+2. En **Authentication → URL Configuration**, pon la URL de la app como _Site URL_ y en _Redirect URLs_.
 3. Despliega la función: `supabase functions deploy mercadona-prices`.
 4. Cambia la URL y la clave en `.env.production`.
 

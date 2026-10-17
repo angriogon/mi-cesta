@@ -17,7 +17,9 @@ test("ninguna vista se sale de la pantalla", async ({ page }) => {
   await expectNoHorizontalScroll(page);
 });
 
-test("claro por defecto aunque el iPhone esté en oscuro; el oscuro se elige en el menú y se recuerda", async ({ page }) => {
+test("claro por defecto aunque el iPhone esté en oscuro; el oscuro se elige en el menú y se recuerda", async ({
+  page,
+}) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await openApp(page);
   const isDark = () => page.evaluate(() => document.documentElement.classList.contains("dark"));

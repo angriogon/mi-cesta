@@ -11,7 +11,8 @@ beforeEach(async () => {
   db = new LocalDb("hogar-test", memoryPersistence());
   await seedIfEmpty(db);
   api = new CestaApi(db, {
-    fetch: async (_cp, names) => names.filter((name) => /tomate/i.test(name)).map((name) => ({ name, priceCents: 249 })),
+    fetch: async (_cp, names) =>
+      names.filter((name) => /tomate/i.test(name)).map((name) => ({ name, priceCents: 249 })),
   });
 });
 
@@ -38,7 +39,8 @@ describe("catálogo", () => {
   });
 
   it("guarda existencias y mínimos sin permitir negativos", async () => {
-    const arroz = (await api.products()).find((product) => product.sku === "despensa-arroz") ?? (await api.products())[0];
+    const arroz =
+      (await api.products()).find((product) => product.sku === "despensa-arroz") ?? (await api.products())[0];
     await api.updateProduct(arroz.id, { currentStock: -3, minimumStock: 2 });
     const updated = (await api.products()).find((product) => product.id === arroz.id)!;
     expect(updated.currentStock).toBe(0);
@@ -129,14 +131,21 @@ describe("listas compartidas", () => {
   it("si otro dispositivo guardó antes, mezcla en vez de pisar", async () => {
     const lists = await api.lists();
     const other = new CestaApi(db);
-    await other.saveLists([{ id: "a", name: "Pan", quantity: 1, category: "Panadería", done: false }], [], lists.revision, (r) => r);
+    await other.saveLists(
+      [{ id: "a", name: "Pan", quantity: 1, category: "Panadería", done: false }],
+      [],
+      lists.revision,
+      (r) => r,
+    );
     const saved = await api.saveLists(
       [{ id: "b", name: "Leche", quantity: 1, category: "Refrigerados", done: false }],
       [],
       lists.revision,
       (remote) => ({
         ...remote,
-        shopping: mergeByName(remote.shopping, [{ id: "b", name: "Leche", quantity: 1, category: "Refrigerados", done: false }]),
+        shopping: mergeByName(remote.shopping, [
+          { id: "b", name: "Leche", quantity: 1, category: "Refrigerados", done: false },
+        ]),
       }),
     );
     expect(saved.shopping.map((item) => item.name).sort()).toEqual(["Leche", "Pan"]);
@@ -151,7 +160,13 @@ describe("recetas, AutoCesta y respuestas", () => {
     await api.cook("Tortilla francesa de calabacín y cebolla", ["huevo", "calabacín", "cebolla"], 3);
     expect((await byName(huevos.name)).currentStock).toBe(5);
     const lots = await api.lots();
-    expect(lots).toEqual([expect.objectContaining({ productName: "Raciones de Tortilla francesa de calabacín y cebolla", quantity: 2, state: "cooked" })]);
+    expect(lots).toEqual([
+      expect.objectContaining({
+        productName: "Raciones de Tortilla francesa de calabacín y cebolla",
+        quantity: 2,
+        state: "cooked",
+      }),
+    ]);
     await api.undo();
     expect((await byName(huevos.name)).currentStock).toBe(6);
     expect(await api.lots()).toEqual([]);
@@ -219,11 +234,27 @@ describe("Serranito", () => {
 describe("inventario rápido y códigos de barras", () => {
   it("guarda el progreso y al incorporar suma existencias con su ubicación", async () => {
     const id = await api.saveQuickSession(null, "Congelador", [
-      { id: "1", name: "Guisantes congelados", quantity: 2, category: "Congelados", unit: "unidad", confidence: 0.9, source: "manual" },
+      {
+        id: "1",
+        name: "Guisantes congelados",
+        quantity: 2,
+        category: "Congelados",
+        unit: "unidad",
+        confidence: 0.9,
+        source: "manual",
+      },
     ]);
     expect((await api.quickInventory()).sessions).toHaveLength(1);
     const count = await api.commitQuickSession(id, "Congelador", [
-      { id: "1", name: "Guisantes congelados", quantity: 2, category: "Congelados", unit: "unidad", confidence: 0.9, source: "manual" },
+      {
+        id: "1",
+        name: "Guisantes congelados",
+        quantity: 2,
+        category: "Congelados",
+        unit: "unidad",
+        confidence: 0.9,
+        source: "manual",
+      },
     ]);
     expect(count).toBe(1);
     expect((await api.quickInventory()).sessions).toEqual([]);
@@ -232,7 +263,17 @@ describe("inventario rápido y códigos de barras", () => {
 
   it("recuerda códigos guardados por el hogar y consulta Open Food Facts", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ status: 1, product: { product_name_es: "Galletas María", brands: "Marca", allergens_tags: ["en:gluten"], nutriments: { "energy-kcal_100g": 440 } } })),
+      new Response(
+        JSON.stringify({
+          status: 1,
+          product: {
+            product_name_es: "Galletas María",
+            brands: "Marca",
+            allergens_tags: ["en:gluten"],
+            nutriments: { "energy-kcal_100g": 440 },
+          },
+        }),
+      ),
     );
     const found = await api.lookupBarcode("8410000000000");
     expect(found).toMatchObject({ name: "Galletas María", allergens: ["gluten"] });

@@ -1,6 +1,12 @@
 import { clsx, type ClassValue } from "clsx";
 import { Check, ChevronDown, Minus, Plus } from "lucide-react";
-import { forwardRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
+import {
+  forwardRef,
+  type ButtonHTMLAttributes,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+} from "react";
 import { twMerge } from "tailwind-merge";
 import { CATEGORIES, type Category } from "../domain/categories";
 
@@ -77,7 +83,10 @@ export interface NativeSelectProps extends Omit<SelectHTMLAttributes<HTMLSelectE
 
 export function NativeSelect({ className, size = "default", children, ...props }: NativeSelectProps) {
   return (
-    <div className={cn("group/native-select relative w-fit has-[select:disabled]:opacity-50", className)} data-size={size}>
+    <div
+      className={cn("group/native-select relative w-fit has-[select:disabled]:opacity-50", className)}
+      data-size={size}
+    >
       <select
         data-size={size}
         className="h-8 w-full min-w-0 appearance-none rounded-lg border border-input bg-transparent py-1 pr-8 pl-2.5 text-sm transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] data-[size=sm]:py-0.5 dark:bg-input/30"
@@ -94,7 +103,15 @@ export function NativeSelect({ className, size = "default", children, ...props }
 }
 
 /** Selector compacto de categoría usado en las listas y el catálogo. */
-export function CategorySelect({ value, onChange, label }: { value: Category; onChange: (value: Category) => void; label: string }) {
+export function CategorySelect({
+  value,
+  onChange,
+  label,
+}: {
+  value: Category;
+  onChange: (value: Category) => void;
+  label: string;
+}) {
   return (
     <NativeSelect
       size="sm"
