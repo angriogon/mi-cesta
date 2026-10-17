@@ -153,6 +153,8 @@ export interface Preferences {
   specialDietEnabled: boolean;
   allergens: string[];
   avoided: string[];
+  /** Cuándo se dio el consentimiento explícito para guardar alergias y dieta (datos de salud). */
+  healthConsentAt?: string | null;
 }
 
 export type StockReason = "purchase" | "ticket" | "consume" | "adjust" | "answer" | "cook" | "inventory";
