@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Version service worker
+        run: sed -i "s/__BUILD__/${GITHUB_SHA::7}/" sw.js
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact

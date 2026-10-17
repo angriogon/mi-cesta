@@ -1,53 +1,443 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#176b4d"><meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Mi Cesta">
-<link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./icons/icon-192.png">
-<title>Mi Cesta</title>
-<style>
-:root{--green:#176b4d;--bg:#f4f7f5;--ink:#18231e;--muted:#6b7771;--line:#e1e8e3}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding-bottom:30px}
-header{background:var(--green);color:white;padding:24px 18px 22px;border-radius:0 0 24px 24px}
-header h1{margin:0 0 5px;font-size:27px}header p{margin:0;opacity:.85;font-size:14px}
-main{max-width:650px;margin:auto;padding:16px}
-.summary{display:flex;gap:10px;margin-top:-5px;margin-bottom:16px}.stat{flex:1;background:white;padding:14px;border-radius:16px;box-shadow:0 3px 14px #173c2510}.stat small{display:block;color:var(--muted);font-size:12px}.stat strong{font-size:22px;display:block;margin-top:4px}
-.panel{background:white;border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 3px 14px #173c2508}
-h2{font-size:17px;margin:0 0 12px}.add{display:grid;grid-template-columns:1fr 76px 90px;gap:8px}
-input,select,button{font:inherit;border-radius:11px;border:1px solid var(--line);padding:12px;min-width:0}input:focus,select:focus{outline:2px solid #a6d5bd}
-button{background:var(--green);color:white;border:0;font-weight:650;cursor:pointer}.secondary{background:#edf5f0;color:var(--green)}.filters{display:flex;gap:8px;margin-bottom:12px}.filters button{flex:1;padding:9px;font-size:13px}.filters .active{background:var(--green);color:white}
-.item{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}.item:last-child{border:0}.item input[type=checkbox]{width:21px;height:21px;accent-color:var(--green);flex-shrink:0}.item-name{flex:1;min-width:0}.item-name.done{text-decoration:line-through;color:#89948e}.detail{font-size:12px;color:var(--muted);margin-top:3px}.price{font-weight:700;white-space:nowrap}.remove{background:transparent;color:#9a554a;padding:6px 8px;font-size:18px}
-.empty{text-align:center;color:var(--muted);padding:22px 4px}.actions{display:flex;gap:8px}.actions button{flex:1}.foot{text-align:center;color:var(--muted);font-size:12px;padding:8px}
-@media(max-width:390px){.add{grid-template-columns:1fr 70px}.add button{grid-column:1/-1}.stat strong{font-size:19px}}
-</style></head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#176b4d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Mi Cesta">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <title>Mi Cesta</title>
+  <style>
+    :root {
+      --green: #176b4d;
+      --bg: #f4f7f5;
+      --ink: #18231e;
+      --muted: #6b7771;
+      --line: #e1e8e3;
+      --danger: #9a554a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding-bottom: 90px;
+    }
+
+    header {
+      background: var(--green);
+      color: white;
+      padding: 24px 18px 22px;
+      border-radius: 0 0 24px 24px;
+    }
+    header h1 { margin: 0 0 5px; font-size: 27px; }
+    header p { margin: 0; opacity: .85; font-size: 14px; }
+
+    main { max-width: 650px; margin: auto; padding: 16px; }
+
+    .summary { display: flex; gap: 10px; margin-top: -5px; margin-bottom: 16px; }
+    .stat {
+      flex: 1;
+      background: white;
+      padding: 14px;
+      border-radius: 16px;
+      box-shadow: 0 3px 14px #173c2510;
+    }
+    .stat small { display: block; color: var(--muted); font-size: 12px; }
+    .stat strong { font-size: 22px; display: block; margin-top: 4px; }
+    .stat .sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
+
+    .panel {
+      background: white;
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 3px 14px #173c2508;
+    }
+    h2 { font-size: 17px; margin: 0 0 12px; }
+
+    /* Nombre en una fila; cantidad, precio y botón debajo. */
+    .add { display: grid; grid-template-columns: 76px 1fr auto; gap: 8px; }
+    .add #name { grid-column: 1 / -1; }
+
+    input, select, button {
+      font: inherit;
+      border-radius: 11px;
+      border: 1px solid var(--line);
+      padding: 12px;
+      min-width: 0;
+    }
+    input:focus, select:focus { outline: 2px solid #a6d5bd; }
+
+    button {
+      background: var(--green);
+      color: white;
+      border: 0;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    .secondary { background: #edf5f0; color: var(--green); }
+
+    .filters { display: flex; gap: 8px; margin-bottom: 12px; }
+    .filters button { flex: 1; padding: 9px; font-size: 13px; }
+    .filters .active { background: var(--green); color: white; }
+
+    .item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .item:last-child { border: 0; }
+    .item input[type=checkbox] {
+      width: 21px;
+      height: 21px;
+      accent-color: var(--green);
+      flex-shrink: 0;
+    }
+    .item-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .item-name.done { text-decoration: line-through; color: #89948e; }
+    .detail { font-size: 12px; color: var(--muted); margin-top: 3px; }
+    .price { font-weight: 700; white-space: nowrap; }
+    .remove {
+      background: transparent;
+      color: var(--danger);
+      padding: 6px 8px;
+      font-size: 18px;
+    }
+
+    .empty { text-align: center; color: var(--muted); padding: 22px 4px; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .actions button { flex: 1; }
+    .foot { text-align: center; color: var(--muted); font-size: 12px; padding: 8px; }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(16px + env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      width: min(calc(100% - 32px), 520px);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--ink);
+      color: white;
+      padding: 10px 10px 10px 16px;
+      border-radius: 14px;
+      box-shadow: 0 6px 24px #0003;
+      font-size: 14px;
+    }
+    .toast[hidden] { display: none; }
+    .toast span { flex: 1; }
+    .toast button { background: transparent; color: #a6d5bd; padding: 8px 10px; }
+
+    @media (max-width: 390px) {
+      .add { grid-template-columns: 70px 1fr; }
+      .add button { grid-column: 1 / -1; }
+      .stat strong { font-size: 19px; }
+    }
+  </style>
+</head>
 <body>
-<header><h1>🛒 Mi Cesta</h1><p>Tu compra organizada, estés donde estés.</p></header>
-<main>
-<div class="summary"><div class="stat"><small>Artículos pendientes</small><strong id="pending">0</strong></div><div class="stat"><small>Total estimado</small><strong id="total">0,00 €</strong></div></div>
-<section class="panel"><h2>Añadir a la cesta</h2><form id="addForm" class="add"><input id="name" placeholder="¿Qué necesitas?" required maxlength="100" aria-label="Artículo"><input id="qty" type="number" min="1" step="1" value="1" aria-label="Cantidad"><button type="submit">Añadir</button></form><div style="margin-top:8px"><input id="price" type="number" min="0" step=".01" placeholder="Precio unitario estimado (€), opcional" style="width:100%" aria-label="Precio unitario"></div></section>
-<section class="panel"><h2>Lista de la compra</h2><div class="filters"><button class="active" data-filter="all">Todos</button><button class="secondary" data-filter="pending">Pendientes</button><button class="secondary" data-filter="done">Comprados</button></div><div id="items"></div><div class="actions" style="margin-top:12px"><button class="secondary" id="clearDone">Borrar comprados</button><button class="secondary" id="export">Exportar lista</button></div></section>
-<p class="foot">Los datos se guardan en este dispositivo. No se envían a ningún servidor.</p>
-</main>
-<script>
-const KEY='mi-cesta-v1';let list=[];let filter='all';
-try{list=JSON.parse(localStorage.getItem(KEY)||'[]')}catch{}
-const $=id=>document.getElementById(id);const euro=n=>Number(n||0).toLocaleString('es-ES',{style:'currency',currency:'EUR'});
-function save(){localStorage.setItem(KEY,JSON.stringify(list));render()}
-function render(){
- const visible=list.filter(x=>filter==='all'||(filter==='done'?x.done:!x.done));
- $('pending').textContent=list.filter(x=>!x.done).reduce((a,x)=>a+Number(x.qty),0);
- $('total').textContent=euro(list.reduce((a,x)=>a+(Number(x.price)||0)*Number(x.qty),0));
- $('items').innerHTML=visible.length?'':'<div class="empty">Tu cesta está vacía por aquí.<br>Añade lo que necesitas comprar.</div>';
- visible.forEach(x=>{const el=document.createElement('div');el.className='item';
- const cb=document.createElement('input');cb.type='checkbox';cb.checked=x.done;cb.setAttribute('aria-label','Marcar comprado');cb.onchange=()=>{x.done=cb.checked;save()};
- const body=document.createElement('div');body.className='item-name'+(x.done?' done':'');const nm=document.createElement('div');nm.textContent=x.name;const dt=document.createElement('div');dt.className='detail';dt.textContent='Cantidad: '+x.qty+(x.price!==''?' · '+euro(x.price)+' / ud.':'');body.append(nm,dt);
- const pr=document.createElement('div');pr.className='price';pr.textContent=x.price!==''?euro(Number(x.price)*Number(x.qty)):'';const del=document.createElement('button');del.className='remove';del.textContent='×';del.setAttribute('aria-label','Eliminar '+x.name);del.onclick=()=>{list=list.filter(y=>y.id!==x.id);save()};el.append(cb,body,pr,del);$('items').append(el)});
- document.querySelectorAll('[data-filter]').forEach(b=>{b.className=b.dataset.filter===filter?'active':'secondary'});
-}
-$('addForm').addEventListener('submit',e=>{e.preventDefault();const name=$('name').value.trim();if(!name)return;list.unshift({id:Date.now()+Math.random(),name,qty:Math.max(1,Number($('qty').value)||1),price:$('price').value===''?'':Math.max(0,Number($('price').value)||0),done:false});$('name').value='';$('qty').value='1';$('price').value='';save();$('name').focus()});
-document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;render()});
-$('clearDone').onclick=()=>{list=list.filter(x=>!x.done);save()};
-$('export').onclick=()=>{const blob=new Blob([JSON.stringify(list,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mi-cesta.json';a.click();URL.revokeObjectURL(a.href)};
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));render();
-</script></body></html>
+  <header>
+    <h1><span aria-hidden="true">🛒</span> Mi Cesta</h1>
+    <p>Tu compra organizada, estés donde estés.</p>
+  </header>
+
+  <main>
+    <div class="summary">
+      <div class="stat">
+        <small>Artículos pendientes</small>
+        <strong id="pending">0</strong>
+        <div class="sub" id="pendingUnits"></div>
+      </div>
+      <div class="stat">
+        <small>Por comprar (estimado)</small>
+        <strong id="totalPending">0,00 €</strong>
+        <div class="sub" id="totalDone"></div>
+      </div>
+    </div>
+
+    <section class="panel">
+      <h2>Añadir a la cesta</h2>
+      <form id="addForm" class="add">
+        <input id="name" placeholder="¿Qué necesitas?" required maxlength="100" aria-label="Artículo" autocomplete="off">
+        <input id="qty" type="number" min="1" max="999" step="1" value="1" inputmode="numeric" aria-label="Cantidad">
+        <input id="price" type="number" min="0" max="99999" step=".01" inputmode="decimal" placeholder="Precio/ud. (€)" aria-label="Precio unitario estimado en euros, opcional">
+        <button type="submit">Añadir</button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Lista de la compra</h2>
+      <div class="filters">
+        <button class="active" data-filter="all" aria-pressed="true">Todos</button>
+        <button class="secondary" data-filter="pending" aria-pressed="false">Pendientes</button>
+        <button class="secondary" data-filter="done" aria-pressed="false">Comprados</button>
+      </div>
+      <div id="items"></div>
+      <div class="actions" style="margin-top:12px">
+        <button class="secondary" id="clearDone">Borrar comprados</button>
+        <button class="secondary" id="export">Exportar lista</button>
+        <button class="secondary" id="import">Importar lista</button>
+        <input id="importFile" type="file" accept="application/json,.json" hidden>
+      </div>
+    </section>
+
+    <p class="foot">Los datos se guardan en este dispositivo. No se envían a ningún servidor.</p>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+    <span id="toastText"></span>
+    <button id="toastUndo" hidden>Deshacer</button>
+  </div>
+
+  <script>
+    const KEY = 'mi-cesta-v1';
+    const MAX_QTY = 999;
+    const MAX_PRICE = 99999;
+
+    const $ = id => document.getElementById(id);
+    const euro = n => Number(n || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+    const newId = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2));
+    const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    function clampQty(value) {
+      const n = Math.round(Number(value));
+      return Number.isFinite(n) ? Math.min(MAX_QTY, Math.max(1, n)) : 1;
+    }
+
+    // Devuelve null si no hay precio. Acepta '' de versiones anteriores.
+    function parsePrice(value) {
+      if (value === '' || value === null || value === undefined) return null;
+      const n = Number(value);
+      if (!Number.isFinite(n)) return null;
+      return Math.round(Math.min(MAX_PRICE, Math.max(0, n)) * 100) / 100;
+    }
+
+    // Valida y limpia una lista (de localStorage o de un archivo importado).
+    function normalize(data) {
+      if (!Array.isArray(data)) throw new Error('El archivo no contiene una lista.');
+      return data
+        .filter(x => x && typeof x.name === 'string' && x.name.trim())
+        .map(x => ({
+          id: x.id ? String(x.id) : newId(),
+          name: x.name.trim().slice(0, 100),
+          qty: clampQty(x.qty),
+          price: parsePrice(x.price),
+          done: Boolean(x.done),
+        }));
+    }
+
+    let list = [];
+    let filter = 'all';
+    try {
+      list = normalize(JSON.parse(localStorage.getItem(KEY) || '[]'));
+    } catch {
+      list = [];
+    }
+
+    // Pide a iOS/navegador que no borre los datos al liberar espacio.
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().catch(() => {});
+    }
+
+    // --- Avisos y deshacer ---
+    let toastTimer;
+    let undoSnapshot = null;
+
+    function showToast(text, snapshot) {
+      undoSnapshot = snapshot || null;
+      $('toastText').textContent = text;
+      $('toastUndo').hidden = !undoSnapshot;
+      $('toast').hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(hideToast, 5000);
+    }
+
+    function hideToast() {
+      $('toast').hidden = true;
+      undoSnapshot = null;
+    }
+
+    $('toastUndo').onclick = () => {
+      if (!undoSnapshot) return;
+      list = undoSnapshot;
+      hideToast();
+      save();
+    };
+
+    // Cambia la lista guardando una copia para poder deshacer.
+    function changeWithUndo(message, mutate) {
+      const snapshot = list.map(x => ({ ...x }));
+      mutate();
+      if (save()) showToast(message, snapshot);
+    }
+
+    function save() {
+      render();
+      try {
+        localStorage.setItem(KEY, JSON.stringify(list));
+        return true;
+      } catch {
+        showToast('No se pudo guardar la lista en este dispositivo.');
+        return false;
+      }
+    }
+
+    // --- Pintado ---
+    function render() {
+      const visible = list.filter(x => filter === 'all' || (filter === 'done' ? x.done : !x.done));
+      const pending = list.filter(x => !x.done);
+      const done = list.filter(x => x.done);
+      const units = pending.reduce((a, x) => a + x.qty, 0);
+      const sum = items => items.reduce((a, x) => a + (x.price || 0) * x.qty, 0);
+
+      $('pending').textContent = pending.length;
+      $('pendingUnits').textContent = units !== pending.length ? units + ' unidades' : '';
+      $('totalPending').textContent = euro(sum(pending));
+      $('totalDone').textContent = done.length ? 'Ya en la cesta: ' + euro(sum(done)) : '';
+
+      const container = $('items');
+      container.innerHTML = visible.length
+        ? ''
+        : '<div class="empty">Tu cesta está vacía por aquí.<br>Añade lo que necesitas comprar.</div>';
+
+      visible.forEach(x => {
+        const el = document.createElement('div');
+        el.className = 'item';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = x.done;
+        cb.setAttribute('aria-label', 'Marcar ' + x.name + ' como comprado');
+        cb.onchange = () => { x.done = cb.checked; save(); };
+
+        const body = document.createElement('div');
+        body.className = 'item-name' + (x.done ? ' done' : '');
+        const name = document.createElement('div');
+        name.textContent = x.name;
+        const detail = document.createElement('div');
+        detail.className = 'detail';
+        detail.textContent = 'Cantidad: ' + x.qty + (x.price !== null ? ' · ' + euro(x.price) + ' / ud.' : '');
+        body.append(name, detail);
+
+        const price = document.createElement('div');
+        price.className = 'price';
+        price.textContent = x.price !== null ? euro(x.price * x.qty) : '';
+
+        const del = document.createElement('button');
+        del.className = 'remove';
+        del.textContent = '×';
+        del.setAttribute('aria-label', 'Eliminar ' + x.name);
+        del.onclick = () => changeWithUndo('«' + x.name + '» eliminado', () => {
+          list = list.filter(y => y.id !== x.id);
+        });
+
+        el.append(cb, body, price, del);
+        container.append(el);
+      });
+
+      document.querySelectorAll('[data-filter]').forEach(b => {
+        const active = b.dataset.filter === filter;
+        b.className = active ? 'active' : 'secondary';
+        b.setAttribute('aria-pressed', active);
+      });
+    }
+
+    // --- Acciones ---
+    $('addForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const name = $('name').value.trim();
+      if (!name) return;
+      list.unshift({
+        id: newId(),
+        name,
+        qty: clampQty($('qty').value),
+        price: parsePrice($('price').value),
+        done: false,
+      });
+      $('name').value = '';
+      $('qty').value = '1';
+      $('price').value = '';
+      save();
+      $('name').focus();
+    });
+
+    document.querySelectorAll('[data-filter]').forEach(b => {
+      b.onclick = () => { filter = b.dataset.filter; render(); };
+    });
+
+    $('clearDone').onclick = () => {
+      const count = list.filter(x => x.done).length;
+      if (!count) return;
+      changeWithUndo(count === 1 ? '1 artículo borrado' : count + ' artículos borrados', () => {
+        list = list.filter(x => !x.done);
+      });
+    };
+
+    $('export').onclick = async () => {
+      const json = JSON.stringify(list, null, 2);
+      const filename = 'mi-cesta.json';
+
+      // En iOS la hoja de compartir permite guardar en Archivos, AirDrop, etc.
+      if (isIOS && navigator.canShare) {
+        const file = new File([json], filename, { type: 'application/json' });
+        if (navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file], title: 'Mi Cesta' });
+          } catch (err) {
+            if (err.name !== 'AbortError') showToast('No se pudo compartir la lista.');
+          }
+          return;
+        }
+      }
+
+      const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.append(a);
+      a.click();
+      a.remove();
+      // Revocar en el mismo tick puede cancelar la descarga en Safari.
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    };
+
+    $('import').onclick = () => $('importFile').click();
+
+    $('importFile').onchange = async () => {
+      const file = $('importFile').files[0];
+      $('importFile').value = '';
+      if (!file) return;
+      let imported;
+      try {
+        imported = normalize(JSON.parse(await file.text()));
+      } catch {
+        showToast('El archivo no es una lista de Mi Cesta válida.');
+        return;
+      }
+      changeWithUndo('Lista importada: ' + imported.length + ' artículos', () => {
+        list = imported;
+      });
+    };
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(() => {});
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>
