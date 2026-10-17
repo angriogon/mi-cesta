@@ -1,6 +1,6 @@
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json, TablesUpdate } from "./database.types";
-import type { CasResult, Db } from "./db";
+import type { BatchOp, CasResult, Db } from "./db";
 import type { Household, ListItem, Lists, TableName, Tables } from "./types";
 
 const toSnake = (key: string) => key.replace(/[A-Z]/g, (char) => `_${char.toLowerCase()}`);
@@ -47,20 +47,57 @@ export class SupabaseDb implements Db {
     if (error) throw new Error(`${action}: ${error.message}`);
   }
 
-  async list<T extends TableName>(table: T): Promise<Tables[T][]> {
+  /** Lee todas las filas del hogar (opcionalmente filtradas por una columna), de 1000 en 1000. */
+  private async readAll<T extends TableName>(table: T, filter?: [string, unknown]): Promise<Tables[T][]> {
     const pageSize = 1000;
     const rows: Tables[T][] = [];
     for (let from = 0; ; from += pageSize) {
-      const { data, error } = await this.anyTable
-        .from(table)
-        .select("*")
-        .eq("household_id", this.householdId)
-        .order("id")
-        .range(from, from + pageSize - 1);
+      let query = this.anyTable.from(table).select("*").eq("household_id", this.householdId);
+      if (filter) query = query.eq(toSnake(filter[0]), filter[1]);
+      const { data, error } = await query.order("id").range(from, from + pageSize - 1);
       this.fail(error, `Leer ${table}`);
-      rows.push(...(data ?? []).map((row) => rowFromDb<Tables[T]>(row)));
+      rows.push(...(data ?? []).map((row: Record<string, unknown>) => rowFromDb<Tables[T]>(row)));
       if (!data || data.length < pageSize) return rows;
     }
+  }
+
+  async list<T extends TableName>(table: T): Promise<Tables[T][]> {
+    return this.readAll(table);
+  }
+
+  async get<T extends TableName>(table: T, id: string): Promise<Tables[T] | null> {
+    const { data, error } = await this.anyTable
+      .from(table)
+      .select("*")
+      .eq("household_id", this.householdId)
+      .eq("id", id)
+      .maybeSingle<Record<string, unknown>>();
+    this.fail(error, `Leer ${table}`);
+    return data ? rowFromDb<Tables[T]>(data) : null;
+  }
+
+  async listBy<T extends TableName, K extends keyof Tables[T] & string>(
+    table: T,
+    column: K,
+    value: Tables[T][K],
+  ): Promise<Tables[T][]> {
+    return this.readAll(table, [column, value]);
+  }
+
+  async applyBatch(ops: BatchOp[]): Promise<void> {
+    if (!ops.length) return;
+    const payload = ops.map((op) =>
+      op.kind === "insert"
+        ? { ...op, rows: op.rows.map((row) => rowToDb(row as Record<string, unknown>)) }
+        : op.kind === "update"
+          ? { ...op, patch: rowToDb(op.patch as Record<string, unknown>) }
+          : op,
+    );
+    const { error } = await this.client.rpc("apply_batch", {
+      p_household_id: this.householdId,
+      p_ops: payload as unknown as Json,
+    });
+    this.fail(error, "Guardar cambios");
   }
 
   async insert<T extends TableName>(table: T, rows: Tables[T][]): Promise<void> {

@@ -198,8 +198,11 @@ export function CestaApp({ api, account }: { api: CestaApi; account: Account }) 
     };
   }, [ready, api, pullLists, refreshProducts, refreshPrices]);
 
+  // El resumen lee varias tablas: se recalcula una vez que la lista deja de cambiar, no en cada toque.
   useEffect(() => {
-    if (ready) void refreshOverview();
+    if (!ready) return;
+    const timer = window.setTimeout(() => void refreshOverview(), 500);
+    return () => window.clearTimeout(timer);
   }, [shopping, ready, refreshOverview]);
 
   useEffect(() => writeJson(memoryKey, memory), [memory, memoryKey]);

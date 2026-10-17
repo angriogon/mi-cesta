@@ -768,6 +768,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_batch: {
+        Args: { p_household_id: string; p_ops: Json }
+        Returns: undefined
+      }
       cas_lists: {
         Args: {
           p_checklist: Json

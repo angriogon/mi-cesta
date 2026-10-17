@@ -1,7 +1,9 @@
 import { PGlite } from "@electric-sql/pglite";
 // Comprueba la migración en un Postgres embebido (PGlite) que imita lo mínimo de Supabase: usuarios, almacenamiento y permisos.
 import { readFileSync } from "node:fs";
-const migration = readFileSync(new URL("../migrations/20261017000000_cesta.sql", import.meta.url), "utf8");
+const migration = ["20261017000000_cesta.sql", "20261018000000_apply_batch.sql"]
+  .map((file) => readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8"))
+  .join("\n");
 const db = new PGlite();
 const ok = (c, m) => {
   if (!c) {
@@ -114,6 +116,83 @@ ok(blocked, "no se permiten productos duplicados (mayúsculas aparte)");
 await as(ANA, `insert into storage.objects (bucket_id,name) values ('ticket-images', $1)`, [`${hid}/t1.jpg`]);
 ok((await as(EVA, `select count(*)::int n from storage.objects`)).rows[0].n === 0, "Eva no ve fotos de tickets ajenas");
 ok((await as(LUIS, `select count(*)::int n from storage.objects`)).rows[0].n === 1, "Luis ve las fotos de su hogar");
+
+// ---- apply_batch: escrituras de varios pasos en una sola transacción ----
+const batch = (user, ops) => as(user, `select public.apply_batch($1, $2::jsonb)`, [hid, JSON.stringify(ops)]);
+await batch(ANA, [
+  {
+    kind: "insert",
+    table: "products",
+    rows: [
+      {
+        id: "b1",
+        name: "Kéfir lote",
+        category: "Refrigerados",
+        sku: "",
+        current_stock: 0,
+        minimum_stock: 0,
+        suppressed: false,
+        confirmed_at: null,
+        planned_until: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ],
+  },
+  { kind: "update", table: "products", id: "b1", patch: { current_stock: 3 } },
+  {
+    kind: "insert",
+    table: "stock_events",
+    rows: [{ id: "e1", product_id: "b1", delta: 3, reason: "purchase", created_at: new Date().toISOString() }],
+  },
+]);
+const kefir = (await as(ANA, `select current_stock::int s from products where household_id=$1 and id='b1'`, [hid]))
+  .rows[0];
+ok(kefir?.s === 3, "apply_batch inserta y actualiza en orden");
+blocked = false;
+try {
+  await batch(ANA, [
+    { kind: "update", table: "products", id: "b1", patch: { current_stock: 7 } },
+    { kind: "update", table: "products", id: "b1", patch: { current_stock: -1 } },
+  ]);
+} catch {
+  blocked = true;
+}
+const after = (await as(ANA, `select current_stock::int s from products where household_id=$1 and id='b1'`, [hid]))
+  .rows[0];
+ok(blocked && after.s === 3, "si un paso falla, no se aplica ninguno (sigue en 3, no en 7)");
+blocked = false;
+try {
+  await batch(EVA, [{ kind: "remove", table: "products", ids: ["b1"] }]);
+} catch {
+  blocked = true;
+}
+ok(blocked, "Eva no puede usar apply_batch en el hogar de Ana");
+blocked = false;
+try {
+  await batch(ANA, [{ kind: "removeAll", table: "household_members" }]);
+} catch {
+  blocked = true;
+}
+ok(blocked, "apply_batch solo acepta tablas de datos del hogar");
+await batch(ANA, [
+  {
+    kind: "update",
+    table: "products",
+    id: "b1",
+    patch: { household_id: "00000000-0000-0000-0000-000000000000", name: "Kéfir movido" },
+  },
+]);
+ok(
+  (await as(ANA, `select name from products where household_id=$1 and id='b1'`, [hid])).rows[0]?.name ===
+    "Kéfir movido",
+  "un cambio no puede mover filas a otro hogar",
+);
+await batch(ANA, [{ kind: "remove", table: "products", ids: ["b1"] }]);
+ok(
+  (await as(ANA, `select count(*)::int n from products where household_id=$1 and id='b1'`, [hid])).rows[0].n === 0,
+  "apply_batch borra por id",
+);
 await as(ANA, `select public.leave_household($1)`, [hid]);
 ok(
   (await as(LUIS, `select role from household_members where household_id=$1`, [hid])).rows[0].role === "owner",
