@@ -32,6 +32,16 @@ export function reportError(error: unknown, context: string, userMessage?: strin
   notifier(userMessage);
 }
 
+/** Ejecuta una acción, deja traza si falla y relanza el error para que la pantalla muestre su mensaje. */
+export async function traced<T>(context: string, action: () => Promise<T>): Promise<T> {
+  try {
+    return await action();
+  } catch (error) {
+    reportError(error, context);
+    throw error;
+  }
+}
+
 export const logError =
   (context: string) =>
   (error: unknown): void =>

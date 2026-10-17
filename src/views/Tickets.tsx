@@ -14,14 +14,16 @@ import {
   Wrench,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { ApiError, type CestaApi } from "../data/api";
+import type { CestaApi } from "../data/api";
+import { errorMessage } from "../app/errorMessage";
+import { useTickets } from "../app/useTickets";
 import type { PriceRef, Ticket, TicketItem, TicketReview } from "../data/types";
 import { compareWithPlan, parseTicketText, reviewTicketLines } from "../domain/tickets";
 import { compressImage, recognizeText } from "../lib/image";
 import { centsToInput, formatCents, parseEuroToCents, todayIso } from "../lib/text";
 import { Button, Input } from "../ui/primitives";
 import type { Notify } from "../ui/Toast";
-import { LOAD_FAILED, logError, notifyError, reportError } from "../lib/errors";
+import { reportError } from "../lib/errors";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
@@ -117,15 +119,17 @@ function MoneyInput({
 
 export function TicketsView({
   api,
+  prices,
   onStockChanged,
   notify,
 }: {
   api: CestaApi;
+  prices: PriceRef[];
   onStockChanged: () => void;
   notify: Notify;
 }) {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [reviews, setReviews] = useState<TicketReview[]>([]);
+  const ticketsState = useTickets(api, onStockChanged);
+  const { tickets, reviews, planned, months } = ticketsState;
   const [corrections, setCorrections] = useState<Record<string, string>>({});
   const [file, setFile] = useState<Blob | null>(null);
   const [preview, setPreview] = useState("");
@@ -139,52 +143,18 @@ export function TicketsView({
   const [busy, setBusy] = useState(false);
   const [control, setControl] = useState(false);
   const [editing, setEditing] = useState<Ticket | null>(null);
-  const [prices, setPrices] = useState<PriceRef[]>([]);
-  const [planned, setPlanned] = useState<{ name: string; quantity: number }[]>([]);
   const [photo, setPhoto] = useState<{ id: string; url: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  async function load() {
-    try {
-      const data = await api.tickets();
-      setTickets(data.tickets);
-      setReviews(data.reviews);
-      setCorrections(
-        Object.fromEntries(
-          data.reviews.map((review) => [review.id, review.suggestion.proposedName || review.description]),
-        ),
-      );
-    } catch (error) {
-      reportError(error, "tickets");
-      setStatus("No se han podido cargar los tickets.");
-    }
-  }
-
+  // Propuesta de corrección por revisión; se rehace cuando llegan revisiones nuevas.
   useEffect(() => {
-    void load();
-    api
-      .prices()
-      .then((data) => setPrices(data.prices))
-      .catch(notifyError("cargar precios", LOAD_FAILED));
-    api
-      .purchaseSession()
-      .then((session) => setPlanned(session?.planned ?? []))
-      .catch(notifyError("cargar compra prevista", LOAD_FAILED));
-    const unsubscribe = api.db.subscribe((table) => {
-      if (table === "tickets" || table === "ticket_reviews") void load();
-    });
-    return unsubscribe;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api]);
+    setCorrections(
+      Object.fromEntries(reviews.map((review) => [review.id, review.suggestion.proposedName || review.description])),
+    );
+  }, [reviews]);
 
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview]);
 
-  const months = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const ticket of tickets)
-      map.set(ticket.purchasedAt.slice(0, 7), (map.get(ticket.purchasedAt.slice(0, 7)) ?? 0) + ticket.totalCents);
-    return [...map.entries()].sort(([a], [b]) => b.localeCompare(a));
-  }, [tickets]);
   const smartReview = useMemo(() => reviewTicketLines(lines, prices), [lines, prices]);
   const plan = useMemo(() => compareWithPlan(planned, lines), [planned, lines]);
 
@@ -245,7 +215,7 @@ export function TicketsView({
     setBusy(true);
     setStatus("Guardando foto y gasto…");
     try {
-      const result = await api.saveTicket({
+      const result = await ticketsState.save({
         image: file && file.size ? file : null,
         merchant,
         purchasedAt: date,
@@ -253,19 +223,12 @@ export function TicketsView({
         rawText,
         items: lines,
       });
-      void api.refreshPrices().catch(logError("actualizar precios tras ticket"));
-      onStockChanged();
       clearForm();
       setStatus(
         `Ticket guardado. ${result.added} ${result.added === 1 ? "unidad añadida" : "unidades añadidas"} al almacén${result.reviews ? ` · ${result.reviews} para revisar` : ""}.`,
       );
-      await load();
     } catch (error) {
-      setStatus(
-        error instanceof ApiError
-          ? error.message
-          : "No se ha podido guardar. Comprueba la conexión y vuelve a intentarlo.",
-      );
+      setStatus(errorMessage(error, "No se ha podido guardar. Comprueba la conexión y vuelve a intentarlo."));
     } finally {
       setBusy(false);
     }
@@ -276,12 +239,11 @@ export function TicketsView({
     if (!editing) return;
     setBusy(true);
     try {
-      await api.updateTicket(editing);
+      await ticketsState.update(editing);
       setEditing(null);
       setStatus("Cambios guardados correctamente.");
-      await load();
     } catch (error) {
-      setStatus(error instanceof ApiError ? error.message : "No se han podido guardar los cambios.");
+      setStatus(errorMessage(error, "No se han podido guardar los cambios."));
     } finally {
       setBusy(false);
     }
@@ -290,14 +252,11 @@ export function TicketsView({
   async function resolve(review: TicketReview) {
     setBusy(true);
     try {
-      await api.resolveReview(review.id, corrections[review.id] || review.description);
+      await ticketsState.resolveReview(review, corrections[review.id] || review.description);
       setStatus(
         review.issueType === "unidentified" ? "Corrección aprendida para próximos tickets." : "Revisión confirmada.",
       );
-      onStockChanged();
-      await load();
-    } catch (error) {
-      reportError(error, "tickets");
+    } catch {
       setStatus("No se ha podido guardar la revisión.");
     } finally {
       setBusy(false);
@@ -311,11 +270,9 @@ export function TicketsView({
     }
     setConfirmDelete(null);
     try {
-      await api.deleteTicket(ticket.id);
+      await ticketsState.remove(ticket.id);
       notify("Ticket eliminado. Las existencias no se modifican.");
-      await load();
-    } catch (error) {
-      reportError(error, "tickets");
+    } catch {
       notify("No se ha podido eliminar el ticket.");
     }
   }
@@ -323,7 +280,7 @@ export function TicketsView({
   async function showPhoto(ticket: Ticket) {
     if (!ticket.imagePath) return;
     if (photo?.id === ticket.id) return setPhoto(null);
-    const url = await api.ticketImageUrl(ticket.imagePath);
+    const url = await ticketsState.photoUrl(ticket);
     if (url) setPhoto({ id: ticket.id, url });
     else notify("No se ha podido abrir la foto.");
   }
