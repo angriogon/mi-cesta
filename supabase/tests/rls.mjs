@@ -1,7 +1,12 @@
 import { PGlite } from "@electric-sql/pglite";
 // Comprueba la migración en un Postgres embebido (PGlite) que imita lo mínimo de Supabase: usuarios, almacenamiento y permisos.
 import { readFileSync } from "node:fs";
-const migration = ["20261017000000_cesta.sql", "20261018000000_apply_batch.sql", "20261019000000_prune_history.sql"]
+const migration = [
+  "20261017000000_cesta.sql",
+  "20261018000000_apply_batch.sql",
+  "20261019000000_prune_history.sql",
+  "20261020000000_delete_account.sql",
+]
   .map((file) => readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8"))
   .join("\n");
 const db = new PGlite();
@@ -218,6 +223,35 @@ const kept = (
   )
 ).rows.map((r) => r.id);
 ok(kept.join() === "op-new,se-new", `prune_history borra solo lo antiguo (${kept.join()})`);
+
+// ---- delete_my_account: eliminar la propia cuenta ----
+const MARTA = "44444444-4444-4444-4444-444444444444";
+await db.query(`insert into auth.users values ($1, 'marta@x.es')`, [MARTA]);
+await as(MARTA, `select public.join_household($1)`, [code]);
+await as(MARTA, `select public.delete_my_account()`);
+ok(
+  (await db.query(`select count(*)::int n from auth.users where id = $1`, [MARTA])).rows[0].n === 0,
+  "Marta elimina su cuenta",
+);
+ok(
+  (await as(ANA, `select count(*)::int n from household_members where household_id = $1`, [hid])).rows[0].n >= 2 &&
+    (await as(ANA, `select count(*)::int n from products where household_id = $1`, [hid])).rows[0].n > 0,
+  "el hogar compartido sigue para los demás con sus datos",
+);
+const evaHome = (await as(EVA, `select public.create_household('Casa Eva') as id`)).rows[0].id;
+await as(EVA, `select public.delete_my_account()`);
+ok(
+  (await db.query(`select count(*)::int n from households where id = $1`, [evaHome])).rows[0].n === 0 &&
+    (await db.query(`select count(*)::int n from products where household_id = $1`, [evaHome])).rows[0].n === 0,
+  "si era la única del hogar, el hogar se borra con sus datos",
+);
+let anonymousBlocked = false;
+try {
+  await as("", `select public.delete_my_account()`);
+} catch {
+  anonymousBlocked = true;
+}
+ok(anonymousBlocked, "sin sesión no se puede eliminar ninguna cuenta");
 
 await as(ANA, `select public.leave_household($1)`, [hid]);
 ok(

@@ -782,6 +782,7 @@ export type Database = {
         Returns: Json
       }
       create_household: { Args: { p_name: string }; Returns: string }
+      delete_my_account: { Args: never; Returns: undefined }
       household_members_list: {
         Args: { p_household_id: string }
         Returns: {

@@ -13,11 +13,11 @@ import type {
 } from "../types";
 import { logError } from "../../lib/errors";
 
-import { TicketsApi } from "./tickets";
+import { PrivacyApi } from "./privacy";
 import { ApiError, now } from "./shared";
 
 /** Inventario rápido, códigos de barras, mascota y ajustes del hogar. */
-export class CestaApi extends TicketsApi {
+export class CestaApi extends PrivacyApi {
   async quickInventory(): Promise<{
     sessions: QuickSession[];
     recentTicketItems: Omit<QuickItem, "id" | "source" | "confidence">[];

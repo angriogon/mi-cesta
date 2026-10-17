@@ -302,3 +302,17 @@ describe("restablecer", () => {
     expect((await api.lists()).shopping).toEqual([]);
   });
 });
+
+describe("privacidad", () => {
+  it("exporta todos los datos del hogar en un archivo legible", async () => {
+    await api.createProduct({ name: "Kombucha de jengibre", category: "Bebidas" });
+    const data = await api.exportHousehold();
+    expect(data.format).toBe("cesta-export");
+    expect(data.household).toMatchObject({ id: "hogar-test" });
+    expect(data.tables.products?.length).toBe(350);
+    expect(Object.keys(data.tables)).toEqual(
+      expect.arrayContaining(["inventory_lots", "tickets", "prices", "dog_items", "dog_reminders", "stock_events"]),
+    );
+    expect(JSON.parse(JSON.stringify(data))).toEqual(data);
+  });
+});
