@@ -49,19 +49,29 @@ export function DietPage({ api, preferences }: { api: CestaApi; preferences: Pre
     allergens: preferences.allergens.join(", "),
     avoided: preferences.avoided.join(", "),
   });
+  const [consent, setConsent] = useState(Boolean(preferences.healthConsentAt));
+  const [consentAt, setConsentAt] = useState(preferences.healthConsentAt ?? null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function save(event: FormEvent) {
     event.preventDefault();
+    const withdrawn = !consent && Boolean(consentAt);
+    const allergens = withdrawn ? [] : split(diet.allergens);
+    const avoided = withdrawn ? [] : split(diet.avoided);
+    if (!consent && !withdrawn && (allergens.length || avoided.length)) {
+      setMessage("Para guardar alergias o alimentos a evitar, marca tu consentimiento.");
+      return;
+    }
     setBusy(true);
     try {
-      await api.savePreferences({
-        specialDietEnabled: diet.enabled,
-        allergens: split(diet.allergens),
-        avoided: split(diet.avoided),
-      });
-      setMessage("Perfil alimentario guardado.");
+      const healthConsentAt = consent ? (consentAt ?? new Date().toISOString()) : null;
+      await api.savePreferences({ specialDietEnabled: diet.enabled, allergens, avoided, healthConsentAt });
+      setConsentAt(healthConsentAt);
+      if (withdrawn) {
+        setDiet({ enabled: false, allergens: "", avoided: "" });
+        setMessage("Consentimiento retirado: se han borrado las alergias y los alimentos a evitar.");
+      } else setMessage("Perfil alimentario guardado.");
     } catch (error) {
       reportError(error, "perfil alimentario");
       setMessage(copy.errors.saveShort);
@@ -103,6 +113,19 @@ export function DietPage({ api, preferences }: { api: CestaApi; preferences: Pre
             placeholder="cerdo, alcohol…"
             className="mt-1 h-11 rounded-xl text-sm"
           />
+        </label>
+        <label className="flex items-start gap-3 rounded-xl bg-muted p-3 text-xs leading-5 text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={(event) => setConsent(event.target.checked)}
+            className="mt-0.5 size-5 shrink-0 accent-primary"
+          />
+          <span>
+            Doy mi consentimiento explícito para que Cesta guarde estas alergias y alimentos a evitar, que son datos de
+            salud, y para que los vean los miembros de mi hogar. Puedo retirarlo cuando quiera: al desmarcarlo y
+            guardar, se borran.
+          </span>
         </label>
         {message && (
           <p className="text-xs font-semibold text-muted-foreground" role="status">

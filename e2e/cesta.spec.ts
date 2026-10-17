@@ -240,12 +240,32 @@ test("menú: código postal, perfil alimentario, novedades y restablecer", async
   await page.getByRole("button", { name: "Alimentación especial" }).click();
   await page.getByLabel("Activar perfil").check();
   await page.getByPlaceholder("gluten, leche, frutos secos").fill("huevo");
+  // Datos de salud: sin consentimiento explícito no se guardan.
+  await page.getByRole("button", { name: "Guardar perfil" }).click();
+  await expect(page.getByText("Para guardar alergias o alimentos a evitar, marca tu consentimiento.")).toBeVisible();
+  await page.getByLabel(/Doy mi consentimiento explícito/).check();
   await page.getByRole("button", { name: "Guardar perfil" }).click();
   await expect(page.getByText("Perfil alimentario guardado.")).toBeVisible();
+  await page.getByLabel(/Doy mi consentimiento explícito/).uncheck();
+  await page.getByRole("button", { name: "Guardar perfil" }).click();
+  await expect(page.getByText(/Consentimiento retirado/)).toBeVisible();
+  await expect(page.getByPlaceholder("gluten, leche, frutos secos")).toHaveValue("");
   await page.getByRole("button", { name: "← Volver al menú" }).click();
   await page.getByRole("button", { name: "Novedades" }).click();
   await expect(page.getByText("Versión 5.0.0", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "← Volver al menú" }).click();
+  await page.getByRole("button", { name: "Privacidad y condiciones" }).click();
+  await expect(page.getByRole("heading", { name: "Política de privacidad" })).toBeVisible();
+  await page.getByRole("button", { name: "Condiciones" }).click();
+  await expect(page.getByRole("heading", { name: "Condiciones de uso" })).toBeVisible();
+  await page.getByRole("button", { name: "← Volver al menú" }).click();
+  await page.getByRole("button", { name: "Exportar mis datos" }).click();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Descargar copia" }).click();
+  expect((await download).suggestedFilename()).toMatch(/^cesta-mis-datos-\d{4}-\d{2}-\d{2}\.json$/);
+  await page.getByRole("button", { name: "← Volver al menú" }).click();
+  // En modo local no hay cuenta que eliminar.
+  await expect(page.getByRole("button", { name: "Eliminar cuenta" })).toHaveCount(0);
   await page.getByRole("button", { name: "Restablecer datos del hogar" }).click();
   await page.getByPlaceholder("Escribe RESTABLECER").fill("otra cosa");
   await page.getByRole("button", { name: "Restablecer todo" }).click();

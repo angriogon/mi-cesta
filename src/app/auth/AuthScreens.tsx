@@ -1,6 +1,8 @@
 import { LoaderCircle, LogIn, Mail, ShoppingBasket } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
+import type { LegalDocument } from "../../copy/legal";
 import { Button, Input } from "../../ui/primitives";
+import { LegalSheet } from "../../views/legal/LegalSheet";
 import { translateAuthError } from "../account";
 import { supabase } from "../config";
 
@@ -38,11 +40,17 @@ export function AuthScreen() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [accepted, setAccepted] = useState(false);
+  const [legal, setLegal] = useState<LegalDocument["id"] | null>(null);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError("");
     setMessage("");
+    if (mode === "signup" && !accepted) {
+      setError("Para crear la cuenta, acepta las condiciones y la política de privacidad.");
+      return;
+    }
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
       setError("Escribe un email válido.");
       return;
@@ -113,6 +121,28 @@ export function AuthScreen() {
             />
           </label>
         )}
+        {mode === "signup" && (
+          <div className="flex items-start gap-3 text-xs leading-5 text-muted-foreground">
+            <input
+              id="accept-legal"
+              type="checkbox"
+              checked={accepted}
+              onChange={(event) => setAccepted(event.target.checked)}
+              className="mt-0.5 size-5 shrink-0 accent-primary"
+            />
+            <span>
+              <label htmlFor="accept-legal">Tengo al menos 14 años y acepto las </label>
+              <button type="button" onClick={() => setLegal("terms")} className="font-semibold text-primary">
+                condiciones de uso
+              </button>{" "}
+              y la{" "}
+              <button type="button" onClick={() => setLegal("privacy")} className="font-semibold text-primary">
+                política de privacidad
+              </button>
+              .
+            </span>
+          </div>
+        )}
         {error && (
           <p className="text-xs font-semibold text-danger" role="alert">
             {error}
@@ -150,7 +180,11 @@ export function AuthScreen() {
             He olvidado mi contraseña
           </button>
         )}
+        <button type="button" onClick={() => setLegal("privacy")} className="mt-2 font-medium text-muted-foreground">
+          Privacidad y condiciones
+        </button>
       </div>
+      {legal && <LegalSheet initial={legal} onClose={() => setLegal(null)} />}
     </Card>
   );
 }
