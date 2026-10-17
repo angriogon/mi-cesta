@@ -31,6 +31,7 @@ import { Button, CategorySelect, EmptyState, Input, NativeSelect, Stepper } from
 import type { Notify } from "../ui/Toast";
 import type { AdminState } from "./AdminAccess";
 import { LOAD_FAILED, reportError } from "../lib/errors";
+import { inventoryChanged, useChannel } from "../app/events";
 
 export const STATE_LABEL: Record<LotState, string> = {
   closed: "Cerrado",
@@ -73,17 +74,12 @@ function ExpiryStates({ api, notify, products }: { api: CestaApi; notify: Notify
     }
   }
 
+  useChannel(inventoryChanged, () => void load());
   useEffect(() => {
     void load();
-    const refresh = () => void load();
-    window.addEventListener("cesta-inventory-refresh", refresh);
-    const unsubscribe = api.db.subscribe((table) => {
-      if (table === "inventory_lots") refresh();
+    return api.db.subscribe((table) => {
+      if (table === "inventory_lots") void load();
     });
-    return () => {
-      window.removeEventListener("cesta-inventory-refresh", refresh);
-      unsubscribe();
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api]);
 
