@@ -1,3 +1,4 @@
+import { copy } from "../../copy/es";
 import { FingerprintPattern, Lock, Plus, ShieldCheck } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import type { CestaApi } from "../../data/api";
@@ -29,7 +30,7 @@ export function SuppressedList({ api, notify, products }: { api: CestaApi; notif
                   .then(() => notify(`${product.name} vuelve a poder sugerirse.`))
                   .catch((error: unknown) => {
                     reportError(error, "volver a sugerir");
-                    notify("No se ha podido guardar.");
+                    notify(copy.errors.saveShort);
                   })
               }
               className="shrink-0 px-1 py-1.5 text-xs font-semibold text-primary"

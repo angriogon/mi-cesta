@@ -1,3 +1,4 @@
+import { copy } from "../../copy/es";
 import { Archive, Bell, Dog, House, LoaderCircle, PackageCheck, ReceiptText, ShoppingBasket, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useCesta } from "../CestaContext";
@@ -114,7 +115,7 @@ function Notice({
       <button
         type="button"
         onClick={onClose}
-        aria-label="Cerrar aviso"
+        aria-label={copy.common.closeNotice}
         className="flex size-9 items-center justify-center rounded-lg active:bg-fill"
       >
         <X className="size-4" />
@@ -163,7 +164,7 @@ export function Notices() {
             type="button"
             className="ml-auto text-muted-foreground"
             onClick={() => setSavedCount(0)}
-            aria-label="Cerrar"
+            aria-label={copy.common.close}
           >
             <X className="size-4" />
           </button>

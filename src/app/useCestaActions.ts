@@ -1,3 +1,4 @@
+import { copy } from "../copy/es";
 import type { BarcodeProduct } from "../data/types";
 import type { Overview } from "../domain/autocesta";
 import { guessCategory, PERISHABLE, type Category } from "../domain/categories";
@@ -96,7 +97,7 @@ export function useCestaActions(core: CestaCore) {
     const previous = core.checklist;
     setChecklist([]);
     toast.show("Lista vaciada.", {
-      label: "Deshacer",
+      label: copy.common.undo,
       onClick: () => setChecklist((items) => mergeByName(previous, items)),
     });
   }

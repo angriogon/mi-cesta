@@ -1,3 +1,4 @@
+import { copy } from "../../copy/es";
 import { useState, type FormEvent } from "react";
 import type { CestaApi } from "../../data/api";
 import type { Preferences } from "../../data/types";
@@ -61,7 +62,7 @@ export function DietPage({ api, preferences }: { api: CestaApi; preferences: Pre
       setMessage("Perfil alimentario guardado.");
     } catch (error) {
       reportError(error, "perfil alimentario");
-      setMessage("No se ha podido guardar.");
+      setMessage(copy.errors.saveShort);
     } finally {
       setBusy(false);
     }

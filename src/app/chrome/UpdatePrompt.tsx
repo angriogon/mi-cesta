@@ -1,3 +1,4 @@
+import { copy } from "../../copy/es";
 import { RefreshCw } from "lucide-react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { logError } from "../../lib/errors";
@@ -34,20 +35,20 @@ export function UpdatePrompt() {
       className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+88px)] z-50 mx-auto flex w-[calc(100%-2rem)] max-w-md items-center gap-3 rounded-2xl bg-card p-3 text-sm shadow-float"
     >
       <RefreshCw className="size-5 shrink-0 text-primary" aria-hidden />
-      <span className="min-w-0 flex-1 font-semibold">Hay una versión nueva de Cesta</span>
+      <span className="min-w-0 flex-1 font-semibold">{copy.update.title}</span>
       <button
         type="button"
         onClick={() => setNeedRefresh(false)}
         className="h-11 rounded-xl px-3 font-semibold text-muted-foreground"
       >
-        Luego
+        {copy.update.later}
       </button>
       <button
         type="button"
         onClick={() => void updateServiceWorker(true)}
         className="h-11 rounded-xl bg-primary px-4 font-semibold text-primary-foreground"
       >
-        Actualizar
+        {copy.update.apply}
       </button>
     </div>
   );

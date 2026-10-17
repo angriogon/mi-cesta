@@ -1,3 +1,4 @@
+import { copy } from "../../copy/es";
 import { mergeByName, mergeDuplicates } from "../../domain/lists";
 import { notifyError, SAVE_FAILED } from "../../lib/errors";
 import { todayIso } from "../../lib/text";
@@ -37,7 +38,7 @@ export function PurchaseScreen() {
             setShopping((items) => items.filter((item) => item.id !== id));
             if (removed)
               toast.show(`${removed.name} eliminado.`, {
-                label: "Deshacer",
+                label: copy.common.undo,
                 onClick: () => setShopping((items) => mergeByName(items, [removed])),
               });
           }}
@@ -61,13 +62,13 @@ export function PurchaseScreen() {
           pendingSuggestions={autocesta ? overview.pendingSuggestions : []}
           acceptSuggestions={store.acceptSuggestions}
           suppressSuggestion={(productId) =>
-            void store.runAndRefresh(() => api.suppress(productId), "No se ha podido guardar.")
+            void store.runAndRefresh(() => api.suppress(productId), copy.errors.saveShort)
           }
           onPlanned={(productId) => {
             store.setProducts((items) =>
               items.map((item) => (item.id === productId ? { ...item, plannedUntil: todayIso() } : item)),
             );
-            void store.runAndRefresh(() => api.planned(productId), "No se ha podido guardar.");
+            void store.runAndRefresh(() => api.planned(productId), copy.errors.saveShort);
           }}
         />
       }
@@ -84,7 +85,7 @@ export function PurchaseScreen() {
             setChecklist((items) => items.filter((item) => item.id !== id));
             if (removed)
               toast.show(`${removed.name} eliminado.`, {
-                label: "Deshacer",
+                label: copy.common.undo,
                 onClick: () => setChecklist((items) => mergeByName(items, [removed])),
               });
           }}

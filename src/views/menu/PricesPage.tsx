@@ -1,3 +1,4 @@
+import { copy } from "../../copy/es";
 import { useState } from "react";
 import type { CestaApi } from "../../data/api";
 import { Button, Input } from "../../ui/primitives";
@@ -27,7 +28,7 @@ export function PricesPage({
             await api.setPostalCode(value);
             onSaved(value.trim());
           } catch (failure) {
-            setError(failure instanceof Error ? failure.message : "No se ha podido guardar.");
+            setError(failure instanceof Error ? failure.message : copy.errors.saveShort);
           }
         }}
         className="mt-4 space-y-3"

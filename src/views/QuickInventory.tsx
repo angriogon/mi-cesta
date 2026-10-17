@@ -1,3 +1,4 @@
+import { copy } from "../copy/es";
 import { ChevronLeft, LoaderCircle, PackageCheck, Plus, Save, Sparkles, X } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import type { CestaApi } from "../data/api";
@@ -132,7 +133,7 @@ export function QuickInventory({
         window.setTimeout(onClose, 700);
       }
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "No se ha podido guardar.");
+      setStatus(error instanceof Error ? error.message : copy.errors.saveShort);
     } finally {
       setBusy(false);
     }
@@ -157,7 +158,7 @@ export function QuickInventory({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Cerrar"
+            aria-label={copy.common.close}
             className="flex size-10 items-center justify-center rounded-xl bg-card"
           >
             <X className="size-4" />

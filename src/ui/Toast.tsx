@@ -1,3 +1,4 @@
+import { copy } from "../copy/es";
 import { X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -57,7 +58,7 @@ export function Toast({ state, onDismiss }: { state: ToastState | null; onDismis
         <button
           type="button"
           onClick={onDismiss}
-          aria-label="Cerrar aviso"
+          aria-label={copy.common.closeNotice}
           className="flex size-9 shrink-0 items-center justify-center text-muted-foreground"
         >
           <X className="size-4" />

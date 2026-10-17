@@ -1,3 +1,4 @@
+import { copy } from "../../copy/es";
 import {
   Archive,
   Bookmark,
@@ -82,7 +83,7 @@ export function ExpiryStates({ api, notify, products }: { api: CestaApi; notify:
     setEditing(null);
     if (await remove(lot))
       notify(`${lot.productName} retirado de caducidades.`, {
-        label: "Deshacer",
+        label: copy.common.undo,
         onClick: () => void restore(lot),
       });
   }

@@ -1,3 +1,4 @@
+import { copy } from "../copy/es";
 import type { Session } from "@supabase/supabase-js";
 import { ShoppingBasket } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -23,10 +24,8 @@ export function Root() {
 function Unconfigured() {
   return (
     <main className="flex min-h-[100dvh] flex-col items-center justify-center bg-background px-6 text-center text-foreground">
-      <h1 className="text-lg font-semibold">Cesta no está disponible</h1>
-      <p className="mt-2 max-w-72 text-sm leading-6 text-muted-foreground">
-        Esta versión no tiene configurado el servidor de cuentas. Vuelve a intentarlo más tarde.
-      </p>
+      <h1 className="text-lg font-semibold">{copy.unconfigured.title}</h1>
+      <p className="mt-2 max-w-72 text-sm leading-6 text-muted-foreground">{copy.unconfigured.text}</p>
     </main>
   );
 }

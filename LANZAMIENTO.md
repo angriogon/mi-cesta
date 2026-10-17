@@ -2,18 +2,20 @@
 
 ## Qué está probado
 
-| Prueba                         | Resultado | Cubre                                                                                                                                                                              |
-| ------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Calidad (`npm run check`)      | En verde  | Tipos (TypeScript 7), ESLint estricto con tipos, react-hooks y jsx-a11y, y Prettier                                                                                                |
-| Unitarias (Vitest)             | 73        | Dominio, API completa, operaciones atómicas (todo o nada), consultas precisas, hooks de cada dominio (listas, despensa, mascota, tickets) y política de errores                    |
-| Base de datos (PGlite)         | 26        | Migraciones, aislamiento entre hogares, invitaciones, listas que no se pisan, fotos privadas, salir de un hogar y `apply_batch` (orden, vuelta atrás, permisos, tablas permitidas) |
-| Extremo a extremo (Playwright) | 21        | Todas las pantallas en WebKit con iPhone 14 y SE, OCR real sin CDN externos y auditoría de accesibilidad WCAG 2.1 AA en claro y oscuro                                             |
-| Integración con Supabase real  | Opcional  | Necesita usuarios de prueba (`CESTA_IT_*`); no se ejecuta en CI                                                                                                                    |
+| Prueba                         | Resultado | Cubre                                                                                                                                                                            |
+| ------------------------------ | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Calidad (`npm run check`)      | En verde  | Tipos (TypeScript 7), ESLint estricto con tipos, react-hooks y jsx-a11y, y Prettier                                                                                              |
+| Unitarias (Vitest)             | 75        | Dominio, API completa, operaciones atómicas (todo o nada), consultas precisas, hooks de cada dominio (listas, despensa, mascota, tickets) y política de errores; escala de texto |
+| Base de datos (PGlite)         | 28        | Migraciones, aislamiento entre hogares, invitaciones, listas que no se pisan, fotos privadas, salir de un hogar y `apply_batch` y limpieza del historial                         |
+| Extremo a extremo (Playwright) | 23        | Todas las pantallas en WebKit con iPhone 14 y SE, OCR real sin CDN externos auditoría WCAG 2.1 AA en claro y oscuro y texto grande (140 %) en iPhone SE                          |
+| Integración con Supabase real  | Opcional  | Necesita usuarios de prueba (`CESTA_IT_*`); no se ejecuta en CI                                                                                                                  |
 
 ### Qué no está probado todavía
 
 - **Un iPhone real.** WebKit en ordenador no prueba la cámara, Face ID, las notificaciones, el teclado, la fuente SF ni la app instalada en la pantalla de inicio.
 - **El registro desde la pantalla y el email de confirmación** con un correo real.
+- **Dynamic Type en un iPhone real**: el WebKit de las pruebas no conoce `-apple-system-body`; en un iPhone hay que comprobar el texto con el tamaño por defecto, uno grande y el máximo.
+- **El aviso de actualización** con la app instalada: aparece al publicar una versión nueva y al tocar «Actualizar» se recarga.
 
 ## Hecho en el estudio de mejora (fases 1 a 4)
 
@@ -23,6 +25,12 @@
 - Consultas precisas y operaciones de varios pasos atómicas con `apply_batch`.
 - Arranque y caché: pantallas bajo demanda, PDF/escáner/OCR fuera de la caché inicial (779 KiB en lugar de 2.020 KiB), OCR servido desde la propia app.
 - Accesibilidad: contraste AA y nombres para VoiceOver comprobados automáticamente.
+- Tamaño de texto del sistema (Dynamic Type) entre el 85 % y el 140 %; los espaciados y zonas de toque no cambian.
+- Actualización con aviso («Hay una versión nueva de Cesta · Actualizar») en lugar de recargar a mitad de uso.
+- Para usar Cesta hace falta cuenta: el modo local es solo para pruebas y desarrollo.
+- Historial limitado: movimientos de almacén 400 días y operaciones de deshacer 30 días, limpiados cada noche por el servidor (pg_cron).
+- Clave _publishable_ de Supabase. El asesor de rendimiento de Supabase no marca ningún índice pendiente.
+- Textos compartidos (errores, avisos, botones comunes) en `src/copy/es.ts`.
 
 ## Imprescindible antes de lanzar (fuera del código)
 
@@ -37,10 +45,8 @@
 
 ## Pulido pendiente (sin funciones nuevas)
 
-- Respetar el tamaño de texto del sistema (Dynamic Type).
-- Limitar el crecimiento del historial (`stock_events`, `operations`).
-- Pasar a la clave _publishable_ de Supabase.
-- Textos de la interfaz en un catálogo único para revisar el tono.
+- **Aplicar la migración `20261019000000_prune_history.sql` en Supabase** (crea la limpieza nocturna; solo añade una función, dos índices y la tarea de pg_cron).
+- Llevar al catálogo `src/copy/es.ts` los textos propios de cada pantalla si se quiere revisar todo el tono en un solo archivo.
 - Primer uso: proponer definir el mínimo de 5–10 productos habituales; sin mínimos, Necesidades y AutoCesta no tienen nada que hacer.
 - Pantallas de arranque de iOS (`apple-touch-startup-image`) para evitar el destello al abrir la app instalada.
 - Cola sin conexión para el almacén, tickets y la mascota con Supabase (hoy solo las listas se reintentan solas; el resto avisa del error).

@@ -1,3 +1,4 @@
+import { copy } from "../../copy/es";
 import { Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { CestaApi } from "../../data/api";
@@ -51,7 +52,7 @@ export function HouseholdPage({
             onChange({ ...household, name: name.trim() });
             setMessage("Nombre guardado.");
           } catch (error) {
-            setMessage(error instanceof Error ? error.message : "No se ha podido guardar.");
+            setMessage(error instanceof Error ? error.message : copy.errors.saveShort);
           }
         }}
         className="mt-4 grid grid-cols-[1fr_auto] gap-2"
