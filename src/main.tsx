@@ -2,12 +2,10 @@ import { Component, StrictMode, type ErrorInfo, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { Root } from "./app/Root";
 import "./index.css";
+import { applyTheme, storedTheme } from "./lib/theme";
 
-// Modo oscuro según el sistema (iOS lo cambia automáticamente por la noche).
-const dark = window.matchMedia("(prefers-color-scheme: dark)");
-const applyTheme = () => document.documentElement.classList.toggle("dark", dark.matches);
-applyTheme();
-dark.addEventListener("change", applyTheme);
+// Claro por defecto; el oscuro se elige desde el menú lateral.
+applyTheme(storedTheme());
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };

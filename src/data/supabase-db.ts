@@ -137,16 +137,50 @@ export class SupabaseDb implements Db {
     this.fail(error, "Borrar fotos de tickets");
   }
 
+  /**
+   * Un único canal por hogar compartido por todas las pantallas: Supabase reutiliza el canal
+   * con el mismo nombre y no permite añadirle escuchas una vez abierto.
+   */
   subscribe(onChange: (table: TableName | "lists") => void): () => void {
-    const channel: RealtimeChannel = this.client.channel(`household:${this.householdId}`);
-    for (const table of REALTIME_TABLES) {
-      channel.on(
-        "postgres_changes",
-        { event: "*", schema: "public", table, filter: `household_id=eq.${this.householdId}` },
-        () => onChange(table),
-      );
-    }
-    channel.subscribe();
-    return () => void this.client.removeChannel(channel);
+    const entry = sharedChannel(this.client, this.householdId);
+    entry.listeners.add(onChange);
+    return () => {
+      entry.listeners.delete(onChange);
+      if (entry.listeners.size) return;
+      channelsByClient.get(this.client)?.delete(this.householdId);
+      void this.client.removeChannel(entry.channel);
+    };
   }
+
+  /** Solo para pruebas: simula un cambio recibido por el canal. */
+  notifyForTests(table: TableName | "lists") {
+    channelsByClient.get(this.client)?.get(this.householdId)?.listeners.forEach((listener) => listener(table));
+  }
+}
+
+type Listener = (table: TableName | "lists") => void;
+interface SharedChannel {
+  channel: RealtimeChannel;
+  listeners: Set<Listener>;
+}
+
+const channelsByClient = new WeakMap<SupabaseClient, Map<string, SharedChannel>>();
+
+function sharedChannel(client: SupabaseClient, householdId: string): SharedChannel {
+  let channels = channelsByClient.get(client);
+  if (!channels) {
+    channels = new Map();
+    channelsByClient.set(client, channels);
+  }
+  const existing = channels.get(householdId);
+  if (existing) return existing;
+  const entry: SharedChannel = { channel: client.channel(`household:${householdId}`), listeners: new Set() };
+  for (const table of REALTIME_TABLES) {
+    entry.channel.on("postgres_changes", { event: "*", schema: "public", table, filter: `household_id=eq.${householdId}` }, () =>
+      entry.listeners.forEach((listener) => listener(table)),
+    );
+  }
+  entry.channel.subscribe();
+  channels.set(householdId, entry);
+  return entry;
 }

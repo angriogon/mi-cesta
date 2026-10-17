@@ -17,13 +17,23 @@ test("ninguna vista se sale de la pantalla", async ({ page }) => {
   await expectNoHorizontalScroll(page);
 });
 
-test("en modo oscuro el texto sigue siendo legible", async ({ page }) => {
+test("claro por defecto aunque el iPhone esté en oscuro; el oscuro se elige en el menú y se recuerda", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await openApp(page);
+  const isDark = () => page.evaluate(() => document.documentElement.classList.contains("dark"));
+  expect(await isDark()).toBe(false);
+  await openMenu(page);
+  await page.getByRole("switch", { name: /Cambiar a oscuro/ }).click();
+  expect(await isDark()).toBe(true);
   const colors = await page.evaluate(() => {
     const body = getComputedStyle(document.body);
-    return { bg: body.backgroundColor, fg: body.color, dark: document.documentElement.classList.contains("dark") };
+    return { bg: body.backgroundColor, fg: body.color };
   });
-  expect(colors.dark).toBe(true);
   expect(colors.bg).not.toBe(colors.fg);
+  await page.reload();
+  await expect(page.getByLabel("Iniciando Cesta")).toBeHidden({ timeout: 15_000 });
+  expect(await isDark()).toBe(true);
+  await openMenu(page);
+  await page.getByRole("switch", { name: /Cambiar a claro/ }).click();
+  expect(await isDark()).toBe(false);
 });
