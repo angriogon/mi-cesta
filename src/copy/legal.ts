@@ -55,7 +55,7 @@ const privacy: LegalDocument = {
         "Los datos se guardan en Supabase, en servidores de la Unión Europea (París), que actúa como encargado del tratamiento.",
         "La app se sirve desde GitHub Pages, que recibe tu dirección IP al descargarla, como cualquier web.",
         "Las fotos de los tickets se leen en tu propio dispositivo: el texto no sale de él salvo lo que guardas.",
-        "Al escanear un código de barras, el código se consulta en Open Food Facts. Al actualizar precios, tu código postal y los nombres de los productos se consultan en la tienda online de Mercadona. En ninguno de los dos casos se envía tu email ni otros datos tuyos.",
+        "Al escanear un código de barras, el código se consulta en Open Food Facts; no se envía tu email ni otros datos tuyos.",
         "Los miembros de tu hogar ven los datos del hogar, incluidas las alergias guardadas en él.",
       ],
     },
@@ -103,7 +103,7 @@ const terms: LegalDocument = {
       paragraphs: [
         "La lectura de tickets, las caducidades estimadas, las previsiones y los precios son orientativos y pueden contener errores: revísalos antes de fiarte de ellos.",
         "Los avisos de alergias son una ayuda, no una garantía: comprueba siempre el etiquetado de los productos.",
-        "Los precios de supermercados se obtienen de fuentes públicas y pueden no coincidir con los de tu tienda.",
+        "Los precios son los que has pagado en tus tickets; en otra tienda o en otro momento pueden ser distintos.",
       ],
     },
     {

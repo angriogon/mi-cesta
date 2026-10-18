@@ -10,10 +10,7 @@ let db: LocalDb;
 beforeEach(async () => {
   db = new LocalDb("hogar-test", memoryPersistence());
   await seedIfEmpty(db);
-  api = new CestaApi(db, {
-    fetch: async (_cp, names) =>
-      names.filter((name) => /tomate/i.test(name)).map((name) => ({ name, priceCents: 249 })),
-  });
+  api = new CestaApi(db);
 });
 
 const byName = async (name: string) => (await api.products()).find((product) => product.name === name)!;
@@ -197,20 +194,23 @@ describe("recetas, AutoCesta y respuestas", () => {
 });
 
 describe("precios", () => {
-  it("sin código postal no consulta fuera y conserva lo aprendido", async () => {
+  it("solo usa lo pagado en los tickets: los de la tienda online antigua se ignoran", async () => {
+    await db.insert("prices", [
+      {
+        id: "mercadona:x",
+        householdId: "hogar-test",
+        productId: "x",
+        productName: "Tomate ensalada",
+        category: "Fruta y verdura",
+        priceCents: 249,
+        merchant: "Mercadona",
+        source: "mercadona",
+        observedAt: "2026-10-01T10:00:00.000Z",
+      },
+    ]);
     const result = await api.refreshPrices();
-    expect(result.online).toBe(false);
-    expect(result.externalUpdated).toBe(0);
-  });
-
-  it("con código postal actualiza fruta y verdura desde la referencia externa", async () => {
-    await api.setPostalCode("41300");
-    const result = await api.refreshPrices();
-    expect(result.online).toBe(true);
-    expect(result.externalUpdated).toBeGreaterThan(0);
-    expect(result.prices.every((price) => price.category === "Fruta y verdura")).toBe(true);
-    expect(result.meta.lastSuccessfulAt).not.toBeNull();
-    await expect(api.setPostalCode("4130")).rejects.toThrow();
+    expect(result.learned).toBe(0);
+    expect(result.prices).toEqual([]);
   });
 });
 

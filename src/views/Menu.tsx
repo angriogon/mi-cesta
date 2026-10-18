@@ -25,7 +25,6 @@ import { saveTheme, storedTheme, type Theme } from "../lib/theme";
 import { LOAD_FAILED, notifyError, reportError } from "../lib/errors";
 import { MenuGroup, MenuButton } from "./menu/MenuList";
 import { HouseholdPage } from "./menu/HouseholdPage";
-import { PricesPage } from "./menu/PricesPage";
 import { PasswordPage, ResetPage } from "./menu/AccountPages";
 import { DietPage, NewsPage } from "./menu/InfoPages";
 import { DeleteAccountPage, ExportPage } from "./menu/PrivacyPages";
@@ -33,17 +32,7 @@ import { LegalPage } from "./legal/LegalPage";
 import { EquivalencesPage } from "./menu/EquivalencesPage";
 
 type Page =
-  | "home"
-  | "household"
-  | "diet"
-  | "news"
-  | "password"
-  | "reset"
-  | "prices"
-  | "export"
-  | "delete"
-  | "legal"
-  | "equivalences";
+  "home" | "household" | "diet" | "news" | "password" | "reset" | "export" | "delete" | "legal" | "equivalences";
 
 export function Menu({
   api,
@@ -53,7 +42,6 @@ export function Menu({
   onOpenRecipes,
   onOpenQuickInventory,
   onRefreshPrices,
-  onPostalCodeChange,
   onReset,
   onClose,
 }: {
@@ -63,8 +51,7 @@ export function Menu({
   priceMeta: PriceMeta;
   onOpenRecipes: () => void;
   onOpenQuickInventory: () => void;
-  onRefreshPrices: () => Promise<{ learned: number; externalUpdated: number; online: boolean }>;
-  onPostalCodeChange: (postalCode: string) => void;
+  onRefreshPrices: () => Promise<{ learned: number }>;
   onReset: () => void;
   onClose: () => void;
 }) {
@@ -90,20 +77,14 @@ export function Menu({
   }
 
   async function refreshPrices() {
-    if (!priceMeta.postalCode) {
-      go("prices");
-      return;
-    }
     setBusy(true);
     setMessage("Actualizando precios…");
     try {
       const result = await onRefreshPrices();
       setMessage(
-        result.online
-          ? `${result.learned + result.externalUpdated} precios revisados · ${result.learned} desde tickets y ${result.externalUpdated} de Mercadona.`
-          : result.learned
-            ? `${result.learned} precios actualizados desde tus tickets. Sin conexión con el catálogo externo.`
-            : "No hay precios nuevos. Guarda tickets para que Cesta aprenda lo que pagas.",
+        result.learned
+          ? `${result.learned} precios al día con lo que pagaste en tus tickets del último mes.`
+          : "No hay precios nuevos. Guarda tickets para que Cesta aprenda lo que pagas.",
       );
     } catch (error) {
       reportError(error, "menú");
@@ -190,13 +171,9 @@ export function Menu({
                   </MenuButton>
                 </MenuGroup>
                 <p className="mt-1.5 px-4 text-[0.8125rem] leading-[18px] whitespace-normal text-muted-foreground">
-                  {priceMeta.lastSuccessfulAt
-                    ? `Última actualización: ${new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "short" }).format(new Date(priceMeta.lastSuccessfulAt))}`
-                    : "Precios aún no actualizados"}
-                  {" · "}
-                  <button type="button" onClick={() => go("prices")} className="text-primary">
-                    {priceMeta.postalCode ? `CP ${priceMeta.postalCode}` : "Indicar código postal"}
-                  </button>
+                  Precios de lo que pagas en tus tickets
+                  {priceMeta.lastSuccessfulAt &&
+                    ` · revisados el ${new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "short" }).format(new Date(priceMeta.lastSuccessfulAt))}`}
                 </p>
                 {message && (
                   <p
@@ -251,16 +228,6 @@ export function Menu({
           )}
           {page === "household" && household && (
             <HouseholdPage api={api} account={account} household={household} onChange={setHousehold} />
-          )}
-          {page === "prices" && (
-            <PricesPage
-              api={api}
-              postalCode={priceMeta.postalCode}
-              onSaved={(postalCode) => {
-                onPostalCodeChange(postalCode);
-                go("home");
-              }}
-            />
           )}
           {page === "news" && <NewsPage version={version} />}
           {page === "diet" && household && <DietPage api={api} preferences={household.preferences} />}

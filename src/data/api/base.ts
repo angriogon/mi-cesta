@@ -13,14 +13,11 @@ import type {
   StockReason,
 } from "../types";
 
-import { ApiError, now, slug, type ExternalPrices } from "./shared";
+import { ApiError, now, slug } from "./shared";
 
 /** Base de la API: productos, existencias, lotes y el registro de operaciones. */
 export class ApiBase {
-  constructor(
-    readonly db: Db,
-    protected readonly externalPrices?: ExternalPrices,
-  ) {}
+  constructor(readonly db: Db) {}
 
   /**
    * Ejecuta una operación de varios pasos como una sola transacción: sus escrituras se acumulan
@@ -29,8 +26,8 @@ export class ApiBase {
    */
   protected async atomically<T>(work: (tx: this) => Promise<T>): Promise<T> {
     const batch = new BatchDb(this.db);
-    const Api = this.constructor as new (db: Db, externalPrices?: ExternalPrices) => this;
-    const result = await work(new Api(batch, this.externalPrices));
+    const Api = this.constructor as new (db: Db) => this;
+    const result = await work(new Api(batch));
     await batch.commit();
     return result;
   }

@@ -1,6 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../data/database.types";
-import type { ExternalPrices } from "../data/api";
 
 export const APP_VERSION = "5.0.0";
 /** Fecha y hora de esta compilación, para distinguir versiones publicadas el mismo día. */
@@ -36,21 +35,4 @@ export function supabase(): CestaSupabase {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "pkce" },
   });
   return client;
-}
-
-/** Precios de Mercadona a través de la Edge Function `mercadona-prices` (solo con Supabase). */
-export function externalPrices(): ExternalPrices | undefined {
-  if (backendMode !== "supabase") return undefined;
-  return {
-    async fetch(postalCode, names) {
-      const response = await supabase().functions.invoke<{ prices?: { name: string; priceCents: number }[] }>(
-        "mercadona-prices",
-        { body: { postalCode, names } },
-      );
-      const error: unknown = response.error;
-      if (error) throw error instanceof Error ? error : new Error("No se pudieron consultar los precios.");
-      const prices = response.data?.prices;
-      return Array.isArray(prices) ? prices : null;
-    },
-  };
 }

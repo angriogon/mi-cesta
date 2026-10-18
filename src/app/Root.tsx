@@ -9,7 +9,7 @@ import { SupabaseDb } from "../data/supabase-db";
 import { readText, writeText } from "../lib/storage";
 import { localAccount, myHouseholds, supabaseAccount, type HouseholdSummary } from "./account";
 import { CestaApp } from "./CestaApp";
-import { backendMode, externalPrices, supabase } from "./config";
+import { backendMode, supabase } from "./config";
 import { AuthScreen, NewPasswordScreen } from "./auth/AuthScreens";
 import { HouseholdScreen } from "./auth/HouseholdScreen";
 
@@ -82,7 +82,7 @@ function SupabaseRoot() {
   }, [householdId]);
 
   const api = useMemo(
-    () => (session && householdId ? new CestaApi(new SupabaseDb(supabase(), householdId), externalPrices()) : null),
+    () => (session && householdId ? new CestaApi(new SupabaseDb(supabase(), householdId)) : null),
     [session, householdId],
   );
   const account = useMemo(
