@@ -210,9 +210,11 @@ export function Menu({
                 </MenuButton>
               </MenuGroup>
               <MenuGroup>
-                <MenuButton tone="danger" icon={<RotateCcw />} onClick={() => go("reset")}>
-                  Restablecer datos del hogar
-                </MenuButton>
+                {account.role !== "member" && (
+                  <MenuButton tone="danger" icon={<RotateCcw />} onClick={() => go("reset")}>
+                    Restablecer datos del hogar
+                  </MenuButton>
+                )}
                 {account.mode === "supabase" && (
                   <MenuButton tone="danger" icon={<LogOut />} onClick={() => void account.signOut()}>
                     Cerrar sesión

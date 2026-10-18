@@ -45,7 +45,7 @@ export function useCestaCore(api: CestaApi, account: Account) {
   const [expiryItems, setExpiryItems] = useState<ExpiryItem[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const device = useMemo(() => deviceId(), []);
-  const admin = useAdmin(householdId);
+  const admin = useAdmin(householdId, account.role);
   const toast = useToast();
   const showToast = toast.show;
   useEffect(() => setErrorNotifier((message) => showToast(message)), [showToast]);

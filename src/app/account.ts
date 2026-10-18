@@ -1,15 +1,24 @@
 import { backendMode, supabase } from "./config";
 
+/** Responsable (quien creó el hogar), administrador o miembro. */
+export type HouseholdRole = "owner" | "admin" | "member";
+
 export interface HouseholdSummary {
   id: string;
   name: string;
   inviteCode: string;
-  role: "owner" | "member";
+  role: HouseholdRole;
 }
+
+const asRole = (value: string): HouseholdRole => (value === "owner" || value === "admin" ? value : "member");
 
 export interface Account {
   mode: "supabase" | "local";
   email: string | null;
+  /** Rol en el hogar (lo comprueba el servidor). En modo local no hay rol: el mantenimiento va con PIN. */
+  role: HouseholdRole | null;
+  /** Nombra o quita administradores (solo responsables y administradores). */
+  setMemberRole(userId: string, role: "admin" | "member"): Promise<void>;
   /** Comprueba la contraseña (o la frase de confirmación en modo local) antes de acciones destructivas. */
   verifyPassword(password: string): Promise<boolean>;
   changePassword(current: string, next: string): Promise<void>;
@@ -29,7 +38,7 @@ export async function myHouseholds(): Promise<HouseholdSummary[]> {
     id: row.id,
     name: row.name,
     inviteCode: row.invite_code,
-    role: row.role === "owner" ? "owner" : "member",
+    role: asRole(row.role),
   }));
 }
 
@@ -63,10 +72,19 @@ function clearLocalData() {
   for (const key of Object.keys(window.localStorage)) if (key.startsWith("cesta-")) window.localStorage.removeItem(key);
 }
 
-export function supabaseAccount(email: string, householdId: string, onLeave: () => void): Account {
+export function supabaseAccount(email: string, householdId: string, role: HouseholdRole, onLeave: () => void): Account {
   return {
     mode: "supabase",
     email,
+    role,
+    async setMemberRole(userId, next) {
+      const { error } = await supabase().rpc("set_member_role", {
+        p_household_id: householdId,
+        p_user_id: userId,
+        p_role: next,
+      });
+      if (error) throw new Error("Solo los administradores del hogar pueden cambiar roles.");
+    },
     async verifyPassword(password) {
       const { error } = await supabase().auth.signInWithPassword({ email, password });
       return !error;
@@ -113,6 +131,10 @@ export function localAccount(): Account {
   return {
     mode: "local",
     email: null,
+    role: null,
+    async setMemberRole() {
+      throw new Error("En modo local no hay cuenta.");
+    },
     async verifyPassword(password) {
       return password.trim().toUpperCase() === LOCAL_RESET_PHRASE;
     },

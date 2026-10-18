@@ -88,12 +88,17 @@ function SupabaseRoot() {
   const account = useMemo(
     () =>
       session && householdId
-        ? supabaseAccount(session.user.email ?? "", householdId, () => {
-            setHouseholdId(null);
-            setHouseholds((list) => list?.filter((item) => item.id !== householdId) ?? null);
-          })
+        ? supabaseAccount(
+            session.user.email ?? "",
+            householdId,
+            households?.find((item) => item.id === householdId)?.role ?? "member",
+            () => {
+              setHouseholdId(null);
+              setHouseholds((list) => list?.filter((item) => item.id !== householdId) ?? null);
+            },
+          )
         : null,
-    [session, householdId],
+    [session, householdId, households],
   );
 
   if (session === undefined) return <Splash />;
