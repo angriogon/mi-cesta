@@ -234,10 +234,12 @@ test.describe("sin service worker", () => {
 
 test("menú: precios, perfil alimentario, novedades y restablecer", async ({ page }) => {
   await openMenu(page);
+  await page.getByRole("button", { name: "Precios" }).click();
   await page.getByRole("button", { name: "Actualizar precios" }).click();
   await expect(
     page.getByText("No hay precios nuevos. Guarda tickets para que Cesta aprenda lo que pagas."),
   ).toBeVisible();
+  await page.getByRole("button", { name: "← Volver al menú" }).click();
   await page.getByRole("button", { name: "Alimentación especial" }).click();
   await page.getByLabel("Activar perfil").check();
   await page.getByPlaceholder("gluten, leche, frutos secos").fill("huevo");

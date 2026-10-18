@@ -12,6 +12,8 @@ const migration = [
   "20261023000000_catalog_more.sql",
   "20261024000000_pet_stock_push.sql",
   "20261025000000_admin_role.sql",
+  "20261026000000_member_permissions.sql",
+  "20261026000001_late_reminders.sql",
 ]
   .map((file) => readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8"))
   .join("\n");
@@ -260,6 +262,70 @@ ok(
   "y se le puede quitar",
 );
 
+// ---- permisos de cada persona y quitar del hogar ----
+const PABLO = "55555555-5555-5555-5555-555555555555";
+await db.query(`insert into auth.users values ($1, 'pablo@x.es')`, [PABLO]);
+await as(PABLO, `select public.join_household($1)`, [code]);
+const permissionsOf = async (user) =>
+  (
+    await as(ANA, `select role, permissions from household_members where household_id = $1 and user_id = $2`, [
+      hid,
+      user,
+    ])
+  ).rows[0];
+ok(
+  !(await tryAs(LUIS, `select public.set_member_permissions($1, $2, array['mascota'])`, [hid, PABLO])),
+  "sin el permiso «miembros» no se cambian permisos",
+);
+ok(
+  await tryAs(ANA, `select public.set_member_permissions($1, $2, array['mascota'])`, [hid, LUIS]),
+  "la responsable da a Luis el permiso de la mascota",
+);
+ok((await permissionsOf(LUIS)).role === "member", "con un permiso suelto sigue siendo miembro");
+ok(await addReminder(LUIS, "rem-luis-2"), "y con él gestiona los recordatorios de la mascota");
+ok(
+  !(await tryAs(LUIS, `select public.set_member_permissions($1, $2, array['almacen'])`, [hid, PABLO])),
+  "el permiso de la mascota no deja gestionar miembros",
+);
+ok(
+  !(await tryAs(ANA, `select public.set_member_permissions($1, $2, array['todo'])`, [hid, LUIS])),
+  "solo permisos conocidos",
+);
+await as(ANA, `select public.set_member_permissions($1, $2, array['almacen', 'mascota', 'miembros'])`, [hid, LUIS]);
+ok((await permissionsOf(LUIS)).role === "admin", "con todos los permisos pasa a administrador");
+ok(
+  !(await tryAs(LUIS, `select public.set_member_permissions($1, $2, '{}')`, [hid, LUIS])),
+  "nadie cambia sus propios permisos",
+);
+ok(!(await tryAs(LUIS, `select public.set_member_permissions($1, $2, '{}')`, [hid, ANA])), "ni los del responsable");
+const listed = (await as(PABLO, `select * from public.household_members_list($1)`, [hid])).rows;
+ok(listed.find((row) => row.user_id === LUIS)?.permissions.length === 3, "el listado de miembros incluye los permisos");
+ok(
+  (await as(LUIS, `select permissions from public.my_households()`)).rows[0].permissions.length === 3,
+  "y cada uno ve los suyos en sus hogares",
+);
+await as(PABLO, `insert into push_subscriptions (endpoint, household_id, p256dh, auth) values ($1, $2, 'k', 'a')`, [
+  "https://push.example/pablo",
+  hid,
+]);
+ok(
+  !(await tryAs(PABLO, `select public.remove_member($1, $2)`, [hid, LUIS])),
+  "un miembro sin permiso no quita a nadie",
+);
+ok(!(await tryAs(LUIS, `select public.remove_member($1, $2)`, [hid, ANA])), "nadie quita al responsable");
+ok(await tryAs(LUIS, `select public.remove_member($1, $2)`, [hid, PABLO]), "Luis, con permiso, quita a Pablo");
+ok(
+  (await as(PABLO, `select count(*)::int n from products where household_id = $1`, [hid])).rows[0].n === 0,
+  "Pablo ya no ve los datos del hogar",
+);
+ok(
+  (await db.query(`select count(*)::int n from push_subscriptions where endpoint = 'https://push.example/pablo'`))
+    .rows[0].n === 0,
+  "y sus dispositivos dejan de recibir los avisos del hogar",
+);
+await as(ANA, `select public.set_member_permissions($1, $2, '{}')`, [hid, LUIS]);
+await as(ANA, `delete from dog_reminders where household_id = $1 and id = 'rem-luis-2'`, [hid]);
+
 // ---- prune_history: límite al historial ----
 await db.query(
   `insert into stock_events (household_id, id, product_id, delta, reason, created_at) values
@@ -316,6 +382,16 @@ await db.query(
   [hid],
 );
 const due = (await db.query(`select reminder_id from public.due_pet_reminders()`)).rows.map((r) => r.reminder_id);
+// Un recordatorio a las 23:30 se envía a las 23:45 (antes, «23:30 + 2 h» daba la vuelta y no salía nunca).
+const lateWindow = (
+  await db.query(
+    "select (time '23:45' >= time '23:30' and time '23:45' - time '23:30' < interval '2 hours') as yes, (time '00:30' >= time '23:30') as nextDay",
+  )
+).rows[0];
+ok(
+  lateWindow.yes && !lateWindow.nextday,
+  "los recordatorios de la noche entran en la ventana y no se repiten al día siguiente",
+);
 // Cerca de medianoche los recordatorios de prueba cambian de día; no se comprueba en ese rato.
 const nearMidnight = (
   await db.query(`select extract(hour from ${localNow}) = 0 and extract(minute from ${localNow}) < 6 as x`)

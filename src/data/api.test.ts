@@ -212,6 +212,27 @@ describe("precios", () => {
     expect(result.learned).toBe(0);
     expect(result.prices).toEqual([]);
   });
+
+  it("guarda el último precio de cada súper y el súper elegido para la compra", async () => {
+    const base = {
+      householdId: "hogar-test",
+      productId: "x",
+      productName: "Tomate ensalada",
+      category: "Fruta y verdura" as const,
+      source: "ticket" as const,
+    };
+    await db.insert("prices", [
+      { ...base, id: "p1", priceCents: 249, merchant: "Mercadona", observedAt: "2026-10-01T10:00:00.000Z" },
+      { ...base, id: "p2", priceCents: 239, merchant: "MERCADONA S.A.", observedAt: "2026-10-08T10:00:00.000Z" },
+      { ...base, id: "p3", priceCents: 199, merchant: "Dia", observedAt: "2026-10-05T10:00:00.000Z" },
+    ]);
+    const { prices } = await api.prices();
+    expect(prices.map((price) => price.priceCents).sort()).toEqual([199, 239]);
+    expect((await api.setPreferredStore("DIA")).preferredStore).toBe("DIA");
+    // Actualizar precios no olvida el súper elegido.
+    expect((await api.refreshPrices()).meta.preferredStore).toBe("DIA");
+    expect((await api.prices()).meta.preferredStore).toBe("DIA");
+  });
 });
 
 describe("Serranito", () => {

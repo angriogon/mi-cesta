@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { readJson, removeKey, writeJson } from "../../lib/storage";
 import { reportError } from "../../lib/errors";
-import type { HouseholdRole } from "../../app/account";
+import type { Permission } from "../../app/account";
 
 export interface AdminSettings {
   salt: string;
@@ -24,18 +24,21 @@ export async function hashPin(pin: string, salt: string): Promise<string> {
 
 export type AdminState = ReturnType<typeof useAdmin>;
 
+/** Zonas de mantenimiento: el almacén (existencias, mínimos y catálogo) y la mascota. */
+export type MaintenanceArea = Extract<Permission, "almacen" | "mascota">;
+
 /**
- * Acceso al mantenimiento (existencias, mínimos y catálogo).
- * - Con cuenta, lo decide el rol del hogar (lo comprueba el servidor): responsables y administradores
- *   entran directamente; a los miembros se les explica que lo pidan.
- * - En modo local (pruebas), PIN o biometría del dispositivo; se vuelve a bloquear al salir de la app.
+ * Acceso al mantenimiento.
+ * - Con cuenta, lo deciden los permisos de cada persona en el hogar (Menú → Mi hogar): quien tiene
+ *   el de esa zona entra directamente; a los demás se les explica que lo pidan.
+ * - En modo local (pruebas), PIN o biometría del dispositivo para todo; se vuelve a bloquear al salir de la app.
  */
-export function useAdmin(householdId: string, role: HouseholdRole | null = null) {
-  const byRole = role !== null;
+export function useAdmin(householdId: string, permissions: readonly Permission[] | null = null) {
+  const byRole = permissions !== null;
   const key = `cesta-admin-v1:${householdId}`;
   const [settings, setSettings] = useState<AdminSettings | null>(() => readJson<AdminSettings | null>(key, null));
   const [unlocked, setUnlocked] = useState(false);
-  const [requested, setRequested] = useState(false);
+  const [requested, setRequested] = useState<MaintenanceArea | null>(null);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
 
   useEffect(() => {
@@ -55,7 +58,7 @@ export function useAdmin(householdId: string, role: HouseholdRole | null = null)
   }, []);
 
   useEffect(() => {
-    if (unlocked) setRequested(false);
+    if (unlocked) setRequested(null);
   }, [unlocked]);
 
   const save = useCallback(
@@ -155,12 +158,16 @@ export function useAdmin(householdId: string, role: HouseholdRole | null = null)
     () => ({
       byRole,
       settings,
-      unlocked: byRole ? role !== "member" : unlocked,
+      /** Mantenimiento del almacén abierto. */
+      unlocked: byRole ? permissions.includes("almacen") : unlocked,
+      /** Si se puede entrar al mantenimiento de una zona. */
+      can: (area: MaintenanceArea) => (byRole ? permissions.includes(area) : unlocked),
+      /** Zona cuyo mantenimiento se ha pedido sin permiso (o sin desbloquear, en modo local). */
       requested,
       biometricAvailable,
       biometricEnabled: Boolean(settings?.credentialId),
-      request: () => setRequested(true),
-      cancel: () => setRequested(false),
+      request: (area: MaintenanceArea = "almacen") => setRequested(area),
+      cancel: () => setRequested(null),
       lock: () => {
         if (!byRole) setUnlocked(false);
       },
@@ -172,7 +179,7 @@ export function useAdmin(householdId: string, role: HouseholdRole | null = null)
     }),
     [
       byRole,
-      role,
+      permissions,
       settings,
       unlocked,
       requested,

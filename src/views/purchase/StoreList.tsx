@@ -16,6 +16,8 @@ export function StoreList(props: {
   clearItems: () => void;
   storePurchased: () => Promise<void>;
   prices: PriceRef[];
+  /** Supermercado elegido en Menú → Precios (vacío: el último precio pagado en cualquiera). */
+  preferredStore?: string;
   stock: StockLike[];
   rejected: { requestedName: string; productId: string }[];
   openScanner: () => void;
@@ -26,7 +28,10 @@ export function StoreList(props: {
   const [confirmClear, setConfirmClear] = useState(false);
   const budget = props.items
     .filter((item) => !item.done)
-    .reduce((sum, item) => sum + (priceFor(item, props.prices)?.priceCents ?? 0) * item.quantity, 0);
+    .reduce(
+      (sum, item) => sum + (priceFor(item, props.prices, props.preferredStore)?.priceCents ?? 0) * item.quantity,
+      0,
+    );
 
   useEffect(() => {
     if (!confirmClear) return;
@@ -39,7 +44,7 @@ export function StoreList(props: {
       <div className="mb-3 flex items-center justify-end gap-2">
         {budget > 0 && (
           <span className="mr-auto rounded-xl bg-muted px-3 py-2 text-xs font-semibold text-primary">
-            Presupuesto · {formatCents(budget)}
+            Presupuesto{props.preferredStore ? ` en ${props.preferredStore}` : ""} · {formatCents(budget)}
           </span>
         )}
         <button
@@ -81,7 +86,7 @@ export function StoreList(props: {
               </h2>
               <div className="overflow-hidden rounded-lg bg-card">
                 {group.items.map((item, index) => {
-                  const price = priceFor(item, props.prices);
+                  const price = priceFor(item, props.prices, props.preferredStore);
                   const alternative = props.stock.find(
                     (product) =>
                       product.category === item.category &&
@@ -123,7 +128,9 @@ export function StoreList(props: {
                           className={`min-w-0 flex-1 truncate py-2 text-left text-[0.8125rem] font-semibold ${item.done ? "text-muted-foreground line-through" : ""}`}
                         >
                           {item.name}
-                          {price?.priceCents ? <PriceTag price={price} quantity={item.quantity} /> : null}
+                          {price?.priceCents ? (
+                            <PriceTag price={price} quantity={item.quantity} preferredStore={props.preferredStore} />
+                          ) : null}
                         </button>
                         {!item.done && (
                           <button

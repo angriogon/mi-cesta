@@ -22,7 +22,7 @@ import type { CestaApi } from "../data/api";
 import type { Household, PriceMeta } from "../data/types";
 import { type Account } from "../app/account";
 import { saveTheme, storedTheme, type Theme } from "../lib/theme";
-import { LOAD_FAILED, notifyError, reportError } from "../lib/errors";
+import { LOAD_FAILED, notifyError } from "../lib/errors";
 import { MenuGroup, MenuButton } from "./menu/MenuList";
 import { HouseholdPage } from "./menu/HouseholdPage";
 import { PasswordPage, ResetPage } from "./menu/AccountPages";
@@ -31,9 +31,20 @@ import { NewsPage } from "./menu/NewsPage";
 import { DeleteAccountPage, ExportPage } from "./menu/PrivacyPages";
 import { LegalPage } from "./legal/LegalPage";
 import { EquivalencesPage } from "./menu/EquivalencesPage";
+import { PricesPage } from "./menu/PricesPage";
 
 type Page =
-  "home" | "household" | "diet" | "news" | "password" | "reset" | "export" | "delete" | "legal" | "equivalences";
+  | "home"
+  | "household"
+  | "prices"
+  | "diet"
+  | "news"
+  | "password"
+  | "reset"
+  | "export"
+  | "delete"
+  | "legal"
+  | "equivalences";
 
 export function Menu({
   api,
@@ -43,6 +54,7 @@ export function Menu({
   onOpenRecipes,
   onOpenQuickInventory,
   onRefreshPrices,
+  onPriceMetaChange,
   onReset,
   onClose,
 }: {
@@ -53,12 +65,11 @@ export function Menu({
   onOpenRecipes: () => void;
   onOpenQuickInventory: () => void;
   onRefreshPrices: () => Promise<{ learned: number }>;
+  onPriceMetaChange: (meta: PriceMeta) => void;
   onReset: () => void;
   onClose: () => void;
 }) {
   const [page, setPage] = useState<Page>("home");
-  const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
   const [household, setHousehold] = useState<Household | null>(null);
   const [theme, setTheme] = useState<Theme>(storedTheme);
 
@@ -72,28 +83,7 @@ export function Menu({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  function go(next: Page) {
-    setPage(next);
-    setMessage("");
-  }
-
-  async function refreshPrices() {
-    setBusy(true);
-    setMessage("Actualizando precios…");
-    try {
-      const result = await onRefreshPrices();
-      setMessage(
-        result.learned
-          ? `${result.learned} precios al día con lo que pagaste en tus tickets del último mes.`
-          : "No hay precios nuevos. Guarda tickets para que Cesta aprenda lo que pagas.",
-      );
-    } catch (error) {
-      reportError(error, "menú");
-      setMessage("No se han podido actualizar. Comprueba la conexión.");
-    } finally {
-      setBusy(false);
-    }
-  }
+  const go = setPage;
 
   return (
     <div className="fixed inset-0 z-[60]">
@@ -167,23 +157,15 @@ export function Menu({
                   <MenuButton tile="bg-warning" icon={<Utensils />} onClick={onOpenRecipes}>
                     Recetas con mi stock
                   </MenuButton>
-                  <MenuButton tile="bg-info" icon={<Euro />} onClick={() => void refreshPrices()} disabled={busy}>
-                    Actualizar precios
+                  <MenuButton tile="bg-info" icon={<Euro />} onClick={() => go("prices")}>
+                    Precios
                   </MenuButton>
                 </MenuGroup>
                 <p className="mt-1.5 px-4 text-[0.8125rem] leading-[18px] whitespace-normal text-muted-foreground">
-                  Precios de lo que pagas en tus tickets
-                  {priceMeta.lastSuccessfulAt &&
-                    ` · revisados el ${new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "short" }).format(new Date(priceMeta.lastSuccessfulAt))}`}
+                  {priceMeta.preferredStore
+                    ? `En la compra, precios de ${priceMeta.preferredStore}`
+                    : "Precios de lo que pagas en tus tickets"}
                 </p>
-                {message && (
-                  <p
-                    className="mt-1 px-4 text-[0.8125rem] leading-[18px] whitespace-normal text-muted-foreground"
-                    role="status"
-                  >
-                    {message}
-                  </p>
-                )}
               </div>
               <MenuGroup>
                 <MenuButton tile="bg-primary" icon={<House />} onClick={() => go("household")}>
@@ -211,7 +193,7 @@ export function Menu({
                 </MenuButton>
               </MenuGroup>
               <MenuGroup>
-                {account.role !== "member" && (
+                {account.can("almacen") && (
                   <MenuButton tone="danger" icon={<RotateCcw />} onClick={() => go("reset")}>
                     Restablecer datos del hogar
                   </MenuButton>
@@ -231,6 +213,14 @@ export function Menu({
           )}
           {page === "household" && household && (
             <HouseholdPage api={api} account={account} household={household} onChange={setHousehold} />
+          )}
+          {page === "prices" && (
+            <PricesPage
+              api={api}
+              priceMeta={priceMeta}
+              onPriceMetaChange={onPriceMetaChange}
+              onRefreshPrices={onRefreshPrices}
+            />
           )}
           {page === "news" && <NewsPage version={version} />}
           {page === "diet" && household && <DietPage api={api} preferences={household.preferences} />}

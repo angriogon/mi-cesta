@@ -1,24 +1,53 @@
 import { backendMode, supabase } from "./config";
 
-/** Responsable (quien creó el hogar), administrador o miembro. */
+/** Responsable (quien creó el hogar), administrador (todos los permisos) o miembro. */
 export type HouseholdRole = "owner" | "admin" | "member";
+
+/**
+ * Permisos de cada persona del hogar (además del uso diario, que tienen todos):
+ * - almacen: mantenimiento del almacén (existencias, mínimos, productos, restablecer).
+ * - mascota: añadir o borrar artículos de la mascota y gestionar sus recordatorios.
+ * - miembros: dar o quitar permisos y quitar a alguien del hogar.
+ */
+export type Permission = "almacen" | "mascota" | "miembros";
+export const PERMISSIONS: readonly Permission[] = ["almacen", "mascota", "miembros"];
+
+export interface HouseholdMember {
+  userId: string;
+  email: string;
+  role: HouseholdRole;
+  permissions: Permission[];
+}
 
 export interface HouseholdSummary {
   id: string;
   name: string;
   inviteCode: string;
   role: HouseholdRole;
+  permissions: Permission[];
 }
 
 const asRole = (value: string): HouseholdRole => (value === "owner" || value === "admin" ? value : "member");
+
+/** Permisos efectivos: el responsable y los administradores los tienen todos. */
+export function effectivePermissions(role: string, permissions: readonly string[] | null | undefined): Permission[] {
+  if (role === "owner" || role === "admin") return [...PERMISSIONS];
+  return PERMISSIONS.filter((permission) => permissions?.includes(permission));
+}
 
 export interface Account {
   mode: "supabase" | "local";
   email: string | null;
   /** Rol en el hogar (lo comprueba el servidor). En modo local no hay rol: el mantenimiento va con PIN. */
   role: HouseholdRole | null;
-  /** Nombra o quita administradores (solo responsables y administradores). */
-  setMemberRole(userId: string, role: "admin" | "member"): Promise<void>;
+  /** Permisos efectivos en el hogar; null en modo local. */
+  permissions: Permission[] | null;
+  /** Si tiene un permiso (en modo local, siempre: el mantenimiento se protege con el PIN). */
+  can(permission: Permission): boolean;
+  /** Cambia los permisos de otra persona (necesita el permiso «miembros»). */
+  setMemberPermissions(userId: string, permissions: Permission[]): Promise<void>;
+  /** Quita a otra persona del hogar (necesita el permiso «miembros»; nunca al responsable). */
+  removeMember(userId: string): Promise<void>;
   /** Comprueba la contraseña (o la frase de confirmación en modo local) antes de acciones destructivas. */
   verifyPassword(password: string): Promise<boolean>;
   changePassword(current: string, next: string): Promise<void>;
@@ -26,7 +55,7 @@ export interface Account {
   leaveHousehold(): Promise<void>;
   /** Elimina la cuenta: sale de todos sus hogares (los que se quedan vacíos se borran) y cierra la sesión. */
   deleteAccount(password: string): Promise<void>;
-  members(): Promise<{ userId: string; email: string; role: string }[]>;
+  members(): Promise<HouseholdMember[]>;
 }
 
 export const LOCAL_RESET_PHRASE = "RESTABLECER";
@@ -39,6 +68,7 @@ export async function myHouseholds(): Promise<HouseholdSummary[]> {
     name: row.name,
     inviteCode: row.invite_code,
     role: asRole(row.role),
+    permissions: effectivePermissions(row.role, row.permissions),
   }));
 }
 
@@ -72,18 +102,30 @@ function clearLocalData() {
   for (const key of Object.keys(window.localStorage)) if (key.startsWith("cesta-")) window.localStorage.removeItem(key);
 }
 
-export function supabaseAccount(email: string, householdId: string, role: HouseholdRole, onLeave: () => void): Account {
+export function supabaseAccount(
+  email: string,
+  householdId: string,
+  role: HouseholdRole,
+  permissions: Permission[],
+  onLeave: () => void,
+): Account {
   return {
     mode: "supabase",
     email,
     role,
-    async setMemberRole(userId, next) {
-      const { error } = await supabase().rpc("set_member_role", {
+    permissions,
+    can: (permission) => permissions.includes(permission),
+    async setMemberPermissions(userId, next) {
+      const { error } = await supabase().rpc("set_member_permissions", {
         p_household_id: householdId,
         p_user_id: userId,
-        p_role: next,
+        p_permissions: next,
       });
-      if (error) throw new Error("Solo los administradores del hogar pueden cambiar roles.");
+      if (error) throw new Error("No tienes permiso para cambiar los permisos de los miembros.");
+    },
+    async removeMember(userId) {
+      const { error } = await supabase().rpc("remove_member", { p_household_id: householdId, p_user_id: userId });
+      if (error) throw new Error("No se ha podido quitar a esa persona del hogar.");
     },
     async verifyPassword(password) {
       const { error } = await supabase().auth.signInWithPassword({ email, password });
@@ -121,7 +163,8 @@ export function supabaseAccount(email: string, householdId: string, role: Househ
       return (data ?? []).map((row) => ({
         userId: row.user_id,
         email: row.email,
-        role: row.role,
+        role: asRole(row.role),
+        permissions: effectivePermissions(row.role, row.permissions),
       }));
     },
   };
@@ -132,7 +175,12 @@ export function localAccount(): Account {
     mode: "local",
     email: null,
     role: null,
-    async setMemberRole() {
+    permissions: null,
+    can: () => true,
+    async setMemberPermissions() {
+      throw new Error("En modo local no hay cuenta.");
+    },
+    async removeMember() {
       throw new Error("En modo local no hay cuenta.");
     },
     async verifyPassword(password) {

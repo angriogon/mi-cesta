@@ -86,6 +86,8 @@ export interface PriceMeta {
   lastAttemptedAt: string | null;
   lastSuccessfulAt: string | null;
   updatedCount: number;
+  /** Supermercado cuyos precios se ven en la compra (vacío: el último precio pagado en cualquiera). */
+  preferredStore?: string;
 }
 
 export interface TicketItem {

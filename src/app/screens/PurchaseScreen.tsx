@@ -46,6 +46,7 @@ export function PurchaseScreen() {
           mergeDuplicates={() => setShopping((items) => mergeDuplicates(items))}
           generateChecklist={store.generateChecklist}
           prices={store.prices}
+          preferredStore={store.priceMeta.preferredStore}
           products={store.products}
           openScanner={() => store.setScanner("shopping")}
           onAvoided={() => {
@@ -92,6 +93,7 @@ export function PurchaseScreen() {
           clearItems={store.clearChecklist}
           storePurchased={store.storePurchased}
           prices={store.prices}
+          preferredStore={store.priceMeta.preferredStore}
           stock={store.stock}
           rejected={store.rejected}
           openScanner={() => store.setScanner("checklist")}

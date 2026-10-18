@@ -45,3 +45,38 @@ export function storeForBrand(brand: string): string | null {
   if (!key) return null;
   return BY_BRAND.get(key) ?? BY_BRAND.get(key.split(" ")[0]) ?? null;
 }
+
+/** Supermercados que se pueden elegir para ver sus precios en la compra. */
+export const STORES = [
+  "Mercadona",
+  "DIA",
+  "Lidl",
+  "Aldi",
+  "Eroski",
+  "Consum",
+  "Carrefour",
+  "Supeco",
+  "Jurado",
+  "Alcampo",
+] as const;
+export type StoreName = (typeof STORES)[number];
+
+/** Cómo aparece cada cadena en un ticket o en el comercio guardado. Supeco antes que Carrefour (es del grupo). */
+const STORE_PATTERNS: [StoreName, RegExp][] = [
+  ["Mercadona", /mercadona/],
+  ["Supeco", /supeco/],
+  ["Carrefour", /carrefour/],
+  ["Lidl", /\blidl\b/],
+  ["Aldi", /\baldi\b/],
+  ["DIA", /\bdia\b/],
+  ["Alcampo", /alcampo|auchan/],
+  ["Eroski", /eroski/],
+  ["Consum", /\bconsum\b/],
+  ["Jurado", /jurado/],
+];
+
+/** Cadena de un comercio («MERCADONA S.A.» → Mercadona, «Dia» → DIA), o null si no es ninguna conocida. */
+export function canonicalStore(merchant: string): StoreName | null {
+  const text = normalizeWords(merchant);
+  return STORE_PATTERNS.find(([, pattern]) => pattern.test(text))?.[0] ?? null;
+}

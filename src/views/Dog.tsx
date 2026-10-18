@@ -261,7 +261,9 @@ export function DogView({
               </div>
             )}
           </section>
-          {pushHouseholdId && <PushCard householdId={pushHouseholdId} />}
+          {pushHouseholdId && (
+            <PushCard householdId={pushHouseholdId} hasAlerts={reminders.length > 0 || items.length > 0} />
+          )}
         </>
       )}
 

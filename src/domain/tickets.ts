@@ -93,13 +93,21 @@ function findDate(text: string, now: Date) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+/**
+ * Cadena del ticket. Se busca en el texto tal cual (sin quitar tildes) para que el «Día» de una fecha
+ * no se confunda con DIA; Supeco antes que Carrefour, que aparece en sus tickets por ser del grupo.
+ */
 function findMerchant(text: string) {
   if (/mercadona/i.test(text)) return "Mercadona";
+  if (/supeco/i.test(text)) return "Supeco";
   if (/carrefour/i.test(text)) return "Carrefour";
   if (/\blidl\b/i.test(text)) return "Lidl";
-  if (/\bdia\b/i.test(text)) return "Dia";
-  if (/alcampo/i.test(text)) return "Alcampo";
+  if (/\baldi\b/i.test(text)) return "Aldi";
+  if (/\bdia\b/i.test(text)) return "DIA";
+  if (/alcampo|auchan/i.test(text)) return "Alcampo";
   if (/eroski/i.test(text)) return "Eroski";
+  if (/\bconsum\b/i.test(text)) return "Consum";
+  if (/jurado/i.test(text)) return "Jurado";
   return null;
 }
 

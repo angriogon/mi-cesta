@@ -228,18 +228,21 @@ export type Database = {
         Row: {
           created_at: string
           household_id: string
+          permissions: string[]
           role: string
           user_id: string
         }
         Insert: {
           created_at?: string
           household_id: string
+          permissions?: string[]
           role?: string
           user_id: string
         }
         Update: {
           created_at?: string
           household_id?: string
+          permissions?: string[]
           role?: string
           user_id?: string
         }
@@ -831,11 +834,18 @@ export type Database = {
         Args: { p_household_id: string }
         Returns: {
           email: string
+          permissions: string[]
           role: string
           user_id: string
         }[]
       }
       is_admin: { Args: { p_household_id: string }; Returns: boolean }
+      has_permission: { Args: { p_household_id: string; p_permission: string }; Returns: boolean }
+      set_member_permissions: {
+        Args: { p_household_id: string; p_permissions: string[]; p_user_id: string }
+        Returns: undefined
+      }
+      remove_member: { Args: { p_household_id: string; p_user_id: string }; Returns: undefined }
       is_member: { Args: { p_household_id: string }; Returns: boolean }
       set_member_role: {
         Args: { p_household_id: string; p_role: string; p_user_id: string }
@@ -849,6 +859,7 @@ export type Database = {
           id: string
           invite_code: string
           name: string
+          permissions: string[]
           role: string
         }[]
       }
