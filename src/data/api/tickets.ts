@@ -1,6 +1,6 @@
 import { PERISHABLE } from "../../domain/categories";
 import { matchLine } from "../../domain/equivalences";
-import { cleanProductName, findProduct, similarNames } from "../../domain/matching";
+import { cleanProductName, similarNames } from "../../domain/matching";
 import { uid } from "../../lib/text";
 import type { InverseStep, PriceRef, Ticket, TicketItem, TicketReview } from "../types";
 import { logError } from "../../lib/errors";
@@ -222,7 +222,17 @@ export class TicketsApi extends PricesApi {
   ): Promise<void> {
     const key = cleanProductName(alias);
     if (!key) return;
-    const existing = known.find((item) => cleanProductName(item.alias) === key);
+    const matches = known.filter((item) => cleanProductName(item.alias) === key);
+    const existing = matches[0];
+    // Un mismo texto solo puede tener una equivalencia: las repetidas (de versiones anteriores) sobran.
+    const repeated = matches.slice(1);
+    if (repeated.length) {
+      await this.db.remove(
+        "name_aliases",
+        repeated.map((item) => item.id),
+      );
+      for (const item of repeated) known.splice(known.indexOf(item), 1);
+    }
     if (existing) {
       if (existing.productId !== productId) await this.db.update("name_aliases", existing.id, { productId });
       existing.productId = productId;
@@ -243,9 +253,11 @@ export class TicketsApi extends PricesApi {
     if (!review) return;
     if (review.issueType === "unidentified") {
       const name = correctedName.trim() || review.description;
-      const products = await this.db.list("products");
-      const product = findProduct(name, products) ?? (await this.ensureProduct(products, name));
-      await this.rememberEquivalence(review.description, product.id, await this.db.list("name_aliases"));
+      const [products, aliases] = await Promise.all([this.db.list("products"), this.db.list("name_aliases")]);
+      // Primero las equivalencias (del hogar y de serie): «PECHUGA FAMILIAR» va a Pechuga de pollo
+      // en lugar de crear un producto nuevo con el texto del ticket.
+      const product = matchLine(name, products, aliases)?.product ?? (await this.ensureProduct(products, name));
+      await this.rememberEquivalence(review.description, product.id, aliases);
       const units = Number.isInteger(review.quantity) && review.quantity > 0 ? review.quantity : 1;
       const inverse: InverseStep[] = [];
       await this.changeStock(product, units, "ticket", inverse);

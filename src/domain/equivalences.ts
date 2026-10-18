@@ -35,6 +35,18 @@ export const DEFAULT_EQUIVALENCES: Record<string, string> = {
   "leche semi": "Leche semidesnatada",
   "leche entera": "Leche entera",
   ketchup: "Kétchup",
+  banana: "Plátanos",
+  "t cherry": "Tomates cherry",
+  cherry: "Tomates cherry",
+  "tomate malla": "Tomate ensalada",
+  "tomate anhel": "Tomate ensalada",
+  "coca cola": "Refrescos de cola",
+  limonada: "Refrescos de limón",
+  champinon: "Champiñones",
+  "ajo granulado": "Ajo en polvo",
+  cap: "Café en cápsulas",
+  burger: "Hamburguesas",
+  coquina: "Almejas",
 };
 
 export type MatchSource = "alias" | "equivalence" | "similar";

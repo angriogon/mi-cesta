@@ -30,10 +30,19 @@ export function EquivalencesPage({ api }: { api: CestaApi }) {
     api.products().then(setProducts).catch(notifyError("cargar productos", LOAD_FAILED));
   }, [api, load]);
 
+  const toReview = items.filter((item) => item.fromTicket);
+  const settled = items.filter((item) => !item.fromTicket);
+
   async function save(alias: string, productId: string) {
     try {
-      await api.setEquivalence(alias, productId);
-      setMessage(`Guardado: «${alias.trim().toUpperCase()}» irá a ${products.find((p) => p.id === productId)?.name}.`);
+      const { merged, moved } = await api.setEquivalence(alias, productId);
+      const target = products.find((product) => product.id === productId)?.name ?? "el producto elegido";
+      setMessage(
+        merged
+          ? `Hecho: «${alias.trim().toUpperCase()}» irá a ${target}${moved === 1 ? " y su unidad pasa a ese producto" : moved ? ` y sus ${moved} unidades pasan a ese producto` : ""}; «${merged}» ya no existe.`
+          : `Guardado: «${alias.trim().toUpperCase()}» irá a ${target}.`,
+      );
+      if (merged) api.products().then(setProducts).catch(notifyError("cargar productos", LOAD_FAILED));
       setDraft("");
       load();
     } catch (error) {
@@ -86,40 +95,35 @@ export function EquivalencesPage({ api }: { api: CestaApi }) {
         </p>
       )}
 
-      <p className="eyebrow mt-5 px-1">Tus equivalencias</p>
-      <div className="mt-1.5 overflow-hidden rounded-xl bg-card">
-        {items.length === 0 && (
-          <p className="p-4 text-xs leading-5 text-muted-foreground">
-            Aún no hay ninguna. Se crean al cambiar el producto de una línea al revisar un ticket, o aquí arriba.
+      {toReview.length > 0 && (
+        <>
+          <p className="eyebrow mt-5 px-1">Por revisar · {toReview.length}</p>
+          <p className="mt-1 px-1 text-xs leading-5 text-warning">
+            Estos productos se crearon con el texto del ticket. Elige el producto de tu almacén: sus existencias,
+            caducidades y precios pasarán a él y el producto del ticket desaparecerá.
           </p>
-        )}
-        {items.map((item) => (
-          <div key={item.id} className="flex items-center gap-1 border-separator pl-3 not-first:border-t-[0.5px]">
-            <button
-              type="button"
-              onClick={() => setPicking({ alias: item.alias })}
-              aria-label={`Cambiar el producto de ${item.alias}`}
-              className="flex min-h-11 min-w-0 flex-1 items-center gap-2 py-2 text-left"
-            >
-              <span className="min-w-0 flex-1">
-                <span className="block truncate font-mono text-xs">{item.alias}</span>
-                <span className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-primary">
-                  <ArrowRight className="size-3.5 shrink-0" />
-                  <span className="truncate">{item.productName}</span>
-                </span>
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => void remove(item)}
-              aria-label={`Borrar la equivalencia de ${item.alias}`}
-              className="flex size-11 shrink-0 items-center justify-center text-danger"
-            >
-              <Trash2 className="size-4" />
-            </button>
-          </div>
-        ))}
-      </div>
+          <EquivalenceList
+            items={toReview}
+            onChange={(item) => setPicking({ alias: item.alias })}
+            onRemove={remove}
+            onUse={save}
+          />
+        </>
+      )}
+
+      <p className="eyebrow mt-5 px-1">Tus equivalencias</p>
+      {settled.length === 0 ? (
+        <p className="mt-1.5 rounded-xl bg-card p-4 text-xs leading-5 text-muted-foreground">
+          Aún no hay ninguna. Se crean al cambiar el producto de una línea al revisar un ticket, o aquí arriba.
+        </p>
+      ) : (
+        <EquivalenceList
+          items={settled}
+          onChange={(item) => setPicking({ alias: item.alias })}
+          onRemove={remove}
+          onUse={save}
+        />
+      )}
 
       <button
         type="button"
@@ -163,5 +167,69 @@ export function EquivalencesPage({ api }: { api: CestaApi }) {
         />
       )}
     </section>
+  );
+}
+
+/** Lista de equivalencias: texto del ticket → producto, con sugerencia para las creadas desde el ticket. */
+function EquivalenceList({
+  items,
+  onChange,
+  onRemove,
+  onUse,
+}: {
+  items: Equivalence[];
+  onChange: (item: Equivalence) => void;
+  onRemove: (item: Equivalence) => Promise<void>;
+  onUse: (alias: string, productId: string) => Promise<void>;
+}) {
+  return (
+    <div className="mt-1.5 overflow-hidden rounded-xl bg-card">
+      {items.map((item) => (
+        <div key={item.id} className="border-separator pl-3 not-first:border-t-[0.5px]">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => onChange(item)}
+              aria-label={`Cambiar el producto de ${item.alias}`}
+              className="flex min-h-11 min-w-0 flex-1 items-center gap-2 py-2 text-left"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-mono text-xs">{item.alias}</span>
+                <span
+                  className={`mt-0.5 flex items-center gap-1 text-sm font-semibold ${item.fromTicket ? "text-warning" : "text-primary"}`}
+                >
+                  <ArrowRight className="size-3.5 shrink-0" />
+                  <span className="truncate">{item.productName}</span>
+                  {item.fromTicket && <span className="shrink-0 text-xs font-medium">· creado desde el ticket</span>}
+                </span>
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => void onRemove(item)}
+              aria-label={`Borrar la equivalencia de ${item.alias}`}
+              className="flex size-11 shrink-0 items-center justify-center text-danger"
+            >
+              <Trash2 className="size-4" />
+            </button>
+          </div>
+          {item.suggestion && (
+            <div className="flex items-center gap-2 pr-3 pb-2 text-xs">
+              <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                ¿Es <b className="text-foreground">{item.suggestion.productName}</b>?
+              </span>
+              <button
+                type="button"
+                onClick={() => void onUse(item.alias, item.suggestion!.productId)}
+                aria-label={`Usar ${item.suggestion.productName} para ${item.alias}`}
+                className="min-h-9 rounded-lg bg-primary px-3 font-semibold text-primary-foreground"
+              >
+                Usar
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }

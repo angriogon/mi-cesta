@@ -429,3 +429,94 @@ describe("del ticket a las recetas", () => {
     expect(withEgg?.present).toContain("huevo");
   });
 });
+
+describe("arreglar equivalencias antiguas", () => {
+  /** Como en un hogar real: un producto creado con el texto del ticket y su equivalencia repetida. */
+  async function legacy(name: string, alias = name, stock = 3) {
+    const product = await api.createProduct({ name, category: "Carne y pescado" });
+    await api.updateProduct(product.id, { currentStock: stock });
+    const rows = [1, 2, 3].map((n) => ({
+      id: `alias-${name}-${n}`,
+      householdId: "hogar-test",
+      alias,
+      productId: product.id,
+      createdAt: `2026-09-0${n}T10:00:00.000Z`,
+    }));
+    await db.insert("name_aliases", rows);
+    await db.insert("prices", [
+      {
+        id: `t1:${product.id}`,
+        householdId: "hogar-test",
+        productId: product.id,
+        productName: product.name,
+        category: product.category,
+        priceCents: 735,
+        merchant: "Mercadona",
+        source: "ticket",
+        observedAt: "2026-09-28T12:00:00.000Z",
+      },
+    ]);
+    await api.addLot({ productId: product.id, productName: product.name, quantity: stock, expiryDate: "2026-10-30" });
+    return product;
+  }
+
+  it("quita las equivalencias repetidas y señala las que apuntan a un producto creado desde el ticket", async () => {
+    await legacy("PECHUGA FAMILIAR");
+    const list = await api.equivalences();
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ alias: "PECHUGA FAMILIAR", productName: "PECHUGA FAMILIAR", fromTicket: true });
+    expect(await db.list("name_aliases")).toHaveLength(1);
+  });
+
+  it("al cambiarla, mueve existencias, caducidades y precios al producto elegido y borra el viejo", async () => {
+    const old = await legacy("PECHUGA FAMILIAR");
+    const pollo = await byName("Pechuga de pollo");
+    const result = await api.setEquivalence("PECHUGA FAMILIAR", pollo.id);
+    expect(result).toEqual({ merged: "PECHUGA FAMILIAR", moved: 3 });
+    expect((await byName("Pechuga de pollo")).currentStock).toBe(3);
+    expect((await api.products()).some((product) => product.id === old.id)).toBe(false);
+    expect((await api.lots()).map((lot) => [lot.productId, lot.productName])).toEqual([[pollo.id, "Pechuga de pollo"]]);
+    expect((await db.list("prices")).map((price) => price.productName)).toEqual(["Pechuga de pollo"]);
+    expect(await api.equivalences()).toMatchObject([{ alias: "PECHUGA FAMILIAR", productName: "Pechuga de pollo" }]);
+  });
+
+  it("no fusiona un producto que alguien creó con otro nombre a propósito", async () => {
+    const own = await legacy("NAPOLITANA CHOCOLATE", "NAPO CHOCO 35%", 2);
+    const napolitanas = await byName("Napolitanas");
+    expect((await api.equivalences())[0].fromTicket).toBe(false);
+    expect(await api.setEquivalence("NAPO CHOCO 35%", napolitanas.id)).toEqual({ merged: null, moved: 0 });
+    expect((await api.products()).find((product) => product.id === own.id)?.currentStock).toBe(2);
+  });
+
+  it("al resolver una línea dudosa usa las equivalencias de serie en vez de crear un producto", async () => {
+    await api.saveTicket({
+      image: null,
+      merchant: "Mercadona",
+      purchasedAt: "2026-09-28",
+      totalCents: 735,
+      rawText: "",
+      items: [{ description: "XQZ LINEA RARA", quantity: 1, lineTotalCents: 735 }],
+    });
+    const [review] = (await api.tickets()).reviews;
+    await api.resolveReview(review.id, "PECHUGA FAMILIAR");
+    expect((await byName("Pechuga de pollo")).currentStock).toBe(1);
+    expect((await api.products()).some((product) => product.name === "PECHUGA FAMILIAR")).toBe(false);
+  });
+});
+
+describe("sugerencias para equivalencias antiguas", () => {
+  it("propone el producto del catálogo que corresponde", async () => {
+    const product = await api.createProduct({ name: "24 HUEVOS FRESCOS", category: "Refrigerados" });
+    await db.insert("name_aliases", [
+      {
+        id: "a1",
+        householdId: "hogar-test",
+        alias: "24 HUEVOS FRESCOS",
+        productId: product.id,
+        createdAt: "2026-09-01",
+      },
+    ]);
+    const [item] = await api.equivalences();
+    expect(item).toMatchObject({ fromTicket: true, suggestion: { productName: "Huevos L" } });
+  });
+});
