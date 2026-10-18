@@ -1,7 +1,9 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../data/database.types";
+import { RELEASES } from "../copy/novedades";
 
-export const APP_VERSION = "5.0.0";
+/** La versión es la primera entrada de Novedades (src/copy/novedades.ts). */
+export const APP_VERSION = RELEASES[0].version;
 /** Fecha y hora de esta compilación, para distinguir versiones publicadas el mismo día. */
 export const BUILD_TIME = typeof __BUILD_TIME__ === "string" ? __BUILD_TIME__ : "";
 

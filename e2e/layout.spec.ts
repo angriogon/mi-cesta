@@ -70,7 +70,7 @@ test("las páginas del menú se pueden leer hasta el final", async ({ page }) =>
   await reachEnd(/Se rigen por la ley española/);
   await back();
   await page.getByRole("button", { name: "Novedades" }).click();
-  await reachEnd(/Recetas encadenadas/);
+  await reachEnd(/Versión 4 · Cesta 4/);
   await back();
   await page.getByRole("button", { name: "Equivalencias de tickets" }).click();
   await page.getByRole("button", { name: "Ver las de serie" }).click();

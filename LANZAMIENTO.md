@@ -27,7 +27,7 @@
 - Consultas precisas y operaciones atómicas con `apply_batch`.
 - Arranque ligero (pantallas bajo demanda, PDF/escáner/OCR fuera de la caché inicial) y OCR servido desde la propia app.
 - Accesibilidad: contraste AA y nombres para VoiceOver comprobados automáticamente.
-- Actualización con aviso; en Novedades, la fecha de la versión instalada y «Buscar actualización».
+- Actualización con aviso; en Novedades, la fecha de la versión instalada, «Buscar actualización» y el registro de cambios de cada versión (`src/copy/novedades.ts`, comprobado en el CI).
 - Para usar Cesta hace falta cuenta: el modo local es solo para pruebas y desarrollo.
 - Historial limitado (400 días de movimientos, 30 de deshacer) con limpieza nocturna; clave _publishable_.
 - **Lectura de tickets reales**: recorte del papel, luz igualada e intérprete tolerante al ruido.

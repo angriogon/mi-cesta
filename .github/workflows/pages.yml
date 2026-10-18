@@ -14,11 +14,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Historial completo: check:novedades compara la rama del PR con la base.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Novedades al día
+        if: github.event_name == 'pull_request'
+        run: npm run check:novedades
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run format:check

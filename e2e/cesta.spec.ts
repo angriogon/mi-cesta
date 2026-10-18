@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { addToPrepare, expectNoHorizontalScroll, nav, openApp, openMenu, unlockMaintenance } from "./helpers";
+import { RELEASES } from "../src/copy/novedades";
 
 test.beforeEach(async ({ page }) => {
   await openApp(page);
@@ -252,7 +253,8 @@ test("menú: precios, perfil alimentario, novedades y restablecer", async ({ pag
   await expect(page.getByPlaceholder("gluten, leche, frutos secos")).toHaveValue("");
   await page.getByRole("button", { name: "← Volver al menú" }).click();
   await page.getByRole("button", { name: "Novedades" }).click();
-  await expect(page.getByText("Versión 5.0.0", { exact: true })).toBeVisible();
+  await expect(page.getByText(`Versión ${RELEASES[0].version}`, { exact: true })).toBeVisible();
+  await expect(page.getByText(RELEASES[0].changes[0])).toBeVisible();
   await page.getByRole("button", { name: "← Volver al menú" }).click();
   await page.getByRole("button", { name: "Privacidad y condiciones" }).click();
   await expect(page.getByRole("heading", { name: "Política de privacidad" })).toBeVisible();
