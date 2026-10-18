@@ -12,6 +12,8 @@ import * as webpush from "jsr:@negrel/webpush@0.5.0";
 
 // Contacto para los servicios de push (Apple, Google, Mozilla): la direccion de la app.
 const CONTACT = "https://angriogon.github.io/mi-cesta/";
+// La i con tilde de "minimo", sin escribirla en el codigo (ver la nota de arriba sobre ASCII).
+const I_ACUTE = String.fromCharCode(237);
 
 const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
@@ -74,7 +76,8 @@ const CORS = {
  * Sirve para comprobar en el iPhone que los avisos llegan sin esperar a un recordatorio.
  */
 async function sendTest(request: Request): Promise<Response> {
-  const token = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
+  const header = request.headers.get("authorization") ?? "";
+  const token = header.toLowerCase().startsWith("bearer ") ? header.slice(7).trim() : "";
   const { data: user } = await admin.auth.getUser(token);
   if (!user?.user) return new Response("forbidden", { status: 403, headers: CORS });
   const body = (await request.json().catch(() => ({}))) as { endpoint?: string };
@@ -144,7 +147,7 @@ Deno.serve(async (request) => {
       key: item.alert_id,
       day: item.day,
       title: `Para ${item.pet_name || "tu mascota"}`,
-      body: `Queda poco: ${item.item_name} (${item.current_stock} de m\u00ednimo ${item.minimum_stock}).`,
+      body: `Queda poco: ${item.item_name} (${item.current_stock} de m${I_ACUTE}nimo ${item.minimum_stock}).`,
     })),
   ];
 
