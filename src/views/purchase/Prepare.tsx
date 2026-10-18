@@ -27,6 +27,8 @@ export function Prepare(props: {
   mergeDuplicates: () => void;
   generateChecklist: () => void;
   prices: PriceRef[];
+  /** Supermercado elegido en Menú → Precios. */
+  preferredStore?: string;
   openScanner: () => void;
   onAvoided: () => void;
   suggestions: Overview["suggestions"];
@@ -201,7 +203,7 @@ export function Prepare(props: {
               {!collapsed.has(group.category) && (
                 <div className="overflow-hidden rounded-lg bg-card">
                   {group.items.map((item, index) => {
-                    const price = priceFor(item, props.prices);
+                    const price = priceFor(item, props.prices, props.preferredStore);
                     const inStock = props.stock.find((product) => normalize(product.name) === normalize(item.name));
                     const plannedUntil = inStock ? productById.get(inStock.id)?.plannedUntil : null;
                     const overbuy =
@@ -217,7 +219,13 @@ export function Prepare(props: {
                           <span className="min-w-0 flex-1 text-left text-[0.8125rem] font-semibold">
                             <span className="block truncate">{item.name}</span>
                             <span className="flex flex-wrap items-center gap-1">
-                              {price?.priceCents ? <PriceTag price={price} quantity={item.quantity} /> : null}
+                              {price?.priceCents ? (
+                                <PriceTag
+                                  price={price}
+                                  quantity={item.quantity}
+                                  preferredStore={props.preferredStore}
+                                />
+                              ) : null}
                               {inStock && inStock.quantity > 0 && (
                                 <span className="rounded bg-danger-soft px-1 py-0.5 text-xs font-semibold text-danger">
                                   EN CASA · {inStock.quantity}

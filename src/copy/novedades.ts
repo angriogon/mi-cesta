@@ -16,6 +16,18 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "5.12.0",
+    date: "2026-10-18",
+    title: "Permisos del hogar, súper por defecto y avisos que se pueden probar",
+    changes: [
+      "En Mi hogar, toca a una persona para darle o quitarle permisos (Almacén, Mascota, Miembros) o quitarla del hogar.",
+      "Menú → Precios: elige tu supermercado y en Compra (Preparar y En tienda) verás sus precios; si allí aún no has comprado algo, el último que pagaste en otro súper, más apagado.",
+      "Los tickets reconocen también Aldi, Consum, Supeco, Jurado y Alcampo.",
+      "Al activar los avisos de la mascota llega uno de prueba, y hay un botón «Enviar aviso de prueba» para comprobarlo cuando quieras.",
+      "Los recordatorios de la mascota entre las 22:00 y las 23:59 no se enviaban nunca; ya llegan.",
+    ],
+  },
+  {
     version: "5.11.1",
     date: "2026-10-18",
     title: "Marcas propias con código que empieza por 2",

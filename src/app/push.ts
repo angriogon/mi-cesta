@@ -55,6 +55,20 @@ export async function enablePush(householdId: string): Promise<void> {
   if (error) throw new Error("No se han podido activar los avisos. Inténtalo de nuevo.");
 }
 
+/**
+ * Pide al servidor un aviso de prueba para este dispositivo: así se ve al momento que llegan,
+ * sin esperar a la hora de un recordatorio.
+ */
+export async function sendTestPush(): Promise<void> {
+  const registration = await navigator.serviceWorker.getRegistration();
+  const subscription = await registration?.pushManager.getSubscription();
+  if (!subscription) throw new Error("Este dispositivo no tiene los avisos activados.");
+  const result = await supabase().functions.invoke<{ sent: number }>("pet-push", {
+    body: { endpoint: subscription.endpoint },
+  });
+  if (result.error) throw new Error("No se ha podido enviar el aviso de prueba. Desactívalos y vuelve a activarlos.");
+}
+
 /** Deja de recibir avisos en este dispositivo. */
 export async function disablePush(): Promise<void> {
   const registration = await navigator.serviceWorker.getRegistration();

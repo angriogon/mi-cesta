@@ -1,5 +1,6 @@
 // Edge Function: envia los avisos de la mascota por Web Push (llamada por pg_cron cada 5 minutos).
-// - Solo responde a pg_cron: comprueba el secreto x-cesta-cron guardado en Vault.
+// - Los envios programados solo los pide pg_cron: comprueba el secreto x-cesta-cron guardado en Vault.
+// - Sin ese secreto, la app puede pedir un aviso de prueba para un dispositivo del usuario (con su sesion).
 // - La primera vez genera las claves VAPID, guarda la privada en Vault y publica la publica en push_config.
 // - Envia cada recordatorio, y cada articulo bajo minimos (10:00-12:00), una vez al dia por dispositivo.
 // - Borra los dispositivos que ya no existen.
@@ -11,6 +12,8 @@ import * as webpush from "jsr:@negrel/webpush@0.5.0";
 
 // Contacto para los servicios de push (Apple, Google, Mozilla): la direccion de la app.
 const CONTACT = "https://angriogon.github.io/mi-cesta/";
+// La i con tilde de "minimo", sin escribirla en el codigo (ver la nota de arriba sobre ASCII).
+const I_ACUTE = String.fromCharCode(237);
 
 const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
@@ -63,7 +66,56 @@ async function vapidKeys() {
   return await webpush.importVapidKeys(final ?? exported, { extractable: false });
 }
 
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+/**
+ * Aviso de prueba: lo pide la app con la sesion del usuario, solo para un dispositivo suyo.
+ * Sirve para comprobar en el iPhone que los avisos llegan sin esperar a un recordatorio.
+ */
+async function sendTest(request: Request): Promise<Response> {
+  const header = request.headers.get("authorization") ?? "";
+  const token = header.toLowerCase().startsWith("bearer ") ? header.slice(7).trim() : "";
+  const { data: user } = await admin.auth.getUser(token);
+  if (!user?.user) return new Response("forbidden", { status: 403, headers: CORS });
+  const body = (await request.json().catch(() => ({}))) as { endpoint?: string };
+  const { data: subscription } = await admin
+    .from("push_subscriptions")
+    .select("endpoint, p256dh, auth")
+    .eq("endpoint", body.endpoint ?? "")
+    .eq("user_id", user.user.id)
+    .maybeSingle();
+  if (!subscription) return new Response("not subscribed", { status: 404, headers: CORS });
+  const appServer = await webpush.ApplicationServer.new({ contactInformation: CONTACT, vapidKeys: await vapidKeys() });
+  try {
+    await appServer
+      .subscribe({ endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } })
+      .pushTextMessage(
+        JSON.stringify({
+          title: "Cesta",
+          body: "Los avisos funcionan en este dispositivo.",
+          tag: "cesta-prueba",
+          url: "./?view=dog",
+        }),
+        { ttl: 10 * 60, urgency: webpush.Urgency.High },
+      );
+  } catch (failure) {
+    const status = (failure as { response?: Response }).response?.status;
+    if (status === 404 || status === 410) {
+      await admin.from("push_subscriptions").delete().eq("endpoint", subscription.endpoint);
+      return new Response("gone", { status: 410, headers: CORS });
+    }
+    console.error("test push failed", status ?? String(failure));
+    return new Response("push failed", { status: 502, headers: CORS });
+  }
+  return new Response(JSON.stringify({ sent: 1 }), { headers: { ...CORS, "Content-Type": "application/json" } });
+}
+
 Deno.serve(async (request) => {
+  if (request.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  if (!request.headers.get("x-cesta-cron")) return sendTest(request);
   const { data: allowed } = await admin.rpc("push_cron_secret_ok", {
     p_secret: request.headers.get("x-cesta-cron"),
   });
@@ -95,7 +147,7 @@ Deno.serve(async (request) => {
       key: item.alert_id,
       day: item.day,
       title: `Para ${item.pet_name || "tu mascota"}`,
-      body: `Queda poco: ${item.item_name} (${item.current_stock} de m\u00ednimo ${item.minimum_stock}).`,
+      body: `Queda poco: ${item.item_name} (${item.current_stock} de m${I_ACUTE}nimo ${item.minimum_stock}).`,
     })),
   ];
 

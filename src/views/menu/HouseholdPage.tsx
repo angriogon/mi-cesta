@@ -1,11 +1,11 @@
 import { copy } from "../../copy/es";
 import { Copy } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { CestaApi } from "../../data/api";
 import type { Household } from "../../data/types";
 import { type Account } from "../../app/account";
 import { Button, Input } from "../../ui/primitives";
-import { LOAD_FAILED, notifyError } from "../../lib/errors";
+import { MembersCard } from "./MembersCard";
 
 export function HouseholdPage({
   api,
@@ -19,26 +19,9 @@ export function HouseholdPage({
   onChange: (household: Household) => void;
 }) {
   const [name, setName] = useState(household.name);
-  const [members, setMembers] = useState<{ userId: string; email: string; role: string }[]>([]);
-  const canManage = account.role === "owner" || account.role === "admin";
-
-  async function changeRole(member: { userId: string; email: string; role: string }) {
-    const next = member.role === "admin" ? "member" : "admin";
-    try {
-      await account.setMemberRole(member.userId, next);
-      setMembers((list) => list.map((item) => (item.userId === member.userId ? { ...item, role: next } : item)));
-      setMessage(next === "admin" ? `${member.email} ya es administrador.` : `${member.email} vuelve a ser miembro.`);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "No se ha podido cambiar el rol.");
-    }
-  }
   const [message, setMessage] = useState("");
   const [confirmLeave, setConfirmLeave] = useState(false);
   const inviteUrl = `${window.location.origin}${import.meta.env.BASE_URL}?hogar=${household.inviteCode}`;
-
-  useEffect(() => {
-    account.members().then(setMembers).catch(notifyError("cargar miembros", LOAD_FAILED));
-  }, [account]);
 
   async function share() {
     const text = `Únete a «${household.name}» en Cesta con el código ${household.inviteCode}: ${inviteUrl}`;
@@ -97,36 +80,7 @@ export function HouseholdPage({
               <Copy className="size-4" /> Compartir invitación
             </Button>
           </div>
-          {members.length > 0 && (
-            <div className="mt-3 rounded-xl bg-card p-4">
-              <p className="text-xs font-semibold">Miembros</p>
-              <ul className="mt-2 space-y-1 text-[0.75rem]">
-                {members.map((member) => (
-                  <li key={member.userId} className="flex min-h-11 items-center justify-between gap-2">
-                    <span className="min-w-0">
-                      <span className="block truncate">{member.email}</span>
-                      <span className="block text-xs text-muted-foreground">
-                        {member.role === "owner"
-                          ? "Responsable"
-                          : member.role === "admin"
-                            ? "Administrador"
-                            : "Miembro"}
-                      </span>
-                    </span>
-                    {canManage && member.role !== "owner" && member.email !== account.email && (
-                      <button
-                        type="button"
-                        onClick={() => void changeRole(member)}
-                        className="min-h-9 shrink-0 rounded-lg bg-muted px-2.5 text-xs font-semibold text-primary"
-                      >
-                        {member.role === "admin" ? "Quitar administrador" : "Hacer administrador"}
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <MembersCard account={account} onMessage={setMessage} />
           <button
             type="button"
             onClick={() => (confirmLeave ? void account.leaveHousehold() : setConfirmLeave(true))}

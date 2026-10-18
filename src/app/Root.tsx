@@ -92,6 +92,7 @@ function SupabaseRoot() {
             session.user.email ?? "",
             householdId,
             households?.find((item) => item.id === householdId)?.role ?? "member",
+            households?.find((item) => item.id === householdId)?.permissions ?? [],
             () => {
               setHouseholdId(null);
               setHouseholds((list) => list?.filter((item) => item.id !== householdId) ?? null);

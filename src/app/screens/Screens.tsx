@@ -117,8 +117,8 @@ export function CurrentScreen() {
       ) : store.view === "dog" ? (
         <DogView
           pet={store.pet}
-          adminUnlocked={store.admin.unlocked}
-          requestMaintenance={store.admin.request}
+          adminUnlocked={store.admin.can("mascota")}
+          requestMaintenance={() => store.admin.request("mascota")}
           lockAdmin={store.admin.lock}
           pushHouseholdId={store.account.mode === "supabase" ? store.api.db.householdId : null}
         />
@@ -146,7 +146,7 @@ export function Overlays() {
   const { api, admin } = store;
   return (
     <>
-      {admin.requested && !admin.unlocked && (
+      {admin.requested && !admin.can(admin.requested) && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-background/95 px-4 py-[calc(1rem+env(safe-area-inset-top))] backdrop-blur-sm">
           <div className="mx-auto max-w-[470px]">
             <button
@@ -182,6 +182,7 @@ export function Overlays() {
               store.setPriceMeta(result.meta);
               return result;
             }}
+            onPriceMetaChange={store.setPriceMeta}
             onReset={() => window.location.reload()}
             onClose={() => store.setMenuOpen(false)}
           />

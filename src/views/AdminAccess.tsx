@@ -51,11 +51,13 @@ export function AdminAccess({ admin, account }: { admin: AdminState; account: Ac
             <Lock className="size-7" />
           </div>
           <h1 id="admin-access-title" className="mt-5 text-2xl font-bold">
-            Solo para administradores
+            Necesitas permiso
           </h1>
           <p className="mx-auto mt-2 max-w-72 text-sm leading-6 text-muted-foreground">
-            El mantenimiento (existencias, mínimos, productos y avisos de la mascota) es de los administradores del
-            hogar. Pide al responsable que te nombre administrador en Menú → Mi hogar.
+            {admin.requested === "mascota"
+              ? "Añadir o borrar artículos de la mascota y gestionar sus recordatorios necesita el permiso «Mascota»."
+              : "El mantenimiento del almacén (existencias, mínimos y productos) necesita el permiso «Almacén»."}{" "}
+            Pídeselo a quien gestiona el hogar: se da en Menú → Mi hogar.
           </p>
           <Button onClick={admin.cancel} className="mt-5 h-11 w-full rounded-xl">
             Entendido
