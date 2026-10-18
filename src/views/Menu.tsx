@@ -126,7 +126,7 @@ export function Menu({
         role="dialog"
         aria-modal="true"
         aria-label="Menú"
-        className="flex min-h-[100dvh] w-[78%] max-w-[300px] flex-col overflow-y-auto bg-background px-3 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))] relative"
+        className="flex h-[100dvh] w-[78%] max-w-[300px] flex-col overflow-y-auto overscroll-contain bg-background px-3 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))] relative"
       >
         <div className="flex items-center justify-between">
           <div className="flex min-w-0 items-center gap-2.5">

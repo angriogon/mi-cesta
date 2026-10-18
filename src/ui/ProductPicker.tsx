@@ -65,7 +65,7 @@ export function ProductPicker({
           className="h-11 rounded-xl pl-9"
         />
       </label>
-      <div className="mt-3 flex-1 overflow-y-auto rounded-xl bg-card">
+      <div className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-xl bg-card">
         {allowSkip && (
           <button
             type="button"

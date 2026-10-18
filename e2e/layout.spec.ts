@@ -52,3 +52,30 @@ test("con texto grande del sistema nada se sale de la pantalla", async ({ page }
   await nav(page, /^Mascota/).click();
   await expectNoHorizontalScroll(page);
 });
+
+/** Las páginas largas del menú se desplazan hasta el final (en iPhone SE, la pantalla más baja). */
+test("las páginas del menú se pueden leer hasta el final", async ({ page }) => {
+  await openApp(page);
+  const reachEnd = async (text: string | RegExp) => {
+    const end = page.getByText(text).last();
+    await end.scrollIntoViewIfNeeded();
+    await expect(end).toBeInViewport();
+  };
+  const back = () => page.getByRole("button", { name: "← Volver al menú" }).click();
+
+  await openMenu(page);
+  await page.getByRole("button", { name: "Privacidad y condiciones" }).click();
+  await reachEnd("Para crear una cuenta debes tener al menos 14 años.");
+  await page.getByRole("button", { name: "Condiciones" }).click();
+  await reachEnd(/Se rigen por la ley española/);
+  await back();
+  await page.getByRole("button", { name: "Novedades" }).click();
+  await reachEnd(/Recetas encadenadas/);
+  await back();
+  await page.getByRole("button", { name: "Equivalencias de tickets" }).click();
+  await page.getByRole("button", { name: "Ver las de serie" }).click();
+  await reachEnd("TOMATE PERA");
+  // Y el final del propio menú (Eliminar cuenta / versión) también se alcanza.
+  await back();
+  await reachEnd(/Cesta · Versión/i);
+});

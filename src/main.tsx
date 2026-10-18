@@ -5,12 +5,14 @@ import { Root } from "./app/Root";
 import "./index.css";
 import { followSystemTextSize } from "./lib/dynamic-type";
 import { blockZoom } from "./lib/no-zoom";
+import { isStaleChunkError, recoverFromStaleChunks, reloadForNewVersion } from "./lib/stale-chunks";
 import { applyTheme, storedTheme } from "./lib/theme";
 
 // Claro por defecto; el oscuro se elige desde el menú lateral.
 applyTheme(storedTheme());
 followSystemTextSize();
 blockZoom();
+recoverFromStaleChunks();
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -20,6 +22,8 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
+    // Una pantalla de la versión anterior que ya no existe: se recarga con la versión nueva.
+    if (isStaleChunkError(error) && reloadForNewVersion()) return;
     console.error("Cesta ha fallado", error, info.componentStack);
   }
 
