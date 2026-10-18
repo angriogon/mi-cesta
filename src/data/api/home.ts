@@ -1,7 +1,7 @@
 import { guessCategory } from "../../domain/categories";
 import { normalize, uid } from "../../lib/text";
 import { lookupCodes, parseScannedCode, type ParsedCode } from "../../domain/barcode";
-import { lookupOpenFacts } from "../openfoodfacts";
+import { lookupOpenFacts, lookupOpenFoodFacts } from "../openfoodfacts";
 import type {
   BarcodeProduct,
   DogItem,
@@ -88,17 +88,24 @@ export class CestaApi extends PrivacyApi {
   }
 
   /**
-   * Identifica un código de cualquier supermercado: primero los que ha guardado el hogar (también
-   * las etiquetas de la balanza por su artículo, aunque cambie el precio) y después las bases
-   * abiertas de Open Food Facts. Las etiquetas de la balanza no se buscan fuera: son de cada tienda.
+   * Identifica un código de cualquier supermercado: primero los que ha guardado el hogar y después
+   * las bases abiertas de Open Food Facts. Los códigos que empiezan por 2 pueden ser la etiqueta de
+   * la balanza o un envasado de marca propia (Alcampo, Lidl…): se busca el código exacto en Open
+   * Food Facts y, si no lo conoce, el artículo que guardó el hogar, aunque cambie el precio.
    */
   async lookupBarcode(code: string | ParsedCode): Promise<BarcodeProduct | null> {
     const parsed = this.parseCode(code);
-    for (const candidate of [...lookupCodes(parsed), ...(parsed.itemKey ? [parsed.itemKey] : [])]) {
-      const [saved] = await this.db.listBy("barcodes", "code", candidate);
-      if (saved) return { ...saved, code: parsed.code };
+    const saved = async (key: string) => (await this.db.listBy("barcodes", "code", key))[0];
+    for (const candidate of lookupCodes(parsed)) {
+      const exact = await saved(candidate);
+      if (exact) return { ...exact, code: parsed.code };
     }
-    if (parsed.kind === "peso-variable") return null;
+    if (parsed.itemKey) {
+      const packaged = await lookupOpenFoodFacts(parsed.code);
+      if (packaged) return packaged;
+      const item = await saved(parsed.itemKey);
+      return item ? { ...item, code: parsed.code } : null;
+    }
     const found = await lookupOpenFacts(lookupCodes(parsed));
     return found && { ...found, code: parsed.code };
   }
