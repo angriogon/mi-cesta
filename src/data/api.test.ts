@@ -310,8 +310,26 @@ describe("inventario rápido y códigos de barras", () => {
     fetchSpy.mockRestore();
   });
 
-  it("las etiquetas de la balanza se recuerdan por el artículo, sin buscar fuera", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
+  it("un envasado de marca propia con código que empieza por 2 se busca en Open Food Facts", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({ status: 1, product: { product_name: "Rosquillas 2 sabores", brands: "Alcampo" } }),
+          ),
+        ),
+      );
+    expect(await api.lookupBarcode("2074477001295")).toMatchObject({ name: "Rosquillas 2 sabores", brand: "Alcampo" });
+    fetchSpy.mockRestore();
+  });
+
+  it("las etiquetas de la balanza se recuerdan por el artículo", async () => {
+    const hosts: string[] = [];
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      hosts.push(new URL(input instanceof Request ? input.url : input).host);
+      return Promise.resolve(new Response(JSON.stringify({ status: 0 })));
+    });
     expect(await api.lookupBarcode("2300540012500")).toBeNull();
     await api.saveBarcode("2300540012500", "Pechuga de pollo al corte");
     // Otra etiqueta del mismo artículo con otro precio.
@@ -320,7 +338,8 @@ describe("inventario rápido y códigos de barras", () => {
       name: "Pechuga de pollo al corte",
       source: "Guardado por tu hogar · al peso",
     });
-    expect(fetchSpy).not.toHaveBeenCalled();
+    // Solo se pregunta a Open Food Facts por el código exacto, no a las bases de limpieza o cosmética.
+    expect(new Set(hosts)).toEqual(new Set(["world.openfoodfacts.org"]));
     // Corregir el nombre de una etiqueta concreta cambia el del artículo.
     await api.saveBarcode("2300540034502", "Contramuslo de pollo");
     expect((await api.lookupBarcode("2300540012500"))?.name).toBe("Contramuslo de pollo");

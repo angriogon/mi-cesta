@@ -16,13 +16,21 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "5.11.1",
+    date: "2026-10-18",
+    title: "Marcas propias con código que empieza por 2",
+    changes: [
+      "Los envasados de marca propia cuyo código empieza por 2 (algunos de Alcampo o Lidl) ya se reconocen: antes se tomaban por etiquetas de la balanza.",
+    ],
+  },
+  {
     version: "5.11.0",
     date: "2026-10-18",
     title: "Códigos de barras de cualquier súper",
     changes: [
-      "Escáner nuevo, más rápido y certero: lee códigos pequeños, curvos, girados, con poca luz o en blanco sobre oscuro.",
+      "Escáner nuevo, más rápido y certero: lee códigos pequeños, curvos, girados o con poca luz.",
       "Lee también los códigos de los packs (ITF-14), los GS1 DataBar de la fruta y la carne y los QR GS1 nuevos.",
-      "«Hacer una foto del código» para los que la cámara en vídeo no pilla: la foto es más nítida.",
+      "«Hacer una foto del código» para los que la cámara en vídeo no pilla: la foto es más nítida y lee también códigos en blanco sobre oscuro.",
       "Reconoce productos de Mercadona, DIA, Lidl, Aldi, Eroski, Consum, Carrefour, Supeco, Alcampo y más, y dice de qué cadena es cada marca propia.",
       "Si no es comida, lo busca también en las bases abiertas de limpieza, cosmética y comida de mascotas.",
       "Etiquetas de la balanza (fruta, carne, charcutería…): dile qué es una vez y la reconocerá siempre, aunque cambie el precio o el peso.",

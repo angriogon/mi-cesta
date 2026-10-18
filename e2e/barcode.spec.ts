@@ -63,9 +63,9 @@ test("lee la foto de un código girado y dice de qué cadena es la marca propia"
 
 test("etiqueta de la balanza: se aprende una vez y vale aunque cambie el precio", async ({ page }) => {
   await openApp(page);
-  let external = 0;
+  const hosts = new Set<string>();
   await page.route("**/api/v2/product/**", async (route) => {
-    external++;
+    hosts.add(new URL(route.request().url()).host);
     await route.fulfill({ json: { status: 0 } });
   });
   await openScanner(page);
@@ -79,7 +79,8 @@ test("etiqueta de la balanza: se aprende una vez y vale aunque cambie el precio"
   await page.getByLabel("Código EAN").fill("2300540034502");
   await page.getByRole("button", { name: "Buscar" }).click();
   await expect(page.getByRole("heading", { name: "Pechuga de pollo al corte" })).toBeVisible();
-  expect(external).toBe(0);
+  // Solo se ha preguntado a Open Food Facts por si era un envasado de marca propia.
+  expect([...hosts]).toEqual(["world.openfoodfacts.org"]);
 
   // Un número mal escrito se avisa.
   await page.getByRole("button", { name: "Otro" }).click();
