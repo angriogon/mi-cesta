@@ -5,13 +5,12 @@ import { errorMessage } from "../app/errorMessage";
 import { useTickets } from "../app/useTickets";
 import type { PriceRef, TicketItem } from "../data/types";
 import { parseTicketText } from "../domain/tickets";
-import { prepareTicketPhoto, recognizeText } from "../lib/image";
-import { readText } from "../lib/storage";
 import { parseEuroToCents, todayIso } from "../lib/text";
 import { Button, Input } from "../ui/primitives";
 import type { Notify } from "../ui/Toast";
 import { reportError } from "../lib/errors";
 import { LineChecks, LinesEditor } from "./tickets/fields";
+import { readTicketFile } from "./tickets/readTicket";
 import { MonthlySpend, ReviewsPanel, TicketHistory } from "./tickets/TicketLists";
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -46,22 +45,23 @@ export function TicketsView({
   async function pick(selected: File | null) {
     if (!selected) return;
     if (selected.size > MAX_BYTES) {
-      setStatus("La foto supera 10 MB. Prueba con otra o recórtala.");
+      setStatus("El archivo supera 10 MB. Prueba con otro o recórtalo.");
       return;
     }
     if (preview) URL.revokeObjectURL(preview);
     setBusy(true);
     setProgress(2);
-    setStatus("Preparando la foto…");
+    setStatus("Preparando el ticket…");
+    setFile(new Blob());
     try {
-      const { photo, ocr } = await prepareTicketPhoto(selected);
-      setFile(photo);
-      setPreview(URL.createObjectURL(photo));
-      setStatus("Leyendo el ticket en este dispositivo…");
-      const text = await recognizeText(ocr, setProgress, { block: true });
-      // Diagnóstico del lector (banco de tickets reales): localStorage "cesta-debug-ocr" = "1".
-      if (readText("cesta-debug-ocr") === "1")
-        console.info("[ocr]", JSON.stringify({ text, image: ocr.toDataURL("image/png") }));
+      const text = await readTicketFile(selected, {
+        onPhoto: (photo) => {
+          setFile(photo);
+          setPreview(URL.createObjectURL(photo));
+        },
+        onStatus: setStatus,
+        onProgress: setProgress,
+      });
       const parsed = parseTicketText(text);
       setRawText(text);
       setDate(parsed.purchasedAt);
@@ -148,12 +148,12 @@ export function TicketsView({
             <>
               <Camera className="size-7" />
               <span className="mt-2 text-sm font-semibold">Fotografiar o elegir ticket</span>
-              <span className="mt-1 text-xs text-muted-foreground">JPG, PNG o HEIC · máximo 10 MB</span>
+              <span className="mt-1 text-xs text-muted-foreground">Foto o PDF (ticket digital) · máximo 10 MB</span>
             </>
           )}
           <input
             type="file"
-            accept="image/*"
+            accept="image/*,application/pdf,.pdf"
             className="sr-only"
             onChange={(event) => {
               void pick(event.target.files?.[0] ?? null);
