@@ -2,59 +2,54 @@
 
 ## Qué está probado
 
-| Prueba                         | Resultado | Cubre                                                                                                                                                                            |
-| ------------------------------ | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Calidad (`npm run check`)      | En verde  | Tipos (TypeScript 7), ESLint estricto con tipos, react-hooks y jsx-a11y, y Prettier                                                                                              |
-| Unitarias (Vitest)             | 75        | Dominio, API completa, operaciones atómicas (todo o nada), consultas precisas, hooks de cada dominio (listas, despensa, mascota, tickets) y política de errores; escala de texto |
-| Base de datos (PGlite)         | 28        | Migraciones, aislamiento entre hogares, invitaciones, listas que no se pisan, fotos privadas, salir de un hogar y `apply_batch` y limpieza del historial                         |
-| Extremo a extremo (Playwright) | 23        | Todas las pantallas en WebKit con iPhone 14 y SE, OCR real sin CDN externos auditoría WCAG 2.1 AA en claro y oscuro y texto grande (140 %) en iPhone SE                          |
-| Integración con Supabase real  | Opcional  | Necesita usuarios de prueba (`CESTA_IT_*`); no se ejecuta en CI                                                                                                                  |
+| Prueba                         | Resultado | Cubre                                                                                                                                                        |
+| ------------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Calidad (`npm run check`)      | En verde  | Tipos (TypeScript 7), ESLint estricto con tipos, react-hooks y jsx-a11y, y Prettier                                                                          |
+| Unitarias (Vitest)             | 83        | Dominio, API completa, operaciones atómicas, hooks de cada dominio, errores, escala de texto, ruido de OCR, búsqueda del papel, exportación y consentimiento |
+| Base de datos (PGlite)         | 39        | Migraciones, aislamiento entre hogares, invitaciones, fotos privadas, `apply_batch`, limpieza del historial, eliminar cuenta, avisos push y catálogo         |
+| Extremo a extremo (Playwright) | 25        | Todas las pantallas en WebKit con iPhone 14 y SE, OCR real sin CDN, WCAG 2.1 AA en claro y oscuro, texto al 140 %, primer uso, favoritas y menú legal        |
+| Tickets reales                 | Opcional  | `CESTA_REAL_TICKETS=carpeta`: fotos reales fuera del repositorio con lo esperado en JSON (hoy, Mercadona: 46/46 líneas)                                      |
+| Integración con Supabase real  | Opcional  | Necesita usuarios de prueba (`CESTA_IT_*`); no se ejecuta en CI                                                                                              |
 
 ### Qué no está probado todavía
 
-- **Un iPhone real.** WebKit en ordenador no prueba la cámara, Face ID, las notificaciones, el teclado, la fuente SF ni la app instalada en la pantalla de inicio.
+- **Avisos push en un iPhone real** (app instalada): activarlos en Mascota y recibir un recordatorio con Cesta cerrada.
+- **Eliminar cuenta y exportar datos** con una cuenta real.
 - **El registro desde la pantalla y el email de confirmación** con un correo real.
-- **Dynamic Type en un iPhone real**: el WebKit de las pruebas no conoce `-apple-system-body`; en un iPhone hay que comprobar el texto con el tamaño por defecto, uno grande y el máximo.
-- **El aviso de actualización** con la app instalada: aparece al publicar una versión nueva y al tocar «Actualizar» se recarga.
+- **Tickets de otros supermercados** (Lidl, Carrefour, Dia) con fotos reales.
 
-## Hecho en el estudio de mejora (fases 1 a 4)
+## Hecho
 
-- Lint, formato, errores visibles (ningún `catch` vacío) y tipos generados de Supabase con contrato de columnas.
-- Aspecto nativo de iOS: colores del sistema, fuente SF, textos de 12 px como mínimo, zonas de toque de 44 pt, barra de pestañas, controles segmentados y listas agrupadas.
-- Estado por dominio (`useLists`, `useProducts`, `useLots`, `usePet`, `useTickets`) y `CestaApp` como esqueleto con contexto; ningún archivo de código pasa de 300 líneas.
-- Consultas precisas y operaciones de varios pasos atómicas con `apply_batch`.
-- Arranque y caché: pantallas bajo demanda, PDF/escáner/OCR fuera de la caché inicial (779 KiB en lugar de 2.020 KiB), OCR servido desde la propia app.
+- Lint, formato, errores visibles y tipos generados de Supabase con contrato de columnas.
+- Aspecto nativo de iOS, Dynamic Type (85 %–140 %), sin zoom y pantallas de arranque iguales al splash.
+- Estado por dominio y `CestaApp` como esqueleto con contexto; ningún archivo de código pasa de 300 líneas.
+- Consultas precisas y operaciones atómicas con `apply_batch`.
+- Arranque ligero (pantallas bajo demanda, PDF/escáner/OCR fuera de la caché inicial) y OCR servido desde la propia app.
 - Accesibilidad: contraste AA y nombres para VoiceOver comprobados automáticamente.
-- Tamaño de texto del sistema (Dynamic Type) entre el 85 % y el 140 %; los espaciados y zonas de toque no cambian.
-- Actualización con aviso («Hay una versión nueva de Cesta · Actualizar») en lugar de recargar a mitad de uso.
+- Actualización con aviso; en Novedades, la fecha de la versión instalada y «Buscar actualización».
 - Para usar Cesta hace falta cuenta: el modo local es solo para pruebas y desarrollo.
-- Historial limitado: movimientos de almacén 400 días y operaciones de deshacer 30 días, limpiados cada noche por el servidor (pg_cron).
-- Clave _publishable_ de Supabase. El asesor de rendimiento de Supabase no marca ningún índice pendiente.
-- Textos compartidos (errores, avisos, botones comunes) en `src/copy/es.ts`.
+- Historial limitado (400 días de movimientos, 30 de deshacer) con limpieza nocturna; clave _publishable_.
+- **Lectura de tickets reales**: recorte del papel, luz igualada e intérprete tolerante al ruido.
+- **Eliminar cuenta y exportar mis datos** (RGPD: supresión y portabilidad).
+- **Textos legales** (privacidad, condiciones y cookies) y consentimiento explícito para alergias y dieta.
+- **Avisos push de la mascota** con Cesta cerrada (pg_cron + Edge Function `pet-push` + Vault).
+- Primer uso con 18 básicos propuestos, recetas favoritas y catálogo base sin duplicados (345 productos).
+- Textos compartidos en `src/copy/es.ts` y legales en `src/copy/legal.ts`.
 
 ## Imprescindible antes de lanzar (fuera del código)
 
-1. **Prueba en iPhones reales** (iOS 17 y 18, Safari y app instalada): cámara del escáner, lectura de tickets con fotos reales de Mercadona, Lidl, Carrefour y Dia, Face ID, safe areas y teclado.
-2. **Correo de Supabase**: configurar **SMTP propio** (el de Supabase solo envía unos pocos emails por hora) y plantillas de email en español.
-3. **Eliminar cuenta y exportar datos.** Es la única función nueva que falta de verdad: la exige el RGPD (derechos de supresión y portabilidad) y Apple, si se publica en la App Store.
-4. **Legal**: política de privacidad, términos y aviso de cookies. Ojo: el perfil de alérgenos y la dieta pueden considerarse **datos de salud** (categoría especial del RGPD), así que hace falta consentimiento explícito o no guardarlos en el servidor.
-5. **Precios de Mercadona**: usa su tienda online sin API oficial. Para un producto comercial hay riesgo legal (condiciones de uso) y puede romperse en cualquier momento. Recomiendo desactivarlo de lanzamiento y quedarse con los precios aprendidos de los tickets, o buscar un acuerdo o fuente con licencia.
-6. **Avisos de la mascota**: hoy solo saltan con la app abierta. Para avisos reales en iPhone hace falta Web Push (iOS 16.4+, app instalada) con un pequeño servidor. Si no se hace, conviene decir claramente «se avisa al abrir Cesta».
-7. **Dominio propio** (no `github.io`): la app instalada queda ligada al dominio, así que cambiarlo después obliga a reinstalar y pierde los datos locales.
-8. **Protección de contraseñas filtradas** en Supabase (Auth → Policies): un interruptor del panel; lo recomienda el asesor de seguridad.
+1. **Rellenar los datos del responsable** en `src/copy/legal.ts` (`OWNER`) y que un profesional revise los textos legales.
+2. **Correo de Supabase**: SMTP propio (el de Supabase solo envía unos pocos emails por hora) y plantillas en español.
+3. **Precios de Mercadona**: sin API oficial; para un producto comercial, desactivarlo o pedir acuerdo (ver «Fuentes de precios» en el estudio).
+4. **Dominio propio** (no `github.io`) antes de que la gente instale la app.
+5. **Protección de contraseñas filtradas** en Supabase (Authentication → Attack Protection): interruptor del panel; disponible en el plan Pro.
+6. **Pruebas en iPhones reales** de lo que no cubren las automáticas (arriba).
 
-## Pulido pendiente (sin funciones nuevas)
+## Pulido pendiente
 
-- **Aplicar la migración `20261019000000_prune_history.sql` en Supabase** (crea la limpieza nocturna; solo añade una función, dos índices y la tarea de pg_cron).
-- Llevar al catálogo `src/copy/es.ts` los textos propios de cada pantalla si se quiere revisar todo el tono en un solo archivo.
-- Primer uso: proponer definir el mínimo de 5–10 productos habituales; sin mínimos, Necesidades y AutoCesta no tienen nada que hacer.
-- Pantallas de arranque de iOS (`apple-touch-startup-image`) para evitar el destello al abrir la app instalada.
-- Cola sin conexión para el almacén, tickets y la mascota con Supabase (hoy solo las listas se reintentan solas; el resto avisa del error).
-- El PIN de mantenimiento es de cada dispositivo: decidir si «administrador» debe ser un rol de la cuenta validado en el servidor.
-- Monitorizar errores en producción (Sentry o similar) y analítica respetuosa con la privacidad.
-
-**Contenido**
-
-- Catálogo base revisado: 345 productos sin pares duplicados.
-- Ampliar las recetas (72) o permitir marcarlas como favoritas; hoy solo se puede descartar.
-- Ampliar el lector de tickets con más formatos de supermercado y probarlo con un banco de tickets reales anonimizados.
+- Importar el **ticket digital de Mercadona** (PDF): texto exacto sin cámara.
+- Cola sin conexión para el almacén, tickets y la mascota (hoy solo las listas se reintentan solas).
+- El PIN de mantenimiento es de cada dispositivo: decidir si «administrador» debe ser un rol de la cuenta.
+- Monitorizar errores en producción (necesita una cuenta de Sentry o similar).
+- Ampliar las recetas (72) y los formatos de ticket con un banco de tickets reales.
+- Llevar a `src/copy/es.ts` los textos propios de cada pantalla si se quiere revisar todo el tono en un solo archivo.
