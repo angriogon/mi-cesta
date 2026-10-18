@@ -9,6 +9,9 @@ const migration = [
   "20261021000000_pet_push.sql",
   "20261021000001_pg_net_schema.sql",
   "20261022000000_catalog_duplicates.sql",
+  "20261023000000_catalog_more.sql",
+  "20261024000000_pet_stock_push.sql",
+  "20261025000000_admin_role.sql",
 ]
   .map((file) => readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8"))
   .join("\n");
@@ -211,6 +214,52 @@ ok(
   (await as(ANA, `select count(*)::int n from products where household_id=$1 and id='b1'`, [hid])).rows[0].n === 0,
   "apply_batch borra por id",
 );
+// ---- rol de administrador ----
+const tryAs = async (user, sql, params) => {
+  try {
+    await as(user, sql, params);
+    return true;
+  } catch {
+    return false;
+  }
+};
+const addReminder = (user, id) =>
+  tryAs(user, `insert into dog_reminders (household_id, id, title, reminder_time) values ($1, $2, 'Paseo', '09:00')`, [
+    hid,
+    id,
+  ]);
+ok(!(await addReminder(LUIS, "rem-luis")), "un miembro no puede crear recordatorios de la mascota");
+ok(await addReminder(ANA, "rem-ana"), "la responsable sí");
+ok(
+  !(await tryAs(LUIS, `delete from dog_reminders where household_id = $1 and id = 'rem-ana'`, [hid])) ||
+    (await as(ANA, `select count(*)::int n from dog_reminders where household_id = $1 and id = 'rem-ana'`, [hid]))
+      .rows[0].n === 1,
+  "un miembro no puede borrar recordatorios",
+);
+ok(
+  !(await tryAs(LUIS, `select public.set_member_role($1, $2, 'admin')`, [hid, LUIS])),
+  "nadie se nombra administrador a sí mismo",
+);
+ok(
+  !(await tryAs(EVA, `select public.set_member_role($1, $2, 'admin')`, [hid, LUIS])),
+  "alguien de fuera no cambia roles",
+);
+ok(
+  await tryAs(ANA, `select public.set_member_role($1, $2, 'admin')`, [hid, LUIS]),
+  "la responsable nombra administrador a Luis",
+);
+ok(await addReminder(LUIS, "rem-luis"), "y ya puede gestionar la mascota");
+ok(
+  !(await tryAs(LUIS, `select public.set_member_role($1, $2, 'member')`, [hid, ANA])),
+  "nadie cambia el rol del responsable",
+);
+await as(ANA, `select public.set_member_role($1, $2, 'member')`, [hid, LUIS]);
+ok(
+  (await as(ANA, `select role from household_members where household_id = $1 and user_id = $2`, [hid, LUIS])).rows[0]
+    .role === "member",
+  "y se le puede quitar",
+);
+
 // ---- prune_history: límite al historial ----
 await db.query(
   `insert into stock_events (household_id, id, product_id, delta, reason, created_at) values
@@ -279,6 +328,25 @@ ok(
   (await db.query(`select count(*)::int n from public.due_pet_reminders()`)).rows[0].n === 0,
   "cada aviso se envía una sola vez al día",
 );
+// Artículos de la mascota bajo mínimos: solo entre las 10:00 y las 12:00 de la hora local.
+await db.query(
+  `insert into dog_items (household_id, id, name, current_stock, minimum_stock) values
+   ($1, 'pienso', 'Pienso', 1, 2), ($1, 'arena', 'Arena', 5, 2), ($1, 'sin-minimo', 'Juguete', 0, 0)`,
+  [hid],
+);
+const localHour = (await db.query(`select extract(hour from ${localNow})::int h`)).rows[0].h;
+const stockDue = (await db.query(`select alert_id from public.due_pet_stock_alerts()`)).rows.map((r) => r.alert_id);
+ok(
+  localHour >= 10 && localHour < 12 ? stockDue.join() === "stock:pienso" : stockDue.length === 0,
+  `avisa solo del pienso bajo mínimos y en su franja (${localHour} h: ${stockDue.join() || "ninguno"})`,
+);
+let stockBlocked = false;
+try {
+  await as(ANA, `select * from public.due_pet_stock_alerts()`);
+} catch {
+  stockBlocked = true;
+}
+ok(stockBlocked, "solo el servidor puede consultar los artículos bajo mínimos");
 let dueBlocked = false;
 try {
   await as(ANA, `select * from public.due_pet_reminders()`);

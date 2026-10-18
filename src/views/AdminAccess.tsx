@@ -43,6 +43,27 @@ export function AdminAccess({ admin, account }: { admin: AdminState; account: Ac
     setBusy(false);
   }
 
+  if (admin.byRole)
+    return (
+      <section className="flex flex-1 flex-col items-center justify-center pb-10" aria-labelledby="admin-access-title">
+        <div className="w-full rounded-xl bg-card p-5 text-center">
+          <div className="mx-auto flex size-16 items-center justify-center rounded-xl bg-primary-soft text-primary">
+            <Lock className="size-7" />
+          </div>
+          <h1 id="admin-access-title" className="mt-5 text-2xl font-bold">
+            Solo para administradores
+          </h1>
+          <p className="mx-auto mt-2 max-w-72 text-sm leading-6 text-muted-foreground">
+            El mantenimiento (existencias, mínimos, productos y avisos de la mascota) es de los administradores del
+            hogar. Pide al responsable que te nombre administrador en Menú → Mi hogar.
+          </p>
+          <Button onClick={admin.cancel} className="mt-5 h-11 w-full rounded-xl">
+            Entendido
+          </Button>
+        </div>
+      </section>
+    );
+
   return (
     <section className="flex flex-1 flex-col items-center justify-center pb-10" aria-labelledby="admin-access-title">
       <div className="w-full rounded-xl bg-card p-5">

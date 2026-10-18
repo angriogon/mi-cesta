@@ -10,10 +10,7 @@ let db: LocalDb;
 beforeEach(async () => {
   db = new LocalDb("hogar-test", memoryPersistence());
   await seedIfEmpty(db);
-  api = new CestaApi(db, {
-    fetch: async (_cp, names) =>
-      names.filter((name) => /tomate/i.test(name)).map((name) => ({ name, priceCents: 249 })),
-  });
+  api = new CestaApi(db);
 });
 
 const byName = async (name: string) => (await api.products()).find((product) => product.name === name)!;
@@ -21,7 +18,7 @@ const byName = async (name: string) => (await api.products()).find((product) => 
 describe("hogar nuevo", () => {
   it("empieza con el catálogo base vacío de existencias y sin datos", async () => {
     const products = await api.products();
-    expect(products.length).toBe(345);
+    expect(products.length).toBe(399);
     expect(products.every((product) => product.currentStock === 0 && product.minimumStock === 0)).toBe(true);
     expect(await api.lots()).toEqual([]);
     expect((await api.tickets()).tickets).toEqual([]);
@@ -101,7 +98,7 @@ describe("compra y ticket", () => {
       purchasedAt: "2026-10-17",
       totalCents: 199,
       rawText: "",
-      items: [{ description: "KMB JENGIBRE 330", quantity: 1, lineTotalCents: 199 }],
+      items: [{ description: "KMB JNG 330", quantity: 1, lineTotalCents: 199 }],
     });
     const [review] = (await api.tickets()).reviews;
     await api.resolveReview(review.id, "Kombucha de jengibre");
@@ -114,7 +111,7 @@ describe("compra y ticket", () => {
       purchasedAt: "2026-10-18",
       totalCents: 199,
       rawText: "",
-      items: [{ description: "KMB JENGIBRE 330", quantity: 1, lineTotalCents: 199 }],
+      items: [{ description: "KMB JNG 330", quantity: 1, lineTotalCents: 199 }],
     });
     expect((await api.tickets()).reviews).toEqual([]);
     expect((await byName("Kombucha de jengibre")).currentStock).toBe(2);
@@ -197,20 +194,23 @@ describe("recetas, AutoCesta y respuestas", () => {
 });
 
 describe("precios", () => {
-  it("sin código postal no consulta fuera y conserva lo aprendido", async () => {
+  it("solo usa lo pagado en los tickets: los de la tienda online antigua se ignoran", async () => {
+    await db.insert("prices", [
+      {
+        id: "mercadona:x",
+        householdId: "hogar-test",
+        productId: "x",
+        productName: "Tomate ensalada",
+        category: "Fruta y verdura",
+        priceCents: 249,
+        merchant: "Mercadona",
+        source: "mercadona",
+        observedAt: "2026-10-01T10:00:00.000Z",
+      },
+    ]);
     const result = await api.refreshPrices();
-    expect(result.online).toBe(false);
-    expect(result.externalUpdated).toBe(0);
-  });
-
-  it("con código postal actualiza fruta y verdura desde la referencia externa", async () => {
-    await api.setPostalCode("41300");
-    const result = await api.refreshPrices();
-    expect(result.online).toBe(true);
-    expect(result.externalUpdated).toBeGreaterThan(0);
-    expect(result.prices.every((price) => price.category === "Fruta y verdura")).toBe(true);
-    expect(result.meta.lastSuccessfulAt).not.toBeNull();
-    await expect(api.setPostalCode("4130")).rejects.toThrow();
+    expect(result.learned).toBe(0);
+    expect(result.prices).toEqual([]);
   });
 });
 
@@ -296,7 +296,7 @@ describe("restablecer", () => {
     await api.saveLists([{ id: "1", name: "Pan", quantity: 1, category: "Panadería", done: false }], [], 0, (r) => r);
     await api.resetHousehold();
     const products = await api.products();
-    expect(products.length).toBe(345);
+    expect(products.length).toBe(399);
     expect(products.every((product) => product.currentStock === 0 && product.minimumStock === 0)).toBe(true);
     expect((await api.dogItems()).items).toEqual([]);
     expect((await api.lists()).shopping).toEqual([]);
@@ -309,7 +309,7 @@ describe("privacidad", () => {
     const data = await api.exportHousehold();
     expect(data.format).toBe("cesta-export");
     expect(data.household).toMatchObject({ id: "hogar-test" });
-    expect(data.tables.products?.length).toBe(346);
+    expect(data.tables.products?.length).toBe(400);
     expect(Object.keys(data.tables)).toEqual(
       expect.arrayContaining(["inventory_lots", "tickets", "prices", "dog_items", "dog_reminders", "stock_events"]),
     );

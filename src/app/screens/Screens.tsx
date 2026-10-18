@@ -182,7 +182,6 @@ export function Overlays() {
               store.setPriceMeta(result.meta);
               return result;
             }}
-            onPostalCodeChange={(postalCode) => store.setPriceMeta((meta) => ({ ...meta, postalCode }))}
             onReset={() => window.location.reload()}
             onClose={() => store.setMenuOpen(false)}
           />

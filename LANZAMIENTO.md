@@ -5,9 +5,9 @@
 | Prueba                         | Resultado | Cubre                                                                                                                                                        |
 | ------------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Calidad (`npm run check`)      | En verde  | Tipos (TypeScript 7), ESLint estricto con tipos, react-hooks y jsx-a11y, y Prettier                                                                          |
-| Unitarias (Vitest)             | 93        | Dominio, API completa, operaciones atómicas, hooks de cada dominio, errores, escala de texto, ruido de OCR, búsqueda del papel, exportación y consentimiento |
-| Base de datos (PGlite)         | 39        | Migraciones, aislamiento entre hogares, invitaciones, fotos privadas, `apply_batch`, limpieza del historial, eliminar cuenta, avisos push y catálogo         |
-| Extremo a extremo (Playwright) | 28        | Todas las pantallas en WebKit con iPhone 14 y SE, OCR real sin CDN, WCAG 2.1 AA en claro y oscuro, texto al 140 %, primer uso, favoritas y menú legal        |
+| Unitarias (Vitest)             | 111       | Dominio, API completa, operaciones atómicas, hooks de cada dominio, errores, escala de texto, ruido de OCR, búsqueda del papel, exportación y consentimiento |
+| Base de datos (PGlite)         | 50        | Migraciones, aislamiento entre hogares, invitaciones, fotos privadas, `apply_batch`, limpieza del historial, eliminar cuenta, avisos push y catálogo         |
+| Extremo a extremo (Playwright) | 32        | Todas las pantallas en WebKit con iPhone 14 y SE, OCR real sin CDN, WCAG 2.1 AA en claro y oscuro, texto al 140 %, primer uso, favoritas y menú legal        |
 | Tickets reales                 | Opcional  | `CESTA_REAL_TICKETS=carpeta`: fotos reales fuera del repositorio con lo esperado en JSON (hoy, Mercadona: 46/46 líneas)                                      |
 | Integración con Supabase real  | Opcional  | Necesita usuarios de prueba (`CESTA_IT_*`); no se ejecuta en CI                                                                                              |
 
@@ -38,20 +38,22 @@
 - **Avisos push de la mascota** con Cesta cerrada (pg_cron + Edge Function `pet-push` + Vault).
 - Primer uso con 18 básicos propuestos, recetas favoritas y catálogo base sin duplicados (345 productos).
 - Textos compartidos en `src/copy/es.ts` y legales en `src/copy/legal.ts`.
+- **Cola sin conexión** para almacén, tickets (con su foto) y mascota: se envía al volver la red.
+- **Administrador como rol de la cuenta** (Responsable, Administrador, Miembro), comprobado en el servidor.
+- **Aviso de artículos de la mascota bajo mínimos**, en la app y por push (10:00–12:00).
+- **Precios solo de tus tickets**: fuera la tienda online de Mercadona y el código postal.
+- **Catálogo de 399 productos** y **100 recetas**, todos sus ingredientes en el catálogo.
 
 ## Imprescindible antes de lanzar (fuera del código)
 
 1. **Rellenar los datos del responsable** en `src/copy/legal.ts` (`OWNER`) y que un profesional revise los textos legales.
 2. **Correo de Supabase**: SMTP propio (el de Supabase solo envía unos pocos emails por hora) y plantillas en español.
-3. **Precios de Mercadona**: sin API oficial; para un producto comercial, desactivarlo o pedir acuerdo (ver «Fuentes de precios» en el estudio).
-4. **Dominio propio** (no `github.io`) antes de que la gente instale la app.
-5. **Protección de contraseñas filtradas** en Supabase (Authentication → Attack Protection): interruptor del panel; disponible en el plan Pro.
-6. **Pruebas en iPhones reales** de lo que no cubren las automáticas (arriba).
+3. **Dominio propio** (no `github.io`) antes de que la gente instale la app.
+4. **Protección de contraseñas filtradas** en Supabase (Authentication → Attack Protection): interruptor del panel; disponible en el plan Pro.
+5. **Pruebas en iPhones reales** de lo que no cubren las automáticas (arriba).
 
 ## Pulido pendiente
 
-- Cola sin conexión para el almacén, tickets y la mascota (hoy solo las listas se reintentan solas).
-- El PIN de mantenimiento es de cada dispositivo: decidir si «administrador» debe ser un rol de la cuenta.
 - Monitorizar errores en producción (necesita una cuenta de Sentry o similar).
-- Ampliar las recetas (72) y los formatos de ticket con un banco de tickets reales.
+- Formatos de ticket de otros supermercados (Lidl, Carrefour, Dia) con un banco de tickets reales.
 - Llevar a `src/copy/es.ts` los textos propios de cada pantalla si se quiere revisar todo el tono en un solo archivo.

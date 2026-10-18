@@ -5,6 +5,8 @@ import type { Category } from "../domain/categories";
 import type { StockLike } from "../domain/lists";
 import { LOAD_FAILED, reportError } from "../lib/errors";
 import { errorMessage } from "./errorMessage";
+import { isNetworkError, outboxFor } from "../data/outbox";
+import { OFFLINE_SAVED } from "./useOfflineQueue";
 
 export const toStock = (product: Product): StockLike => ({
   id: product.id,
@@ -74,6 +76,16 @@ export function useProducts(api: CestaApi, onChanged: () => void): ProductsState
         await write;
         changed.current();
       } catch (error) {
+        if (isNetworkError(error)) {
+          await outboxFor(api.db.householdId).enqueue({
+            kind: "stock",
+            productId: id,
+            currentStock: next.quantity,
+            minimumStock: next.minimum,
+          });
+          reportError(error, "guardar existencias", OFFLINE_SAVED);
+          return;
+        }
         reportError(error, "guardar existencias", errorMessage(error, "No se ha podido guardar el cambio."));
         void refreshProducts();
       }

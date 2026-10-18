@@ -835,7 +835,12 @@ export type Database = {
           user_id: string
         }[]
       }
+      is_admin: { Args: { p_household_id: string }; Returns: boolean }
       is_member: { Args: { p_household_id: string }; Returns: boolean }
+      set_member_role: {
+        Args: { p_household_id: string; p_role: string; p_user_id: string }
+        Returns: undefined
+      }
       join_household: { Args: { p_code: string }; Returns: string }
       leave_household: { Args: { p_household_id: string }; Returns: undefined }
       my_households: {

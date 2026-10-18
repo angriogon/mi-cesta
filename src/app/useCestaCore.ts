@@ -9,6 +9,8 @@ import type { ExpiryItem } from "../views/ExpiryDialog";
 import type { Account } from "./account";
 import { usePetAlerts, usePreloadScreens, useSavedNotice, useSplash, useStorePresence } from "./useAppEffects";
 import { useHouseholdData } from "./useHouseholdData";
+import { useOfflineQueue } from "./useOfflineQueue";
+import { inventoryChanged } from "./events";
 import { useLists } from "./useLists";
 import { usePet } from "./usePet";
 
@@ -45,7 +47,7 @@ export function useCestaCore(api: CestaApi, account: Account) {
   const [expiryItems, setExpiryItems] = useState<ExpiryItem[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const device = useMemo(() => deviceId(), []);
-  const admin = useAdmin(householdId);
+  const admin = useAdmin(householdId, account.role);
   const toast = useToast();
   const showToast = toast.show;
   useEffect(() => setErrorNotifier((message) => showToast(message)), [showToast]);
@@ -63,13 +65,17 @@ export function useCestaCore(api: CestaApi, account: Account) {
   // Carga inicial: listas y despensa antes de quitar la pantalla de bienvenida.
   const { pullLists } = lists;
   const { refreshProducts } = data;
+  const offlinePending = useOfflineQueue(api, () => {
+    void refreshProducts();
+    inventoryChanged.emit();
+  });
   useEffect(() => {
     void Promise.all([pullLists(), refreshProducts()]).then(() => setReady(true));
   }, [pullLists, refreshProducts]);
 
   const splash = useSplash(ready);
   usePreloadScreens(ready);
-  const petAlert = usePetAlerts(ready, pet.reminders, pet.petName);
+  const petAlert = usePetAlerts(ready, pet.reminders, pet.items, pet.petName);
   const pendingInStore = lists.checklist.filter((item) => !item.done).length;
   useStorePresence(api, device, ready && view === "purchase" && stage === "store", pendingInStore);
   const saved = useSavedNotice(expiryItems.length > 0);
@@ -86,6 +92,7 @@ export function useCestaCore(api: CestaApi, account: Account) {
 
   return {
     api,
+    offlinePending,
     account,
     admin,
     toast,

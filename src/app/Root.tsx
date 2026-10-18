@@ -9,7 +9,7 @@ import { SupabaseDb } from "../data/supabase-db";
 import { readText, writeText } from "../lib/storage";
 import { localAccount, myHouseholds, supabaseAccount, type HouseholdSummary } from "./account";
 import { CestaApp } from "./CestaApp";
-import { backendMode, externalPrices, supabase } from "./config";
+import { backendMode, supabase } from "./config";
 import { AuthScreen, NewPasswordScreen } from "./auth/AuthScreens";
 import { HouseholdScreen } from "./auth/HouseholdScreen";
 
@@ -82,18 +82,23 @@ function SupabaseRoot() {
   }, [householdId]);
 
   const api = useMemo(
-    () => (session && householdId ? new CestaApi(new SupabaseDb(supabase(), householdId), externalPrices()) : null),
+    () => (session && householdId ? new CestaApi(new SupabaseDb(supabase(), householdId)) : null),
     [session, householdId],
   );
   const account = useMemo(
     () =>
       session && householdId
-        ? supabaseAccount(session.user.email ?? "", householdId, () => {
-            setHouseholdId(null);
-            setHouseholds((list) => list?.filter((item) => item.id !== householdId) ?? null);
-          })
+        ? supabaseAccount(
+            session.user.email ?? "",
+            householdId,
+            households?.find((item) => item.id === householdId)?.role ?? "member",
+            () => {
+              setHouseholdId(null);
+              setHouseholds((list) => list?.filter((item) => item.id !== householdId) ?? null);
+            },
+          )
         : null,
-    [session, householdId],
+    [session, householdId, households],
   );
 
   if (session === undefined) return <Splash />;

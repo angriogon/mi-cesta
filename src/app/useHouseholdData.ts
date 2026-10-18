@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useState, type RefObject } from "react";
 import type { CestaApi } from "../data/api";
 import type { ListItem, PriceMeta, PriceRef } from "../data/types";
 import type { Overview, Prediction } from "../domain/autocesta";
@@ -54,26 +54,6 @@ export function useHouseholdData(
     }, 450);
     return () => window.clearTimeout(timer);
   }, [ready, api, refreshPrices]);
-
-  // Actualización automática de precios cada 72 h si hay código postal y wifi (o sin información de red).
-  const autoPricesStarted = useRef(false);
-  useEffect(() => {
-    if (!ready || autoPricesStarted.current || !priceMeta.postalCode) return;
-    const last = priceMeta.lastSuccessfulAt ? new Date(priceMeta.lastSuccessfulAt).getTime() : 0;
-    if (Date.now() - last < 72 * 3600 * 1000) return;
-    const connection = (navigator as Navigator & { connection?: { type?: string } }).connection;
-    if (!navigator.onLine || (connection?.type && connection.type !== "wifi")) return;
-    autoPricesStarted.current = true;
-    api
-      .refreshPrices()
-      .then((result) => {
-        setPrices(result.prices);
-        setPriceMeta(result.meta);
-      })
-      .catch(() => {
-        autoPricesStarted.current = false;
-      });
-  }, [ready, api, priceMeta]);
 
   // Cambios hechos desde otros dispositivos (agrupados) y al volver a la app.
   useEffect(() => {

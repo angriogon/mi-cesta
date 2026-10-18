@@ -231,12 +231,12 @@ test.describe("sin service worker", () => {
   });
 });
 
-test("menú: código postal, perfil alimentario, novedades y restablecer", async ({ page }) => {
+test("menú: precios, perfil alimentario, novedades y restablecer", async ({ page }) => {
   await openMenu(page);
-  await page.getByRole("button", { name: "Indicar código postal" }).click();
-  await page.getByPlaceholder("41300").fill("41300");
-  await page.getByRole("button", { name: "Guardar", exact: true }).click();
-  await expect(page.getByRole("button", { name: "CP 41300" })).toBeVisible();
+  await page.getByRole("button", { name: "Actualizar precios" }).click();
+  await expect(
+    page.getByText("No hay precios nuevos. Guarda tickets para que Cesta aprenda lo que pagas."),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Alimentación especial" }).click();
   await page.getByLabel("Activar perfil").check();
   await page.getByPlaceholder("gluten, leche, frutos secos").fill("huevo");

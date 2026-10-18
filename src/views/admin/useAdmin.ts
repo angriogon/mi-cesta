@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { readJson, removeKey, writeJson } from "../../lib/storage";
 import { reportError } from "../../lib/errors";
+import type { HouseholdRole } from "../../app/account";
 
 export interface AdminSettings {
   salt: string;
@@ -24,10 +25,13 @@ export async function hashPin(pin: string, salt: string): Promise<string> {
 export type AdminState = ReturnType<typeof useAdmin>;
 
 /**
- * Bloqueo local del mantenimiento (existencias, mínimos y catálogo) con PIN o biometría del dispositivo.
- * Se vuelve a bloquear al salir de la app.
+ * Acceso al mantenimiento (existencias, mínimos y catálogo).
+ * - Con cuenta, lo decide el rol del hogar (lo comprueba el servidor): responsables y administradores
+ *   entran directamente; a los miembros se les explica que lo pidan.
+ * - En modo local (pruebas), PIN o biometría del dispositivo; se vuelve a bloquear al salir de la app.
  */
-export function useAdmin(householdId: string) {
+export function useAdmin(householdId: string, role: HouseholdRole | null = null) {
+  const byRole = role !== null;
   const key = `cesta-admin-v1:${householdId}`;
   const [settings, setSettings] = useState<AdminSettings | null>(() => readJson<AdminSettings | null>(key, null));
   const [unlocked, setUnlocked] = useState(false);
@@ -149,21 +153,36 @@ export function useAdmin(householdId: string) {
 
   return useMemo(
     () => ({
+      byRole,
       settings,
-      unlocked,
+      unlocked: byRole ? role !== "member" : unlocked,
       requested,
       biometricAvailable,
       biometricEnabled: Boolean(settings?.credentialId),
       request: () => setRequested(true),
       cancel: () => setRequested(false),
-      lock: () => setUnlocked(false),
+      lock: () => {
+        if (!byRole) setUnlocked(false);
+      },
       configure,
       unlockPin,
       enableBiometrics,
       unlockBiometric,
       forget: () => save(null),
     }),
-    [settings, unlocked, requested, biometricAvailable, configure, unlockPin, enableBiometrics, unlockBiometric, save],
+    [
+      byRole,
+      role,
+      settings,
+      unlocked,
+      requested,
+      biometricAvailable,
+      configure,
+      unlockPin,
+      enableBiometrics,
+      unlockBiometric,
+      save,
+    ],
   );
 }
 

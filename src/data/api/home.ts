@@ -226,13 +226,6 @@ export class CestaApi extends PrivacyApi {
     });
   }
 
-  async setPostalCode(postalCode: string): Promise<void> {
-    const clean = postalCode.trim();
-    if (clean && !/^\d{5}$/.test(clean)) throw new ApiError("El código postal debe tener 5 números.");
-    const household = await this.db.getHousehold();
-    await this.db.updateHousehold({ postalCode: clean, priceMeta: { ...household.priceMeta, postalCode: clean } });
-  }
-
   async renameHousehold(name: string): Promise<void> {
     const clean = name.trim().slice(0, 50);
     if (!clean) throw new ApiError("Escribe un nombre para el hogar.");

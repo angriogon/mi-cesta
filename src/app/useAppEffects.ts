@@ -1,6 +1,7 @@
 import { useEffect, useState, type TouchEvent } from "react";
 import type { CestaApi } from "../data/api";
-import type { DogReminder } from "../data/types";
+import type { DogItem, DogReminder } from "../data/types";
+import { lowPetItems, lowPetItemText } from "../domain/pet";
 import { logError } from "../lib/errors";
 import { deviceName, readJson, writeJson } from "../lib/storage";
 import { todayIso } from "../lib/text";
@@ -32,9 +33,33 @@ export function usePreloadScreens(ready: boolean) {
   }, [ready]);
 }
 
-/** Avisos de la mascota: se muestran dentro de la app y como notificación si hay permiso. */
-export function usePetAlerts(ready: boolean, reminders: DogReminder[], petName: string) {
-  const [alert, setAlert] = useState<DogReminder | null>(null);
+/** Aviso de la mascota dentro de la app: un recordatorio o un artículo que se acaba. */
+export interface PetAlert {
+  id: string;
+  title: string;
+}
+
+/**
+ * Avisos de la mascota: recordatorios a su hora y artículos bajo mínimos (una vez al día cada uno).
+ * Se muestran dentro de la app y como notificación si hay permiso.
+ */
+export function usePetAlerts(ready: boolean, reminders: DogReminder[], items: DogItem[], petName: string) {
+  const [alert, setAlert] = useState<PetAlert | null>(null);
+  useEffect(() => {
+    if (!ready) return;
+    function check() {
+      const today = todayIso(new Date());
+      for (const item of lowPetItems(items)) {
+        const key = `cesta-dog-stock-${item.id}-${today}`;
+        if (readJson(key, null)) continue;
+        writeJson(key, "shown");
+        setAlert((current) => current ?? { id: `stock-${item.id}`, title: lowPetItemText(item) });
+      }
+    }
+    check();
+    document.addEventListener("visibilitychange", check);
+    return () => document.removeEventListener("visibilitychange", check);
+  }, [items, ready]);
   useEffect(() => {
     if (!ready || !reminders.some((reminder) => reminder.enabled)) return;
     function check() {

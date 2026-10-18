@@ -19,7 +19,19 @@ export function HouseholdPage({
   onChange: (household: Household) => void;
 }) {
   const [name, setName] = useState(household.name);
-  const [members, setMembers] = useState<{ email: string; role: string }[]>([]);
+  const [members, setMembers] = useState<{ userId: string; email: string; role: string }[]>([]);
+  const canManage = account.role === "owner" || account.role === "admin";
+
+  async function changeRole(member: { userId: string; email: string; role: string }) {
+    const next = member.role === "admin" ? "member" : "admin";
+    try {
+      await account.setMemberRole(member.userId, next);
+      setMembers((list) => list.map((item) => (item.userId === member.userId ? { ...item, role: next } : item)));
+      setMessage(next === "admin" ? `${member.email} ya es administrador.` : `${member.email} vuelve a ser miembro.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se ha podido cambiar el rol.");
+    }
+  }
   const [message, setMessage] = useState("");
   const [confirmLeave, setConfirmLeave] = useState(false);
   const inviteUrl = `${window.location.origin}${import.meta.env.BASE_URL}?hogar=${household.inviteCode}`;
@@ -90,11 +102,26 @@ export function HouseholdPage({
               <p className="text-xs font-semibold">Miembros</p>
               <ul className="mt-2 space-y-1 text-[0.75rem]">
                 {members.map((member) => (
-                  <li key={member.email} className="flex items-center justify-between gap-2">
-                    <span className="truncate">{member.email}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {member.role === "owner" ? "Creador" : "Miembro"}
+                  <li key={member.userId} className="flex min-h-11 items-center justify-between gap-2">
+                    <span className="min-w-0">
+                      <span className="block truncate">{member.email}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {member.role === "owner"
+                          ? "Responsable"
+                          : member.role === "admin"
+                            ? "Administrador"
+                            : "Miembro"}
+                      </span>
                     </span>
+                    {canManage && member.role !== "owner" && member.email !== account.email && (
+                      <button
+                        type="button"
+                        onClick={() => void changeRole(member)}
+                        className="min-h-9 shrink-0 rounded-lg bg-muted px-2.5 text-xs font-semibold text-primary"
+                      >
+                        {member.role === "admin" ? "Quitar administrador" : "Hacer administrador"}
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
