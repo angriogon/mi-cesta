@@ -1,4 +1,4 @@
--- Catálogo base ampliado (47 productos): básicos que faltaban (azúcar, harina, fideos…) y los
+-- Catálogo base ampliado (54 productos): básicos que faltaban (azúcar, harina, fideos…) y los
 -- que aparecían en tickets reales sin equivalente (aceitunas, pepinillos, setas, rosquillas,
 -- ambientadores…). Los hogares nuevos los reciben al crearse; a los existentes se les añaden con
 -- existencias a cero si aún no tienen un producto con ese nombre.
@@ -26,6 +26,8 @@ insert into public.catalog_template (sku, name, category) values
   ('despensa-patatas-chips', 'Patatas chips', 'Despensa'),
   ('despensa-sal-gruesa', 'Sal gruesa', 'Despensa'),
   ('despensa-bicarbonato', 'Bicarbonato', 'Despensa'),
+  ('despensa-curcuma', 'Cúrcuma', 'Despensa'),
+  ('despensa-habitas', 'Habitas', 'Despensa'),
   ('fruta-y-verdura-setas', 'Setas', 'Fruta y verdura'),
   ('fruta-y-verdura-cebollino', 'Cebollino', 'Fruta y verdura'),
   ('fruta-y-verdura-frutos-rojos', 'Frutos rojos', 'Fruta y verdura'),
@@ -37,6 +39,11 @@ insert into public.catalog_template (sku, name, category) values
   ('fruta-y-verdura-batata', 'Batata', 'Fruta y verdura'),
   ('fruta-y-verdura-cebolla-morada', 'Cebolla morada', 'Fruta y verdura'),
   ('fruta-y-verdura-albahaca', 'Albahaca', 'Fruta y verdura'),
+  ('fruta-y-verdura-calabaza', 'Calabaza', 'Fruta y verdura'),
+  ('fruta-y-verdura-limas', 'Limas', 'Fruta y verdura'),
+  ('fruta-y-verdura-endivias', 'Endivias', 'Fruta y verdura'),
+  ('fruta-y-verdura-acelgas', 'Acelgas', 'Fruta y verdura'),
+  ('fruta-y-verdura-remolacha', 'Remolacha', 'Fruta y verdura'),
   ('refrigerados-tofu', 'Tofu', 'Refrigerados'),
   ('refrigerados-yogur-de-soja', 'Yogur de soja', 'Refrigerados'),
   ('refrigerados-bebida-de-soja', 'Bebida de soja', 'Refrigerados'),
@@ -57,7 +64,7 @@ insert into public.products (household_id, id, sku, name, category)
 select h.id, gen_random_uuid()::text, t.sku, t.name, t.category
 from public.households h
 cross join public.catalog_template t
-where t.sku in ('despensa-azucar', 'despensa-azucar-moreno', 'despensa-harina-de-trigo', 'despensa-harina-de-maiz', 'despensa-levadura', 'despensa-pan-rallado', 'despensa-fideos', 'despensa-noodles', 'despensa-cuscus', 'despensa-quinoa', 'despensa-aceitunas', 'despensa-pepinillos', 'despensa-pimientos-del-piquillo', 'despensa-cayena', 'despensa-cebolla-frita', 'despensa-leche-de-coco', 'despensa-hummus', 'despensa-cereales-de-chocolate', 'despensa-galletas-saladas', 'despensa-patatas-chips', 'despensa-sal-gruesa', 'despensa-bicarbonato', 'fruta-y-verdura-setas', 'fruta-y-verdura-cebollino', 'fruta-y-verdura-frutos-rojos', 'fruta-y-verdura-brotes-tiernos', 'fruta-y-verdura-rucula', 'fruta-y-verdura-lechuga-romana', 'fruta-y-verdura-esparragos-trigueros', 'fruta-y-verdura-jengibre', 'fruta-y-verdura-batata', 'fruta-y-verdura-cebolla-morada', 'fruta-y-verdura-albahaca', 'refrigerados-tofu', 'refrigerados-yogur-de-soja', 'refrigerados-bebida-de-soja', 'refrigerados-bebida-de-avena', 'refrigerados-masa-de-pizza', 'refrigerados-hojaldre', 'panaderia-caracolas', 'panaderia-rosquillas', 'bebidas-te-frio', 'bebidas-cafe-frio', 'higiene-y-hogar-ambientador', 'higiene-y-hogar-recambio-de-ambientador', 'higiene-y-hogar-carbon-para-barbacoa', 'higiene-y-hogar-pastillas-lavavajillas')
+where t.sku in ('despensa-azucar', 'despensa-azucar-moreno', 'despensa-harina-de-trigo', 'despensa-harina-de-maiz', 'despensa-levadura', 'despensa-pan-rallado', 'despensa-fideos', 'despensa-noodles', 'despensa-cuscus', 'despensa-quinoa', 'despensa-aceitunas', 'despensa-pepinillos', 'despensa-pimientos-del-piquillo', 'despensa-cayena', 'despensa-cebolla-frita', 'despensa-leche-de-coco', 'despensa-hummus', 'despensa-cereales-de-chocolate', 'despensa-galletas-saladas', 'despensa-patatas-chips', 'despensa-sal-gruesa', 'despensa-bicarbonato', 'despensa-curcuma', 'despensa-habitas', 'fruta-y-verdura-setas', 'fruta-y-verdura-cebollino', 'fruta-y-verdura-frutos-rojos', 'fruta-y-verdura-brotes-tiernos', 'fruta-y-verdura-rucula', 'fruta-y-verdura-lechuga-romana', 'fruta-y-verdura-esparragos-trigueros', 'fruta-y-verdura-jengibre', 'fruta-y-verdura-batata', 'fruta-y-verdura-cebolla-morada', 'fruta-y-verdura-albahaca', 'fruta-y-verdura-calabaza', 'fruta-y-verdura-limas', 'fruta-y-verdura-endivias', 'fruta-y-verdura-acelgas', 'fruta-y-verdura-remolacha', 'refrigerados-tofu', 'refrigerados-yogur-de-soja', 'refrigerados-bebida-de-soja', 'refrigerados-bebida-de-avena', 'refrigerados-masa-de-pizza', 'refrigerados-hojaldre', 'panaderia-caracolas', 'panaderia-rosquillas', 'bebidas-te-frio', 'bebidas-cafe-frio', 'higiene-y-hogar-ambientador', 'higiene-y-hogar-recambio-de-ambientador', 'higiene-y-hogar-carbon-para-barbacoa', 'higiene-y-hogar-pastillas-lavavajillas')
   and not exists (
     select 1 from public.products p where p.household_id = h.id and lower(p.name) = lower(t.name)
   );

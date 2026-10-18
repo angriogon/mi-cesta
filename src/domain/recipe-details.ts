@@ -11,13 +11,19 @@ export interface Nutrients {
 
 export function ingredientNutrients(ingredient: string): Nutrients {
   const t = normalizeWords(ingredient);
-  if (/pollo|pavo|merluza|atun|bacalao|lubina|sepia|gamba|sardina|caballa|bonito|pescado/.test(t))
+  if (
+    /pollo|pavo|merluza|atun|bacalao|lubina|sepia|gamba|langostino|calamar|pulpo|mejillon|almeja|dorada|sardina|caballa|bonito|pescado/.test(
+      t,
+    )
+  )
     return { protein: 19, carbs: 0, fat: 3, fiber: 0, kcal: 105 };
   if (/salmon/.test(t)) return { protein: 20, carbs: 0, fat: 11, fiber: 0, kcal: 185 };
   if (/carne|lomo|hamburguesa/.test(t)) return { protein: 21, carbs: 0, fat: 7, fiber: 0, kcal: 150 };
   if (/huevo/.test(t)) return { protein: 7, carbs: 1, fat: 5, fiber: 0, kcal: 75 };
+  if (/garbanzo|lenteja|judia|alubia|hummus/.test(t)) return { protein: 9, carbs: 20, fat: 2, fiber: 7, kcal: 130 };
+  if (/tofu/.test(t)) return { protein: 12, carbs: 2, fat: 7, fiber: 1, kcal: 120 };
   if (/queso|mozzarella|cottage/.test(t)) return { protein: 7, carbs: 2, fat: 4, fiber: 0, kcal: 75 };
-  if (/arroz|pasta|espagueti|quinoa|fideo|noodle/.test(t))
+  if (/arroz|pasta|espagueti|macarron|quinoa|cuscus|fideo|noodle/.test(t))
     return { protein: 4, carbs: 26, fat: 1, fiber: 2, kcal: 130 };
   if (/patata|boniato|pan|tortilla|fajita|arepa/.test(t))
     return { protein: 3, carbs: 20, fat: 1.5, fiber: 2, kcal: 105 };
@@ -86,6 +92,30 @@ export function recipeSteps(recipe: Pick<Recipe, "title">): string[] {
       "Cocina verduras y proteína por separado hasta que estén hechas.",
       "Integra todo 2–3 min, ajusta la textura y sirve.",
     ];
+  if (/wok|salteado/.test(t))
+    return [
+      "Corta todo en tiras finas y ten las salsas a mano: el wok va muy rápido.",
+      "Saltea la proteína a fuego fuerte 3–4 min y resérvala.",
+      "Saltea las verduras 3 min, devuelve la proteína, añade la salsa y sirve al momento.",
+    ];
+  if (/guiso|garbanzos|lentejas|potaje/.test(t))
+    return [
+      "Sofríe cebolla y el resto de verduras picadas 8–10 min a fuego medio.",
+      "Añade las legumbres cocidas, las especias y caldo o agua hasta cubrir.",
+      "Cuece 15–20 min a fuego suave, rectifica de sal y deja reposar 5 min.",
+    ];
+  if (/fajita|taco|burrito|wrap/.test(t))
+    return [
+      "Corta la proteína y las verduras en tiras y saltéalas con especias 6–8 min.",
+      "Calienta las tortillas 20 s por cada lado en una sartén.",
+      "Rellena, añade los acompañamientos frescos y enrolla.",
+    ];
+  if (/plancha/.test(t))
+    return [
+      "Seca bien la pieza y sazónala justo antes de cocinar.",
+      "Plancha muy caliente con unas gotas de aceite: 2–4 min por lado según el grosor.",
+      "Sirve con la guarnición recién hecha.",
+    ];
   return [
     "Lava, corta y organiza los ingredientes antes de encender el fuego.",
     "Cocina primero la proteína y después las verduras con poco aceite.",
@@ -96,7 +126,7 @@ export function recipeSteps(recipe: Pick<Recipe, "title">): string[] {
 export function recipeMinutes(recipe: Pick<Recipe, "title">): number {
   const t = normalizeWords(recipe.title);
   if (/pollo.*horno|pollo asado/.test(t)) return 50;
-  if (/guiso|paella/.test(t)) return 45;
+  if (/guiso|paella|potaje|curry/.test(t)) return 45;
   if (/pescado.*horno|papillote|berenjena rellena|pizza/.test(t) || /crema|pure|sopa|patata|boniato/.test(t)) return 30;
   if (/pasta|espagueti|arroz|quinoa/.test(t)) return 25;
   if (/tortilla|revuelto|crepe|wok|plancha/.test(t)) return 18;
