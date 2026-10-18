@@ -1,5 +1,8 @@
 import { X } from "lucide-react";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
+import { needsStarter } from "../../domain/starter";
+import { readText, writeText } from "../../lib/storage";
+import { StarterCard } from "../../views/home/StarterCard";
 import { reportError } from "../../lib/errors";
 import { AdminAccess } from "../../views/AdminAccess";
 import { Home } from "../../views/Home";
@@ -10,12 +13,30 @@ import { inventoryChanged } from "../events";
 import { BarcodeScanner, DogView, ExpiryDialog, Menu, QuickInventory, RecipesView, Stock, TicketsView } from "./lazy";
 import { PurchaseScreen } from "./PurchaseScreen";
 
+const STARTER_DISMISSED = "cesta-starter-dismissed";
+
 function HomeScreen() {
   const store = useCesta();
   const { api } = store;
+  const [starterDismissed, setStarterDismissed] = useState(() => readText(STARTER_DISMISSED) === "1");
+  const showStarter = store.ready && !starterDismissed && needsStarter(store.products);
   return (
     <Home
       data={store.overview}
+      intro={
+        showStarter && (
+          <StarterCard
+            products={store.products}
+            onDismiss={() => {
+              writeText(STARTER_DISMISSED, "1");
+              setStarterDismissed(true);
+            }}
+            onSave={(choices) =>
+              store.runAndRefresh(() => api.setStarterMinimums(choices), "No se han podido guardar los básicos.")
+            }
+          />
+        )
+      }
       stock={store.stock}
       needs={store.needs}
       onModeChange={(mode) => {

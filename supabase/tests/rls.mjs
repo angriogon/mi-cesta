@@ -7,6 +7,8 @@ const migration = [
   "20261019000000_prune_history.sql",
   "20261020000000_delete_account.sql",
   "20261021000000_pet_push.sql",
+  "20261021000001_pg_net_schema.sql",
+  "20261022000000_catalog_duplicates.sql",
 ]
   .map((file) => readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8"))
   .join("\n");
@@ -61,6 +63,16 @@ const count = (
 ok(count.n > 300 && count.s === 0, `catálogo base copiado (${count.n} productos, existencias 0)`);
 const code = (await as(ANA, `select invite_code from households where id=$1`, [hid])).rows[0].invite_code;
 ok(/^[A-Z2-9]{6}$/.test(code), `código de invitación ${code}`);
+ok(
+  (
+    await as(
+      ANA,
+      `select count(*)::int n from products where household_id=$1 and sku in ('garbanzo', 'congelados-pizzas')`,
+      [hid],
+    )
+  ).rows[0].n === 0,
+  "el catálogo base ya no trae pares duplicados",
+);
 ok(
   (await as(EVA, `select count(*)::int n from products where household_id=$1`, [hid])).rows[0].n === 0,
   "Eva (otro hogar) no ve los productos de Ana",

@@ -39,6 +39,13 @@ export class AutoCestaApi extends ApiBase {
     return predictions(products, events);
   }
 
+  /** Primer uso: fija de una vez los mínimos de los básicos elegidos (todo o nada). */
+  async setStarterMinimums(choices: { productId: string; minimum: number }[]): Promise<void> {
+    await this.atomically(async (tx) => {
+      for (const choice of choices) await tx.updateProduct(choice.productId, { minimumStock: choice.minimum });
+    });
+  }
+
   async setMode(mode: Mode): Promise<void> {
     await this.db.updateHousehold({ mode });
   }
@@ -96,6 +103,19 @@ export class AutoCestaApi extends ApiBase {
 
   async recipeSkip(recipeId: string): Promise<void> {
     await this.logEvent("recipe-skip", recipeId, {});
+  }
+
+  async recipeFavorite(recipeId: string, on: boolean): Promise<void> {
+    await this.logEvent("recipe-favorite", recipeId, { on });
+  }
+
+  /** Recetas favoritas: manda la última marca de cada receta. */
+  async favoriteRecipes(): Promise<Set<string>> {
+    const events = (await this.db.list("household_events"))
+      .filter((event) => event.kind === "recipe-favorite" && event.ref)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    const latest = new Map(events.map((event) => [event.ref!, event.data.on === true]));
+    return new Set([...latest].filter(([, on]) => on).map(([id]) => id));
   }
 
   async skippedRecipes(): Promise<Set<string>> {

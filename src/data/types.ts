@@ -190,7 +190,7 @@ export type InverseStep =
 export interface HouseholdEvent {
   id: string;
   householdId: string;
-  kind: "avoided" | "recipe-skip" | "substitution" | "question-skip";
+  kind: "avoided" | "recipe-skip" | "recipe-favorite" | "substitution" | "question-skip";
   ref: string | null;
   data: Record<string, unknown>;
   createdAt: string;

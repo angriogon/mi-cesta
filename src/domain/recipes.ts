@@ -155,6 +155,8 @@ export function filterRecipes(
     query: string;
     skipped: Set<string>;
     lots: InventoryLot[];
+    /** Las favoritas van siempre primero. */
+    favorites?: Set<string>;
     now?: Date;
   },
 ): ScoredRecipe[] {
@@ -164,7 +166,8 @@ export function filterRecipes(
     .map((lot) => normalizeWords(lot.productName));
   const opened = options.lots.filter((lot) => lot.state === "opened").map((lot) => normalizeWords(lot.productName));
   const query = normalizeWords(options.query);
-  return scored.filter((recipe) => {
+  const favorites = options.favorites ?? new Set<string>();
+  const visible = scored.filter((recipe) => {
     const ingredients = recipe.ingredients.map(normalizeWords);
     const byFilter =
       options.filter === "ready"
@@ -187,6 +190,7 @@ export function filterRecipes(
     const byQuery = !query || normalizeWords(`${recipe.title} ${recipe.ingredients.join(" ")}`).includes(query);
     return !options.skipped.has(recipe.id) && byFilter && byGoal && byQuery;
   });
+  return [...visible].sort((a, b) => Number(favorites.has(b.id)) - Number(favorites.has(a.id)));
 }
 
 /** Propone dos comidas que comparten ingrediente: se abre hoy y se termina mañana. */

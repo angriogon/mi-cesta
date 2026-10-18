@@ -103,7 +103,7 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
         // Avisos push de la mascota (public/push-sw.js).
         importScripts: ["push-sw.js"],
-        globIgnores: ["**/og.png", "**/assets/ondemand-*", "**/ocr/**"],
+        globIgnores: ["**/og.png", "**/assets/ondemand-*", "**/ocr/**", "**/startup/**"],
         navigateFallback: `${base}index.html`,
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         runtimeCaching: [

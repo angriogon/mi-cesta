@@ -1,6 +1,7 @@
 import {
   Check,
   ChevronDown,
+  Heart,
   Clock,
   CookingPot,
   Leaf,
@@ -47,6 +48,7 @@ export function RecipesView({
   const [cooking, setCooking] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [lots, setLots] = useState<InventoryLot[]>([]);
   const [preferences, setPreferences] = useState<Preferences>({
     specialDietEnabled: false,
@@ -58,13 +60,14 @@ export function RecipesView({
     api.preferences().then(setPreferences).catch(notifyError("cargar preferencias", LOAD_FAILED));
     api.lots().then(setLots).catch(notifyError("cargar existencias", LOAD_FAILED));
     api.skippedRecipes().then(setSkipped).catch(notifyError("cargar recetas descartadas", LOAD_FAILED));
+    api.favoriteRecipes().then(setFavorites).catch(notifyError("cargar recetas favoritas", LOAD_FAILED));
   }, [api]);
 
   const scored = useMemo(
     () => scoreRecipes(stock.map((item) => ({ name: item.name, category: item.category, quantity: item.quantity }))),
     [stock],
   );
-  const visible = filterRecipes(scored, { filter, goal, query, skipped, lots });
+  const visible = filterRecipes(scored, { filter, goal, query, skipped, lots, favorites });
   const plan = useMemo(() => chainedPlan(scored, skipped), [scored, skipped]);
   const ready = scored.filter((recipe) => !recipe.missing.length).length;
 
@@ -80,6 +83,17 @@ export function RecipesView({
         : "No se ha podido actualizar la despensa.",
     );
     if (ok) api.lots().then(setLots).catch(notifyError("cargar existencias", LOAD_FAILED));
+  }
+
+  function toggleFavorite(id: string) {
+    const on = !favorites.has(id);
+    setFavorites((current) => {
+      const next = new Set(current);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+    void api.recipeFavorite(id, on).catch(notifyError("guardar favorita", SAVE_FAILED));
   }
 
   function skip(id: string) {
@@ -204,37 +218,51 @@ export function RecipesView({
             const conflicts = dietConflicts(recipe.ingredients, preferences);
             return (
               <section key={recipe.id} className="overflow-hidden rounded-lg bg-card">
-                <button
-                  type="button"
-                  onClick={() => setOpen(expanded ? null : recipe.id)}
-                  aria-expanded={expanded}
-                  className="flex w-full items-center gap-2.5 p-3 text-left"
-                >
-                  <div
-                    className={`flex size-8 shrink-0 items-center justify-center rounded-full ${recipe.missing.length ? (recipe.score >= 50 ? "bg-warning-soft text-warning" : "bg-danger-soft text-danger") : "bg-primary-soft text-primary"}`}
+                <div className="flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setOpen(expanded ? null : recipe.id)}
+                    aria-expanded={expanded}
+                    className="flex min-w-0 flex-1 items-center gap-2.5 py-3 pl-3 text-left"
                   >
-                    {recipe.missing.length ? (
-                      recipe.score >= 50 ? (
-                        <Leaf className="size-3.5" />
+                    <div
+                      className={`flex size-8 shrink-0 items-center justify-center rounded-full ${recipe.missing.length ? (recipe.score >= 50 ? "bg-warning-soft text-warning" : "bg-danger-soft text-danger") : "bg-primary-soft text-primary"}`}
+                    >
+                      {recipe.missing.length ? (
+                        recipe.score >= 50 ? (
+                          <Leaf className="size-3.5" />
+                        ) : (
+                          <X className="size-3.5" />
+                        )
                       ) : (
-                        <X className="size-3.5" />
-                      )
-                    ) : (
-                      <Check className="size-3.5" />
+                        <Check className="size-3.5" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[0.8125rem] font-semibold">{recipe.title}</p>
+                      <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                        {recipe.meal} ·{" "}
+                        {recipe.missing.length ? `Faltan ${recipe.missing.length}` : "Lista para cocinar"} ·{" "}
+                        <Clock className="size-2.5" /> {recipe.minutes} min
+                      </p>
+                    </div>
+                    {conflicts.length > 0 && (
+                      <TriangleAlert className="size-3.5 text-danger" aria-label="Contiene ingredientes de tu perfil" />
                     )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[0.8125rem] font-semibold">{recipe.title}</p>
-                    <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                      {recipe.meal} · {recipe.missing.length ? `Faltan ${recipe.missing.length}` : "Lista para cocinar"}{" "}
-                      · <Clock className="size-2.5" /> {recipe.minutes} min
-                    </p>
-                  </div>
-                  {conflicts.length > 0 && (
-                    <TriangleAlert className="size-3.5 text-danger" aria-label="Contiene ingredientes de tu perfil" />
-                  )}
-                  <ChevronDown className={`size-4 text-muted-foreground ${expanded ? "rotate-180" : ""}`} />
-                </button>
+                    <ChevronDown className={`size-4 text-muted-foreground ${expanded ? "rotate-180" : ""}`} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleFavorite(recipe.id)}
+                    aria-pressed={favorites.has(recipe.id)}
+                    aria-label={`Favorita: ${recipe.title}`}
+                    className="flex size-11 shrink-0 items-center justify-center text-danger"
+                  >
+                    <Heart
+                      className={`size-4 ${favorites.has(recipe.id) ? "fill-current" : "text-muted-foreground"}`}
+                    />
+                  </button>
+                </div>
                 {expanded && (
                   <RecipeDetails
                     recipe={recipe}

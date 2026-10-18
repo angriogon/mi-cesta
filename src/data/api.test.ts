@@ -21,7 +21,7 @@ const byName = async (name: string) => (await api.products()).find((product) => 
 describe("hogar nuevo", () => {
   it("empieza con el catálogo base vacío de existencias y sin datos", async () => {
     const products = await api.products();
-    expect(products.length).toBe(349);
+    expect(products.length).toBe(345);
     expect(products.every((product) => product.currentStock === 0 && product.minimumStock === 0)).toBe(true);
     expect(await api.lots()).toEqual([]);
     expect((await api.tickets()).tickets).toEqual([]);
@@ -296,7 +296,7 @@ describe("restablecer", () => {
     await api.saveLists([{ id: "1", name: "Pan", quantity: 1, category: "Panadería", done: false }], [], 0, (r) => r);
     await api.resetHousehold();
     const products = await api.products();
-    expect(products.length).toBe(349);
+    expect(products.length).toBe(345);
     expect(products.every((product) => product.currentStock === 0 && product.minimumStock === 0)).toBe(true);
     expect((await api.dogItems()).items).toEqual([]);
     expect((await api.lists()).shopping).toEqual([]);
@@ -309,7 +309,7 @@ describe("privacidad", () => {
     const data = await api.exportHousehold();
     expect(data.format).toBe("cesta-export");
     expect(data.household).toMatchObject({ id: "hogar-test" });
-    expect(data.tables.products?.length).toBe(350);
+    expect(data.tables.products?.length).toBe(346);
     expect(Object.keys(data.tables)).toEqual(
       expect.arrayContaining(["inventory_lots", "tickets", "prices", "dog_items", "dog_reminders", "stock_events"]),
     );
@@ -327,5 +327,28 @@ describe("alimentación especial", () => {
     expect(await api.preferences()).toMatchObject({ allergens: ["gluten"], healthConsentAt: at });
     await api.savePreferences({ specialDietEnabled: false, allergens: [], avoided: [], healthConsentAt: null });
     expect(await api.preferences()).toMatchObject({ allergens: [], avoided: [], healthConsentAt: null });
+  });
+});
+
+describe("primer uso", () => {
+  it("propone los básicos del catálogo y guarda sus mínimos de una vez", async () => {
+    const { needsStarter, starterChoices } = await import("../domain/starter");
+    const products = await api.products();
+    expect(needsStarter(products)).toBe(true);
+    const choices = starterChoices(products);
+    expect(choices.length).toBeGreaterThanOrEqual(15);
+    await api.setStarterMinimums(choices.map(({ product, minimum }) => ({ productId: product.id, minimum })));
+    const after = await api.products();
+    expect(needsStarter(after)).toBe(false);
+    expect(after.find((product) => product.name === "Leche semidesnatada")?.minimumStock).toBe(2);
+  });
+});
+
+describe("recetas favoritas", () => {
+  it("recuerda la última marca de cada receta", async () => {
+    await api.recipeFavorite("r1", true);
+    await api.recipeFavorite("r2", true);
+    await api.recipeFavorite("r1", false);
+    expect([...(await api.favoriteRecipes())]).toEqual(["r2"]);
   });
 });

@@ -47,7 +47,7 @@ describe.skipIf(!enabled)("Supabase real", () => {
       expect(error).toBeNull();
       householdId = created!;
       const anaApi = new CestaApi(new SupabaseDb(ana, householdId));
-      expect((await anaApi.products()).length).toBe(349);
+      expect((await anaApi.products()).length).toBe(345);
 
       const household = await anaApi.household();
       const { error: joinError } = await luis.rpc("join_household", { p_code: household.inviteCode.toLowerCase() });
