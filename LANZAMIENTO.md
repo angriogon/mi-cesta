@@ -55,6 +55,6 @@
 
 **Contenido**
 
-- Revisar el catálogo base (349 productos): quedan pares como «Garbanzo» / «Garbanzos».
+- Catálogo base revisado: 345 productos sin pares duplicados.
 - Ampliar las recetas (72) o permitir marcarlas como favoritas; hoy solo se puede descartar.
 - Ampliar el lector de tickets con más formatos de supermercado y probarlo con un banco de tickets reales anonimizados.
