@@ -176,7 +176,7 @@ test("recetas: filtrar, añadir lo que falta y cocinar", async ({ page }) => {
   await page.getByRole("button", { name: "Recetas con mi stock" }).click();
   await expect(page.getByText("Recetas para decidir")).toBeVisible();
   await page.getByLabel("Buscar receta o ingrediente").fill("tortilla francesa");
-  await page.getByRole("button", { name: /Tortilla francesa de calabacín/ }).click();
+  await page.getByRole("button", { name: /^Tortilla francesa de calabacín/ }).click();
   await page.getByRole("button", { name: "Añadir ingredientes a la lista" }).click();
   await expect(page.getByText(/ingredientes añadidos a En tienda/)).toBeVisible();
   await expect(page.getByRole("tab", { name: /En tienda · 3/ })).toBeVisible();
@@ -296,4 +296,21 @@ test("primer uso: marca los básicos y Necesidades ya sabe qué reponer", async 
   await expect(starter).toBeHidden();
   await nav(page, "Necesidades").click();
   await expect(page.getByText("Leche semidesnatada").first()).toBeVisible();
+});
+
+test("recetas favoritas: el corazón la sube al principio y se recuerda", async ({ page }) => {
+  await openMenu(page);
+  await page.getByRole("button", { name: "Recetas con mi stock" }).click();
+  const hearts = page.getByRole("button", { name: /^Favorita: / });
+  const third = (await hearts.nth(2).getAttribute("aria-label"))!.replace("Favorita: ", "");
+  await hearts.nth(2).click();
+  await expect(hearts.first()).toHaveAttribute("aria-label", `Favorita: ${third}`);
+  await expect(hearts.first()).toHaveAttribute("aria-pressed", "true");
+  await page.reload();
+  await openMenu(page);
+  await page.getByRole("button", { name: "Recetas con mi stock" }).click();
+  await expect(page.getByRole("button", { name: /^Favorita: / }).first()).toHaveAttribute(
+    "aria-label",
+    `Favorita: ${third}`,
+  );
 });

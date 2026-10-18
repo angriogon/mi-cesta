@@ -105,6 +105,19 @@ export class AutoCestaApi extends ApiBase {
     await this.logEvent("recipe-skip", recipeId, {});
   }
 
+  async recipeFavorite(recipeId: string, on: boolean): Promise<void> {
+    await this.logEvent("recipe-favorite", recipeId, { on });
+  }
+
+  /** Recetas favoritas: manda la última marca de cada receta. */
+  async favoriteRecipes(): Promise<Set<string>> {
+    const events = (await this.db.list("household_events"))
+      .filter((event) => event.kind === "recipe-favorite" && event.ref)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    const latest = new Map(events.map((event) => [event.ref!, event.data.on === true]));
+    return new Set([...latest].filter(([, on]) => on).map(([id]) => id));
+  }
+
   async skippedRecipes(): Promise<Set<string>> {
     const events = await this.db.list("household_events");
     return new Set(events.filter((event) => event.kind === "recipe-skip" && event.ref).map((event) => event.ref!));

@@ -343,3 +343,12 @@ describe("primer uso", () => {
     expect(after.find((product) => product.name === "Leche semidesnatada")?.minimumStock).toBe(2);
   });
 });
+
+describe("recetas favoritas", () => {
+  it("recuerda la última marca de cada receta", async () => {
+    await api.recipeFavorite("r1", true);
+    await api.recipeFavorite("r2", true);
+    await api.recipeFavorite("r1", false);
+    expect([...(await api.favoriteRecipes())]).toEqual(["r2"]);
+  });
+});
