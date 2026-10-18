@@ -1,12 +1,23 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { PriceRef, TicketItem } from "../../data/types";
+import type { PriceRef } from "../../data/types";
 import { compareWithPlan, reviewTicketLines } from "../../domain/tickets";
 import { centsToInput, formatCents, parseEuroToCents } from "../../lib/text";
 import { Button, Input } from "../../ui/primitives";
+import type { PickerProduct } from "../../ui/ProductPicker";
+import { LineProduct, type TicketLine } from "./LineProduct";
 
-export function LinesEditor({ items, onChange }: { items: TicketItem[]; onChange: (items: TicketItem[]) => void }) {
-  const update = (index: number, patch: Partial<TicketItem>) =>
+export function LinesEditor({
+  items,
+  products,
+  onChange,
+}: {
+  items: TicketLine[];
+  /** Con productos, cada línea muestra y deja cambiar a qué producto del almacén va. */
+  products?: PickerProduct[];
+  onChange: (items: TicketLine[]) => void;
+}) {
+  const update = (index: number, patch: Partial<TicketLine>) =>
     onChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   return (
     <div className="space-y-2">
@@ -51,6 +62,7 @@ export function LinesEditor({ items, onChange }: { items: TicketItem[]; onChange
           >
             <Trash2 className="size-3.5" />
           </button>
+          {products && <LineProduct item={item} products={products} onChange={(patch) => update(index, patch)} />}
         </div>
       ))}
       <Button
@@ -100,15 +112,34 @@ export function LineChecks({
   lines,
   prices,
   planned,
+  onReview,
 }: {
-  lines: TicketItem[];
+  lines: TicketLine[];
   prices: PriceRef[];
   planned: { name: string; quantity: number }[];
+  onReview?: () => void;
 }) {
   const smartReview = useMemo(() => reviewTicketLines(lines, prices), [lines, prices]);
   const plan = useMemo(() => compareWithPlan(planned, lines), [planned, lines]);
+  const unmatched = lines.filter((line) => !line.skip && line.productId === null);
   return (
     <>
+      {unmatched.length > 0 && (
+        <div className="mb-2 rounded-xl bg-warning-soft p-2 text-xs text-warning">
+          <p className="font-semibold">
+            {unmatched.length === 1 ? "1 línea sin producto" : `${unmatched.length} líneas sin producto`} del almacén
+          </p>
+          <p className="mt-1">
+            {unmatched.map((line) => line.description).join(", ")}. {unmatched.length === 1 ? "Asígnala" : "Asígnalas"}{" "}
+            para que el almacén y las recetas cuadren (Cesta lo recordará).
+          </p>
+          {onReview && (
+            <button type="button" onClick={onReview} className="mt-1 min-h-9 font-semibold underline">
+              Asignar productos
+            </button>
+          )}
+        </div>
+      )}
       {(smartReview.duplicates.length > 0 || smartReview.unexpected.length > 0) && (
         <div className="mb-2 rounded-xl bg-warning-soft p-2 text-xs text-warning">
           <p className="font-semibold">Revisión inteligente</p>

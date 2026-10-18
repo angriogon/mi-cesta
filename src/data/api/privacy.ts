@@ -1,5 +1,5 @@
 import type { TableName } from "../types";
-import { TicketsApi } from "./tickets";
+import { EquivalencesApi } from "./equivalences";
 import { now } from "./shared";
 
 /** Todas las tablas con datos del hogar, en el orden en que se leen mejor en la exportación. */
@@ -34,7 +34,7 @@ export interface HouseholdExport {
 }
 
 /** Privacidad: copia de todos los datos del hogar (derecho de portabilidad del RGPD). */
-export class PrivacyApi extends TicketsApi {
+export class PrivacyApi extends EquivalencesApi {
   async exportHousehold(): Promise<HouseholdExport> {
     const [household, lists, ...rows] = await Promise.all([
       this.db.getHousehold(),

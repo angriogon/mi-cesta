@@ -2,6 +2,7 @@ import {
   Download,
   Euro,
   House,
+  Link2,
   KeyRound,
   LogOut,
   Moon,
@@ -29,8 +30,20 @@ import { PasswordPage, ResetPage } from "./menu/AccountPages";
 import { DietPage, NewsPage } from "./menu/InfoPages";
 import { DeleteAccountPage, ExportPage } from "./menu/PrivacyPages";
 import { LegalPage } from "./legal/LegalPage";
+import { EquivalencesPage } from "./menu/EquivalencesPage";
 
-type Page = "home" | "household" | "diet" | "news" | "password" | "reset" | "prices" | "export" | "delete" | "legal";
+type Page =
+  | "home"
+  | "household"
+  | "diet"
+  | "news"
+  | "password"
+  | "reset"
+  | "prices"
+  | "export"
+  | "delete"
+  | "legal"
+  | "equivalences";
 
 export function Menu({
   api,
@@ -198,6 +211,9 @@ export function Menu({
                 <MenuButton tile="bg-primary" icon={<House />} onClick={() => go("household")}>
                   Mi hogar
                 </MenuButton>
+                <MenuButton tile="bg-warning" icon={<Link2 />} onClick={() => go("equivalences")}>
+                  Equivalencias de tickets
+                </MenuButton>
                 <MenuButton tile="bg-danger" icon={<ShieldCheck />} onClick={() => go("diet")}>
                   Alimentación especial
                 </MenuButton>
@@ -253,6 +269,7 @@ export function Menu({
           {page === "export" && <ExportPage api={api} account={account} />}
           {page === "delete" && <DeleteAccountPage account={account} />}
           {page === "legal" && <LegalPage />}
+          {page === "equivalences" && <EquivalencesPage api={api} />}
         </div>
         <p className="border-t-[0.5px] border-separator pt-4 text-center text-xs font-semibold uppercase text-muted-foreground">
           Cesta · Versión {version}

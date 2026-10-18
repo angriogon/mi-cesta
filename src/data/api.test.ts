@@ -352,3 +352,80 @@ describe("recetas favoritas", () => {
     expect([...(await api.favoriteRecipes())]).toEqual(["r2"]);
   });
 });
+
+describe("equivalencias de tickets", () => {
+  const ticket = (items: { description: string; productId?: string | null; skip?: boolean }[]) =>
+    api.saveTicket({
+      image: null,
+      merchant: "Mercadona",
+      purchasedAt: "2026-09-28",
+      totalCents: 1000,
+      rawText: "",
+      items: items.map((item) => ({ quantity: 1, lineTotalCents: 500, ...item })),
+    });
+
+  it("PECHUGA FAMILIAR suma a Pechuga de pollo sin preguntar", async () => {
+    const [match] = await api.matchTicketItems([{ description: "PECHUGA FAMILIAR", quantity: 1, lineTotalCents: 735 }]);
+    expect(match).toMatchObject({ productName: "Pechuga de pollo", source: "equivalence" });
+    const result = await ticket([{ description: "PECHUGA FAMILIAR" }]);
+    expect(result.reviews).toBe(0);
+    expect((await byName("Pechuga de pollo")).currentStock).toBe(1);
+  });
+
+  it("si se elige otro producto, se recuerda para los próximos tickets", async () => {
+    const pollo = await byName("Pollo entero");
+    await ticket([{ description: "PECHUGA FAMILIAR", productId: pollo.id }]);
+    expect((await byName("Pollo entero")).currentStock).toBe(1);
+    expect((await api.equivalences()).map((item) => [item.alias, item.productName])).toEqual([
+      ["PECHUGA FAMILIAR", "Pollo entero"],
+    ]);
+    const [next] = await api.matchTicketItems([{ description: "PECHUGA FAMILIAR", quantity: 1, lineTotalCents: 735 }]);
+    expect(next).toMatchObject({ productName: "Pollo entero", source: "alias" });
+    await ticket([{ description: "PECHUGA FAMILIAR" }]);
+    expect((await byName("Pollo entero")).currentStock).toBe(2);
+    expect((await byName("Pechuga de pollo")).currentStock).toBe(0);
+  });
+
+  it("las líneas que no son del almacén no suman ni quedan para revisar", async () => {
+    const result = await ticket([{ description: "BOLSA PLASTICO", skip: true }]);
+    expect(result).toMatchObject({ reviews: 0, added: 0 });
+  });
+
+  it("se pueden crear, cambiar y borrar a mano", async () => {
+    const pavo = await byName("Pechuga de pavo");
+    const pollo = await byName("Pechuga de pollo");
+    await api.setEquivalence("PECHUGA FAMILIAR", pavo.id);
+    await api.setEquivalence("pechuga familiar", pollo.id);
+    const [saved] = await api.equivalences();
+    expect(saved).toMatchObject({ alias: "PECHUGA FAMILIAR", productName: "Pechuga de pollo" });
+    await api.removeEquivalence(saved.id);
+    expect(await api.equivalences()).toEqual([]);
+    await expect(api.setEquivalence("  ", pollo.id)).rejects.toThrow("texto");
+  });
+});
+
+describe("del ticket a las recetas", () => {
+  it("lo que entra por el ticket con su equivalencia cuenta como ingrediente", async () => {
+    const { scoreRecipes } = await import("../domain/recipes");
+    await api.saveTicket({
+      image: null,
+      merchant: "Mercadona",
+      purchasedAt: "2026-09-28",
+      totalCents: 1260,
+      rawText: "",
+      items: [
+        { description: "PECHUGA FAMILIAR", quantity: 1, lineTotalCents: 735 },
+        { description: "24 HUEVOS FRESCOS", quantity: 1, lineTotalCents: 525 },
+      ],
+    });
+    const stock = (await api.products())
+      .filter((product) => product.currentStock > 0)
+      .map((product) => ({ name: product.name, category: product.category, quantity: product.currentStock }));
+    expect(stock.map((item) => item.name).sort()).toEqual(["Huevos L", "Pechuga de pollo"]);
+    const recipes = scoreRecipes(stock);
+    const withChicken = recipes.find((recipe) => recipe.ingredients.includes("pollo"));
+    const withEgg = recipes.find((recipe) => recipe.ingredients.includes("huevo"));
+    expect(withChicken?.present).toContain("pollo");
+    expect(withEgg?.present).toContain("huevo");
+  });
+});

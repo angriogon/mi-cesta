@@ -127,9 +127,9 @@ test("ticket a mano: líneas, revisión, historial, edición y borrado", async (
   await page.getByRole("button", { name: "Añadir ticket sin foto" }).click();
   await page.getByRole("button", { name: "Revisar textos y cantidades" }).click();
   await page.getByRole("button", { name: "Añadir línea" }).click();
-  await page.getByLabel("Producto").first().fill("LECHE ENTERA");
+  await page.getByLabel("Producto", { exact: true }).first().fill("LECHE ENTERA");
   await page.getByRole("button", { name: "Añadir línea" }).click();
-  await page.getByLabel("Producto").nth(1).fill("ZZ COSA RARA");
+  await page.getByLabel("Producto", { exact: true }).nth(1).fill("ZZ COSA RARA");
   await page.getByPlaceholder("0,00").fill("4,50");
   await page.getByRole("button", { name: "Guardar ticket" }).click();
   await expect(page.getByText(/Ticket guardado\. 1 unidad añadida.*1 para revisar/)).toBeVisible();
