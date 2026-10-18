@@ -16,6 +16,21 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "5.11.0",
+    date: "2026-10-18",
+    title: "Códigos de barras de cualquier súper",
+    changes: [
+      "Escáner nuevo, más rápido y certero: lee códigos pequeños, curvos, girados, con poca luz o en blanco sobre oscuro.",
+      "Lee también los códigos de los packs (ITF-14), los GS1 DataBar de la fruta y la carne y los QR GS1 nuevos.",
+      "«Hacer una foto del código» para los que la cámara en vídeo no pilla: la foto es más nítida.",
+      "Reconoce productos de Mercadona, DIA, Lidl, Aldi, Eroski, Consum, Carrefour, Supeco, Alcampo y más, y dice de qué cadena es cada marca propia.",
+      "Si no es comida, lo busca también en las bases abiertas de limpieza, cosmética y comida de mascotas.",
+      "Etiquetas de la balanza (fruta, carne, charcutería…): dile qué es una vez y la reconocerá siempre, aunque cambie el precio o el peso.",
+      "Si un producto sale con un nombre equivocado, «Corregir el nombre» lo arregla para tu hogar.",
+      "Al escribir un código a mano, avisa si algún número está mal.",
+    ],
+  },
+  {
     version: "5.10.0",
     date: "2026-10-18",
     title: "Novedades al día",

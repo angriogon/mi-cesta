@@ -1,6 +1,7 @@
 import { guessCategory } from "../../domain/categories";
 import { normalize, uid } from "../../lib/text";
-import { lookupOpenFoodFacts } from "../openfoodfacts";
+import { lookupCodes, parseScannedCode, type ParsedCode } from "../../domain/barcode";
+import { lookupOpenFacts } from "../openfoodfacts";
 import type {
   BarcodeProduct,
   DogItem,
@@ -86,40 +87,63 @@ export class CestaApi extends PrivacyApi {
     return count;
   }
 
-  async lookupBarcode(code: string): Promise<BarcodeProduct | null> {
-    const clean = code.replace(/\D/g, "").slice(0, 18);
-    if (clean.length < 8) throw new ApiError("El código debe tener al menos 8 números.");
-    const [saved] = await this.db.listBy("barcodes", "code", clean);
-    if (saved) return saved;
-    return lookupOpenFoodFacts(clean);
+  /**
+   * Identifica un código de cualquier supermercado: primero los que ha guardado el hogar (también
+   * las etiquetas de la balanza por su artículo, aunque cambie el precio) y después las bases
+   * abiertas de Open Food Facts. Las etiquetas de la balanza no se buscan fuera: son de cada tienda.
+   */
+  async lookupBarcode(code: string | ParsedCode): Promise<BarcodeProduct | null> {
+    const parsed = this.parseCode(code);
+    for (const candidate of [...lookupCodes(parsed), ...(parsed.itemKey ? [parsed.itemKey] : [])]) {
+      const [saved] = await this.db.listBy("barcodes", "code", candidate);
+      if (saved) return { ...saved, code: parsed.code };
+    }
+    if (parsed.kind === "peso-variable") return null;
+    const found = await lookupOpenFacts(lookupCodes(parsed));
+    return found && { ...found, code: parsed.code };
   }
 
-  async saveBarcode(code: string, name: string): Promise<BarcodeProduct> {
-    const clean = code.replace(/\D/g, "");
-    if (clean.length < 8) throw new ApiError("El código no es válido.");
+  private parseCode(code: string | ParsedCode): ParsedCode {
+    if (typeof code !== "string") return code;
+    const parsed = parseScannedCode(code);
+    if (parsed) return parsed;
+    throw new ApiError(
+      code.replace(/\D/g, "").length < 8
+        ? "El código debe tener al menos 8 números."
+        : "Revisa el código: el último número no cuadra con los demás.",
+    );
+  }
+
+  /**
+   * Guarda el nombre de un código. En las etiquetas de la balanza se guarda el artículo (sin el
+   * importe), así vale para todas sus etiquetas y corregirlo una vez las corrige todas.
+   */
+  async saveBarcode(code: string | ParsedCode, name: string): Promise<BarcodeProduct> {
+    const parsed = this.parseCode(code);
     if (name.trim().length < 2) throw new ApiError("Escribe el nombre del producto.");
-    const product = {
+    const key = parsed.itemKey ?? parsed.code;
+    const record = {
       id: uid(),
       householdId: this.db.householdId,
-      code: clean,
+      code: key,
       name: name.trim(),
       brand: "",
       quantity: "",
       image: null,
       allergens: [],
       nutrients: { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
-      source: "Guardado por tu hogar",
+      source: parsed.itemKey ? "Guardado por tu hogar · al peso" : "Guardado por tu hogar",
       createdAt: now(),
     };
-    const existing = await this.db.listBy("barcodes", "code", clean);
+    const existing = await this.db.listBy("barcodes", "code", key);
     await this.atomically(async (tx) => {
       await tx.db.remove(
         "barcodes",
         existing.map((item) => item.id),
       );
-      await tx.db.insert("barcodes", [product]);
+      await tx.db.insert("barcodes", [record]);
     });
-    return product;
+    return { ...record, code: parsed.code };
   }
 
   async dogItems(): Promise<{ items: DogItem[]; petName: string }> {

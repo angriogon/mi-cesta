@@ -203,8 +203,8 @@ test.describe("sin service worker", () => {
   test.use({ serviceWorkers: "block" });
   test("código de barras: producto conocido y desconocido", async ({ page }) => {
     await openApp(page);
-    await page.route("https://world.openfoodfacts.org/**", async (route) => {
-      const known = route.request().url().includes("8410000000001");
+    await page.route("**/api/v2/product/**", async (route) => {
+      const known = route.request().url().includes("8410000000009");
       await route.fulfill({
         json: known
           ? {
@@ -216,14 +216,14 @@ test.describe("sin service worker", () => {
     });
     await nav(page, "Compra").click();
     await page.getByRole("button", { name: "Escanear código de barras" }).first().click();
-    await page.getByLabel("Código EAN").fill("8410000000001");
+    await page.getByLabel("Código EAN").fill("8410000000009");
     await page.getByRole("button", { name: "Buscar" }).click();
     await expect(page.getByText("Alérgenos: gluten")).toBeVisible();
     await page.getByRole("button", { name: "Usar este producto" }).click();
     await expect(page.getByText("Galletas María")).toBeVisible();
 
     await page.getByRole("button", { name: "Escanear código de barras" }).first().click();
-    await page.getByLabel("Código EAN").fill("8410000000099");
+    await page.getByLabel("Código EAN").fill("8410000000092");
     await page.getByRole("button", { name: "Buscar" }).click();
     await page.getByPlaceholder("Nombre del producto").fill("Paté de la abuela");
     await page.getByRole("button", { name: "Guardar y usar" }).click();

@@ -2,14 +2,14 @@
 
 ## Qué está probado
 
-| Prueba                         | Resultado | Cubre                                                                                                                                                        |
-| ------------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Calidad (`npm run check`)      | En verde  | Tipos (TypeScript 7), ESLint estricto con tipos, react-hooks y jsx-a11y, y Prettier                                                                          |
-| Unitarias (Vitest)             | 111       | Dominio, API completa, operaciones atómicas, hooks de cada dominio, errores, escala de texto, ruido de OCR, búsqueda del papel, exportación y consentimiento |
-| Base de datos (PGlite)         | 50        | Migraciones, aislamiento entre hogares, invitaciones, fotos privadas, `apply_batch`, limpieza del historial, eliminar cuenta, avisos push y catálogo         |
-| Extremo a extremo (Playwright) | 32        | Todas las pantallas en WebKit con iPhone 14 y SE, OCR real sin CDN, WCAG 2.1 AA en claro y oscuro, texto al 140 %, primer uso, favoritas y menú legal        |
-| Tickets reales                 | Opcional  | `CESTA_REAL_TICKETS=carpeta`: fotos reales fuera del repositorio con lo esperado en JSON (hoy, Mercadona: 46/46 líneas)                                      |
-| Integración con Supabase real  | Opcional  | Necesita usuarios de prueba (`CESTA_IT_*`); no se ejecuta en CI                                                                                              |
+| Prueba                         | Resultado | Cubre                                                                                                                                                                                              |
+| ------------------------------ | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Calidad (`npm run check`)      | En verde  | Tipos (TypeScript 7), ESLint estricto con tipos, react-hooks y jsx-a11y, y Prettier                                                                                                                |
+| Unitarias (Vitest)             | 132       | Dominio, API completa, operaciones atómicas, hooks de cada dominio, errores, escala de texto, ruido de OCR, búsqueda del papel, exportación, consentimiento y códigos de barras con el lector real |
+| Base de datos (PGlite)         | 50        | Migraciones, aislamiento entre hogares, invitaciones, fotos privadas, `apply_batch`, limpieza del historial, eliminar cuenta, avisos push y catálogo                                               |
+| Extremo a extremo (Playwright) | 34        | Todas las pantallas en WebKit con iPhone 14 y SE, OCR real sin CDN, WCAG 2.1 AA en claro y oscuro, texto al 140 %, primer uso, favoritas, menú legal y escáner con fotos de códigos                |
+| Tickets reales                 | Opcional  | `CESTA_REAL_TICKETS=carpeta`: fotos reales fuera del repositorio con lo esperado en JSON (hoy, Mercadona: 46/46 líneas)                                                                            |
+| Integración con Supabase real  | Opcional  | Necesita usuarios de prueba (`CESTA_IT_*`); no se ejecuta en CI                                                                                                                                    |
 
 ### Qué no está probado todavía
 
@@ -26,6 +26,7 @@
 - Estado por dominio y `CestaApp` como esqueleto con contexto; ningún archivo de código pasa de 300 líneas.
 - Consultas precisas y operaciones atómicas con `apply_batch`.
 - Arranque ligero (pantallas bajo demanda, PDF/escáner/OCR fuera de la caché inicial) y OCR servido desde la propia app.
+- Escáner con ZXing C++ (WebAssembly servido por la app): EAN/UPC, ITF-14, GS1 DataBar, GS1-128 y QR GS1 Digital Link; foto del código; etiquetas de la balanza recordadas por artículo; búsqueda en Open Food, Products, Beauty y Pet Food Facts; marca propia → cadena.
 - Accesibilidad: contraste AA y nombres para VoiceOver comprobados automáticamente.
 - Actualización con aviso; en Novedades, la fecha de la versión instalada, «Buscar actualización» y el registro de cambios de cada versión (`src/copy/novedades.ts`, comprobado en el CI).
 - Para usar Cesta hace falta cuenta: el modo local es solo para pruebas y desarrollo.

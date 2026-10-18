@@ -1,11 +1,35 @@
 import { useEffect, useRef, useState } from "react";
+import { parseScannedCode, type ParsedCode } from "../../domain/barcode";
+import { readCodes } from "../../lib/barcode-reader";
 import { logError, reportError } from "../../lib/errors";
 
-type Controls = { stop: () => void };
 type Capabilities = MediaTrackCapabilities & { torch?: boolean; focusMode?: string[]; zoom?: { max: number } };
 
+/** Lado mayor del recorte que se analiza: suficiente para un EAN a un palmo y rápido en el iPhone. */
+const MAX_SIDE = 1280;
+
 /**
- * Cámara trasera leyendo códigos EAN/UPC/Code128 con ZXing (que se descarga al abrir el escáner).
+ * Elige el código bueno de lo leído. Todo lo que lleva un GTIN (EAN, UPC, ITF-14, DataBar, GS1-128,
+ * QR GS1) ya trae su dígito de control y vale a la primera; un Code 128 interno, que no lo tiene,
+ * tiene que salir igual en dos fotogramas seguidos.
+ */
+export function acceptRead(
+  reads: { text: string; format: string }[],
+  previous: string,
+): { parsed: ParsedCode | null; seen: string } {
+  for (const read of reads) {
+    const parsed = parseScannedCode(read.text, read.format);
+    if (!parsed) continue;
+    const checked = parsed.kind !== "interno" || !read.format.startsWith("Code128");
+    if (checked || previous === read.text) return { parsed, seen: read.text };
+    return { parsed: null, seen: read.text };
+  }
+  return { parsed: null, seen: "" };
+}
+
+/**
+ * Cámara trasera leyendo los códigos de cualquier supermercado (ver `RETAIL_FORMATS`).
+ * Analiza la zona del recuadro y, cada pocos fotogramas, la imagen entera (packs grandes).
  * Ajusta enfoque continuo y algo de zoom si el dispositivo lo permite, y ofrece la linterna.
  * `attempt` reinicia la cámara; `active` la apaga mientras se muestra un resultado.
  */
@@ -17,11 +41,11 @@ export function useBarcodeCamera({
 }: {
   active: boolean;
   attempt: number;
-  onCode: (code: string) => void;
+  onCode: (code: ParsedCode) => void;
   onError: (message: string) => void;
 }) {
   const video = useRef<HTMLVideoElement>(null);
-  const controls = useRef<Controls | null>(null);
+  const stopRef = useRef<() => void>(() => undefined);
   const callbacks = useRef({ onCode, onError });
   const [torchAvailable, setTorchAvailable] = useState(false);
   const [torch, setTorch] = useState(false);
@@ -32,69 +56,86 @@ export function useBarcodeCamera({
 
   useEffect(() => {
     if (!active) return;
-    let cancelled = false;
+    let stopped = false;
+    let stream: MediaStream | null = null;
+    let timer = 0;
+    const stop = () => {
+      stopped = true;
+      window.clearTimeout(timer);
+      stream?.getTracks().forEach((track) => track.stop());
+    };
+    stopRef.current = stop;
     setTorch(false);
     setTorchAvailable(false);
+
     void (async () => {
       try {
-        const [{ BrowserMultiFormatReader }, { BarcodeFormat, DecodeHintType }] = await Promise.all([
-          import("@zxing/browser"),
-          import("@zxing/library"),
-        ]);
-        if (cancelled || !video.current) return;
-        const hints = new Map();
-        hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-          BarcodeFormat.EAN_13,
-          BarcodeFormat.EAN_8,
-          BarcodeFormat.UPC_A,
-          BarcodeFormat.UPC_E,
-          BarcodeFormat.CODE_128,
-        ]);
-        const reader = new BrowserMultiFormatReader(hints, {
-          delayBetweenScanAttempts: 70,
-          delayBetweenScanSuccess: 900,
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false,
         });
-        const started = await reader.decodeFromConstraints(
-          {
-            video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-            audio: false,
-          },
-          video.current,
-          (result) => {
-            const code = result?.getText().replace(/\D/g, "") ?? "";
-            if (code.length >= 8) callbacks.current.onCode(code);
-          },
-        );
-        if (cancelled) {
-          started.stop();
-          return;
-        }
-        controls.current = started;
-        const track = (video.current.srcObject as MediaStream | null)?.getVideoTracks()[0];
-        // Linterna, enfoque y zoom aún no están en los tipos DOM de TypeScript 7; el lint usa TypeScript 6, que sí los trae.
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-        const capabilities = track?.getCapabilities?.() as Capabilities | undefined;
-        setTorchAvailable(Boolean(capabilities?.torch));
-        const advanced: MediaTrackConstraintSet[] = [];
-        if (capabilities?.focusMode?.includes("continuous"))
-          advanced.push({ focusMode: "continuous" } as MediaTrackConstraintSet);
-        if (capabilities?.zoom && capabilities.zoom.max > 1)
-          advanced.push({ zoom: Math.min(1.5, capabilities.zoom.max) } as MediaTrackConstraintSet);
-        if (advanced.length) track?.applyConstraints({ advanced }).catch(logError("ajustar cámara"));
+        const element = video.current;
+        if (stopped || !element) return stop();
+        element.srcObject = stream;
+        await element.play();
+        tuneTrack(stream.getVideoTracks()[0], setTorchAvailable);
+
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context) throw new Error("Sin lienzo 2D");
+        let frame = 0;
+        let previous = "";
+        const scan = async () => {
+          if (stopped) return;
+          if (element.readyState >= 2 && element.videoWidth) {
+            // El recuadro de la pantalla está en el centro: se analiza esa franja, con margen.
+            // Cada cuarto fotograma se mira la imagen entera, por si el código no cabe en el recuadro.
+            const whole = frame++ % 4 === 3;
+            const { videoWidth: w, videoHeight: h } = element;
+            const cropW = whole ? w : w * 0.9;
+            const cropH = whole ? h : h * 0.6;
+            const scale = Math.min(1, MAX_SIDE / Math.max(cropW, cropH));
+            canvas.width = Math.round(cropW * scale);
+            canvas.height = Math.round(cropH * scale);
+            context.drawImage(
+              element,
+              (w - cropW) / 2,
+              (h - cropH) / 2,
+              cropW,
+              cropH,
+              0,
+              0,
+              canvas.width,
+              canvas.height,
+            );
+            const reads = await readCodes(context.getImageData(0, 0, canvas.width, canvas.height));
+            const { parsed, seen } = acceptRead(reads, previous);
+            previous = seen;
+            if (parsed && !stopped) {
+              callbacks.current.onCode(parsed);
+              return;
+            }
+          }
+          timer = window.setTimeout(() => void scan().catch(fail), 60);
+        };
+        await scan();
       } catch (error) {
-        if (!cancelled)
-          callbacks.current.onError(
-            (error as DOMException)?.name === "NotAllowedError"
-              ? "Sin permiso para usar la cámara. Actívalo en Ajustes o escribe el código."
-              : "No se pudo abrir la cámara. Introduce el código manualmente.",
-          );
+        fail(error);
       }
     })();
-    return () => {
-      cancelled = true;
-      controls.current?.stop();
-      controls.current = null;
-    };
+
+    function fail(error: unknown) {
+      if (stopped) return;
+      stop();
+      logError("escáner")(error);
+      callbacks.current.onError(
+        (error as DOMException)?.name === "NotAllowedError"
+          ? "Sin permiso para usar la cámara. Actívalo en Ajustes, haz una foto del código o escríbelo."
+          : "No se pudo abrir la cámara. Haz una foto del código o escríbelo.",
+      );
+    }
+
+    return stop;
   }, [active, attempt]);
 
   async function toggleTorch() {
@@ -109,5 +150,19 @@ export function useBarcodeCamera({
     }
   }
 
-  return { video, stop: () => controls.current?.stop(), torch, torchAvailable, toggleTorch };
+  return { video, stop: () => stopRef.current(), torch, torchAvailable, toggleTorch };
+}
+
+/** Enfoque continuo, algo de zoom para acercar el código sin pegar el móvil, y si hay linterna. */
+function tuneTrack(track: MediaStreamTrack | undefined, setTorchAvailable: (value: boolean) => void) {
+  // Linterna, enfoque y zoom aún no están en los tipos DOM de TypeScript 7; el lint usa TypeScript 6, que sí los trae.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+  const capabilities = track?.getCapabilities?.() as Capabilities | undefined;
+  setTorchAvailable(Boolean(capabilities?.torch));
+  const advanced: MediaTrackConstraintSet[] = [];
+  if (capabilities?.focusMode?.includes("continuous"))
+    advanced.push({ focusMode: "continuous" } as MediaTrackConstraintSet);
+  if (capabilities?.zoom && capabilities.zoom.max > 1)
+    advanced.push({ zoom: Math.min(1.5, capabilities.zoom.max) } as MediaTrackConstraintSet);
+  if (advanced.length) track?.applyConstraints({ advanced }).catch(logError("ajustar cámara"));
 }

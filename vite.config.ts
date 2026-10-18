@@ -25,7 +25,7 @@ function vendorChunk(id: string): string | undefined {
 }
 
 /** Dependencias pesadas que solo se usan en momentos concretos (PDF, escáner, OCR). */
-const ON_DEMAND_PACKAGES = ["jspdf", "pdfjs-dist", "html2canvas", "dompurify", "canvg", "@zxing", "tesseract.js"];
+const ON_DEMAND_PACKAGES = ["jspdf", "pdfjs-dist", "html2canvas", "dompurify", "canvg", "zxing-wasm", "tesseract.js"];
 
 /** Sus bloques llevan el prefijo «ondemand-»: no entran en la descarga inicial y se guardan al usarlos. */
 function chunkFileName(chunk: { moduleIds: readonly string[] }): string {
@@ -35,7 +35,8 @@ function chunkFileName(chunk: { moduleIds: readonly string[] }): string {
   return onDemand ? "assets/ondemand-[name]-[hash].js" : "assets/[name]-[hash].js";
 }
 
-const ON_DEMAND = /\/assets\/ondemand-/;
+/** Bloques bajo demanda y el lector de códigos (WebAssembly): se guardan al usarlos por primera vez. */
+const ON_DEMAND = /\/assets\/(ondemand-|zxing_reader-)/;
 
 /**
  * OCR servido desde la propia app, sin CDN de terceros: el trabajador, el motor LSTM en sus tres
