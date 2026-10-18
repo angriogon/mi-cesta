@@ -69,7 +69,7 @@ test("equivalencias antiguas: reasignar un producto creado desde el ticket mueve
   await page.getByRole("button", { name: "Añadir ticket sin foto" }).click();
   await page.getByRole("button", { name: "Revisar textos y cantidades" }).click();
   await page.getByRole("button", { name: "Añadir línea" }).click();
-  await page.getByLabel("Producto", { exact: true }).first().fill("ROSQUILLA CHOCO COCO");
+  await page.getByLabel("Producto", { exact: true }).first().fill("BOLLO ZZ CHOCO");
   await page.getByPlaceholder("0,00").fill("1,80");
   await page.getByRole("button", { name: "Guardar ticket" }).click();
   await page.getByRole("button", { name: "Confirmar revisión" }).click();
@@ -78,15 +78,15 @@ test("equivalencias antiguas: reasignar un producto creado desde el ticket mueve
   await openMenu(page);
   await page.getByRole("button", { name: "Equivalencias de tickets" }).click();
   await expect(page.getByText("Por revisar · 1")).toBeVisible();
-  await page.getByRole("button", { name: "Cambiar el producto de ROSQUILLA CHOCO COCO" }).click();
-  const picker = page.getByRole("dialog", { name: "ROSQUILLA CHOCO COCO" });
+  await page.getByRole("button", { name: "Cambiar el producto de BOLLO ZZ CHOCO" }).click();
+  const picker = page.getByRole("dialog", { name: "BOLLO ZZ CHOCO" });
   await picker.getByLabel("Buscar producto").fill("donuts");
   await picker.getByRole("button", { name: /^Donuts/ }).click();
   await expect(
-    page.getByText(/irá a Donuts y su unidad pasa a ese producto; «ROSQUILLA CHOCO COCO» ya no existe/),
+    page.getByText(/irá a Donuts y su unidad pasa a ese producto; «BOLLO ZZ CHOCO» ya no existe/),
   ).toBeVisible();
   await expect(page.getByText(/Por revisar/)).toBeHidden();
-  await expect(page.getByRole("button", { name: "Cambiar el producto de ROSQUILLA CHOCO COCO" })).toContainText(
+  await expect(page.getByRole("button", { name: "Cambiar el producto de BOLLO ZZ CHOCO" })).toContainText(
     "Donuts",
   );
 });
