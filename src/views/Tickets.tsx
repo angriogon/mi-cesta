@@ -3,13 +3,15 @@ import { useEffect, useState, type FormEvent } from "react";
 import type { CestaApi } from "../data/api";
 import { errorMessage } from "../app/errorMessage";
 import { useTickets } from "../app/useTickets";
-import type { PriceRef, TicketItem } from "../data/types";
+import type { PriceRef } from "../data/types";
 import { parseTicketText } from "../domain/tickets";
 import { parseEuroToCents, todayIso } from "../lib/text";
 import { Button, Input } from "../ui/primitives";
 import type { Notify } from "../ui/Toast";
 import { reportError } from "../lib/errors";
+import type { PickerProduct } from "../ui/ProductPicker";
 import { LineChecks, LinesEditor } from "./tickets/fields";
+import type { TicketLine } from "./tickets/LineProduct";
 import { readTicketFile } from "./tickets/readTicket";
 import { MonthlySpend, ReviewsPanel, TicketHistory } from "./tickets/TicketLists";
 
@@ -34,7 +36,8 @@ export function TicketsView({
   const [date, setDate] = useState(todayIso());
   const [total, setTotal] = useState("");
   const [rawText, setRawText] = useState("");
-  const [lines, setLines] = useState<TicketItem[]>([]);
+  const [lines, setLines] = useState<TicketLine[]>([]);
+  const [products, setProducts] = useState<PickerProduct[]>([]);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
@@ -66,7 +69,10 @@ export function TicketsView({
       setRawText(text);
       setDate(parsed.purchasedAt);
       setTotal(parsed.total.replace(".", ","));
-      setLines(parsed.items);
+      // Cada línea con su producto del almacén (equivalencias del hogar, de serie o por parecido).
+      const [matched, catalog] = await Promise.all([api.matchTicketItems(parsed.items), api.products()]);
+      setLines(matched);
+      setProducts(catalog);
       if (parsed.merchant) setMerchant(parsed.merchant);
       setProgress(100);
       setStatus(
@@ -245,8 +251,8 @@ export function TicketsView({
                   </button>
                 )}
               </div>
-              <LineChecks lines={lines} prices={prices} planned={planned} />
-              {control && <LinesEditor items={lines} onChange={setLines} />}
+              <LineChecks lines={lines} prices={prices} planned={planned} onReview={() => setControl(true)} />
+              {control && <LinesEditor items={lines} products={products} onChange={setLines} />}
             </div>
             <p className="col-span-2 text-xs leading-5 text-muted-foreground">
               La lectura automática puede cometer errores: confirma siempre la fecha y el total antes de guardar.

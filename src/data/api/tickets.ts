@@ -1,4 +1,5 @@
 import { PERISHABLE } from "../../domain/categories";
+import { matchLine } from "../../domain/equivalences";
 import { cleanProductName, findProduct, similarNames } from "../../domain/matching";
 import { uid } from "../../lib/text";
 import type { InverseStep, PriceRef, Ticket, TicketItem, TicketReview } from "../types";
@@ -74,8 +75,16 @@ export class TicketsApi extends PricesApi {
         lineTotalCents: Math.max(0, Math.round(raw.lineTotalCents)),
       };
       if (!item.description) continue;
+      if (raw.skip) {
+        items.push({ ...item, productId: null, skip: true });
+        continue;
+      }
       const key = cleanProductName(item.description);
-      const product = findProduct(item.description, products, aliases);
+      const automatic = matchLine(item.description, products, aliases)?.product ?? null;
+      const chosen = raw.productId ? (products.find((candidate) => candidate.id === raw.productId) ?? null) : null;
+      const product = chosen ?? automatic;
+      // Si se eligió otro producto al revisar, se recuerda para los próximos tickets.
+      if (chosen && chosen.id !== automatic?.id) await this.rememberEquivalence(item.description, chosen.id, aliases);
       if (!product) {
         reviews.push(this.review(ticketId, item, "unidentified", null, { proposedName: item.description }));
         items.push({ ...item, productId: null });
@@ -205,6 +214,25 @@ export class TicketsApi extends PricesApi {
       await this.db.removeTicketImages([ticket.imagePath]).catch(logError("borrar foto de ticket"));
   }
 
+  /** Guarda (o cambia) la equivalencia «texto del ticket → producto» del hogar. */
+  protected async rememberEquivalence(
+    alias: string,
+    productId: string,
+    known: { id: string; alias: string; productId: string }[],
+  ): Promise<void> {
+    const key = cleanProductName(alias);
+    if (!key) return;
+    const existing = known.find((item) => cleanProductName(item.alias) === key);
+    if (existing) {
+      if (existing.productId !== productId) await this.db.update("name_aliases", existing.id, { productId });
+      existing.productId = productId;
+      return;
+    }
+    const row = { id: uid(), householdId: this.db.householdId, alias: alias.trim(), productId, createdAt: now() };
+    await this.db.insert("name_aliases", [row]);
+    known.push(row);
+  }
+
   /** Resuelve una línea dudosa. Si se corrige el nombre, se recuerda para los próximos tickets. */
   async resolveReview(reviewId: string, correctedName: string): Promise<void> {
     await this.atomically((tx) => tx.resolveReviewSteps(reviewId, correctedName));
@@ -217,15 +245,7 @@ export class TicketsApi extends PricesApi {
       const name = correctedName.trim() || review.description;
       const products = await this.db.list("products");
       const product = findProduct(name, products) ?? (await this.ensureProduct(products, name));
-      await this.db.insert("name_aliases", [
-        {
-          id: uid(),
-          householdId: this.db.householdId,
-          alias: review.description,
-          productId: product.id,
-          createdAt: now(),
-        },
-      ]);
+      await this.rememberEquivalence(review.description, product.id, await this.db.list("name_aliases"));
       const units = Number.isInteger(review.quantity) && review.quantity > 0 ? review.quantity : 1;
       const inverse: InverseStep[] = [];
       await this.changeStock(product, units, "ticket", inverse);

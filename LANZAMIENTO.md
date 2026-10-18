@@ -5,9 +5,9 @@
 | Prueba                         | Resultado | Cubre                                                                                                                                                        |
 | ------------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Calidad (`npm run check`)      | En verde  | Tipos (TypeScript 7), ESLint estricto con tipos, react-hooks y jsx-a11y, y Prettier                                                                          |
-| Unitarias (Vitest)             | 84        | Dominio, API completa, operaciones atómicas, hooks de cada dominio, errores, escala de texto, ruido de OCR, búsqueda del papel, exportación y consentimiento |
+| Unitarias (Vitest)             | 93        | Dominio, API completa, operaciones atómicas, hooks de cada dominio, errores, escala de texto, ruido de OCR, búsqueda del papel, exportación y consentimiento |
 | Base de datos (PGlite)         | 39        | Migraciones, aislamiento entre hogares, invitaciones, fotos privadas, `apply_batch`, limpieza del historial, eliminar cuenta, avisos push y catálogo         |
-| Extremo a extremo (Playwright) | 27        | Todas las pantallas en WebKit con iPhone 14 y SE, OCR real sin CDN, WCAG 2.1 AA en claro y oscuro, texto al 140 %, primer uso, favoritas y menú legal        |
+| Extremo a extremo (Playwright) | 28        | Todas las pantallas en WebKit con iPhone 14 y SE, OCR real sin CDN, WCAG 2.1 AA en claro y oscuro, texto al 140 %, primer uso, favoritas y menú legal        |
 | Tickets reales                 | Opcional  | `CESTA_REAL_TICKETS=carpeta`: fotos reales fuera del repositorio con lo esperado en JSON (hoy, Mercadona: 46/46 líneas)                                      |
 | Integración con Supabase real  | Opcional  | Necesita usuarios de prueba (`CESTA_IT_*`); no se ejecuta en CI                                                                                              |
 
@@ -32,6 +32,7 @@
 - Historial limitado (400 días de movimientos, 30 de deshacer) con limpieza nocturna; clave _publishable_.
 - **Lectura de tickets reales**: recorte del papel, luz igualada e intérprete tolerante al ruido.
 - **Tickets en PDF** (ticket digital): se lee su texto tal cual, sin cámara ni OCR; un PDF escaneado pasa por el OCR.
+- **Equivalencias de tickets**: cada línea va a un producto del almacén (PECHUGA FAMILIAR → Pechuga de pollo). Hay equivalencias de serie para Mercadona, se puede cambiar el producto de cada línea al revisar (y se recuerda) y se gestionan en Menú → Equivalencias de tickets. Así el almacén y las recetas cuadran con lo que se compra.
 - **Eliminar cuenta y exportar mis datos** (RGPD: supresión y portabilidad).
 - **Textos legales** (privacidad, condiciones y cookies) y consentimiento explícito para alergias y dieta.
 - **Avisos push de la mascota** con Cesta cerrada (pg_cron + Edge Function `pet-push` + Vault).

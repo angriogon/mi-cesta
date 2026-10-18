@@ -92,7 +92,10 @@ export interface TicketItem {
   description: string;
   quantity: number;
   lineTotalCents: number;
+  /** Producto del almacén al que va la línea (lo elige Cesta y se puede cambiar antes de guardar). */
   productId?: string | null;
+  /** No es un producto del almacén (bolsa, descuento…): no se suma ni queda para revisar. */
+  skip?: boolean;
 }
 
 export interface Ticket {
