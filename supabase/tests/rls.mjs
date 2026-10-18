@@ -10,6 +10,7 @@ const migration = [
   "20261021000001_pg_net_schema.sql",
   "20261022000000_catalog_duplicates.sql",
   "20261023000000_catalog_more.sql",
+  "20261024000000_pet_stock_push.sql",
 ]
   .map((file) => readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8"))
   .join("\n");
@@ -280,6 +281,25 @@ ok(
   (await db.query(`select count(*)::int n from public.due_pet_reminders()`)).rows[0].n === 0,
   "cada aviso se envía una sola vez al día",
 );
+// Artículos de la mascota bajo mínimos: solo entre las 10:00 y las 12:00 de la hora local.
+await db.query(
+  `insert into dog_items (household_id, id, name, current_stock, minimum_stock) values
+   ($1, 'pienso', 'Pienso', 1, 2), ($1, 'arena', 'Arena', 5, 2), ($1, 'sin-minimo', 'Juguete', 0, 0)`,
+  [hid],
+);
+const localHour = (await db.query(`select extract(hour from ${localNow})::int h`)).rows[0].h;
+const stockDue = (await db.query(`select alert_id from public.due_pet_stock_alerts()`)).rows.map((r) => r.alert_id);
+ok(
+  localHour >= 10 && localHour < 12 ? stockDue.join() === "stock:pienso" : stockDue.length === 0,
+  `avisa solo del pienso bajo mínimos y en su franja (${localHour} h: ${stockDue.join() || "ninguno"})`,
+);
+let stockBlocked = false;
+try {
+  await as(ANA, `select * from public.due_pet_stock_alerts()`);
+} catch {
+  stockBlocked = true;
+}
+ok(stockBlocked, "solo el servidor puede consultar los artículos bajo mínimos");
 let dueBlocked = false;
 try {
   await as(ANA, `select * from public.due_pet_reminders()`);

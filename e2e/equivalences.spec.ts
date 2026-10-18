@@ -86,7 +86,5 @@ test("equivalencias antiguas: reasignar un producto creado desde el ticket mueve
     page.getByText(/irá a Donuts y su unidad pasa a ese producto; «BOLLO ZZ CHOCO» ya no existe/),
   ).toBeVisible();
   await expect(page.getByText(/Por revisar/)).toBeHidden();
-  await expect(page.getByRole("button", { name: "Cambiar el producto de BOLLO ZZ CHOCO" })).toContainText(
-    "Donuts",
-  );
+  await expect(page.getByRole("button", { name: "Cambiar el producto de BOLLO ZZ CHOCO" })).toContainText("Donuts");
 });

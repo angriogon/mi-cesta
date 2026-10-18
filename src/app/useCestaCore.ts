@@ -69,7 +69,7 @@ export function useCestaCore(api: CestaApi, account: Account) {
 
   const splash = useSplash(ready);
   usePreloadScreens(ready);
-  const petAlert = usePetAlerts(ready, pet.reminders, pet.petName);
+  const petAlert = usePetAlerts(ready, pet.reminders, pet.items, pet.petName);
   const pendingInStore = lists.checklist.filter((item) => !item.done).length;
   useStorePresence(api, device, ready && view === "purchase" && stage === "store", pendingInStore);
   const saved = useSavedNotice(expiryItems.length > 0);
