@@ -1,12 +1,21 @@
 import { copy } from "../copy/es";
-import { Camera, Flashlight, LoaderCircle, RotateCcw, ScanLine, X } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { ImageUp, Flashlight, LoaderCircle, ScanLine, X } from "lucide-react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { ApiError, type CestaApi } from "../data/api";
 import type { BarcodeProduct } from "../data/types";
+import { parseScannedCode, type ParsedCode } from "../domain/barcode";
+import { readCodes } from "../lib/barcode-reader";
+import { logError } from "../lib/errors";
 import { Button, Input } from "../ui/primitives";
+import { ScannedProduct } from "./scanner/ScannedProduct";
 import { useBarcodeCamera } from "./scanner/useBarcodeCamera";
 
-/** Escáner EAN/UPC con la cámara trasera; si no se reconoce, permite guardar el nombre. */
+const AIM = "Acerca el código al recuadro y evita reflejos.";
+
+/**
+ * Escáner de códigos de cualquier supermercado con la cámara trasera, con una foto o a mano.
+ * Si no se reconoce el producto, permite guardar su nombre para las próximas veces.
+ */
 export function BarcodeScanner({
   api,
   onClose,
@@ -20,37 +29,50 @@ export function BarcodeScanner({
 }) {
   const busyRef = useRef(false);
   const lastCode = useRef("");
+  const photoInput = useRef<HTMLInputElement>(null);
   const [manual, setManual] = useState("");
   const [unknownName, setUnknownName] = useState("");
-  const [unknownCode, setUnknownCode] = useState("");
-  const [status, setStatus] = useState("Acerca el código al recuadro y evita reflejos.");
+  const [unknown, setUnknown] = useState<ParsedCode | null>(null);
+  const [parsed, setParsed] = useState<ParsedCode | null>(null);
+  const [status, setStatus] = useState(AIM);
   const [busy, setBusy] = useState(false);
   const [product, setProduct] = useState<BarcodeProduct | null>(null);
   const [attempt, setAttempt] = useState(0);
   const camera = useBarcodeCamera({
-    active: !product && !unknownCode,
+    active: !product && !unknown,
     attempt,
     onCode: (code) => {
-      if (code !== lastCode.current) void lookup(code);
+      if (code.code !== lastCode.current) void lookup(code);
     },
     onError: setStatus,
   });
 
-  async function lookup(raw: string) {
-    const code = raw.replace(/\D/g, "").slice(0, 18);
-    if (code.length < 8 || busyRef.current) return;
+  async function lookup(input: ParsedCode | string) {
+    if (busyRef.current) return;
     busyRef.current = true;
-    lastCode.current = code;
     camera.stop();
     setBusy(true);
-    setUnknownCode("");
+    setUnknown(null);
     setUnknownName("");
     setStatus("Identificando producto…");
     try {
+      const code = typeof input === "string" ? parseScannedCode(input) : input;
+      if (!code) {
+        // La API explica qué le pasa al código escrito (pocos números o dígito de control erróneo).
+        if (typeof input === "string") await api.lookupBarcode(input);
+        return;
+      }
+      lastCode.current = code.code;
+      setParsed(code);
       const found = await api.lookupBarcode(code);
       if (!found) {
-        setUnknownCode(code);
-        throw new Error("No conocemos este código. Dinos qué producto es y lo recordaremos.");
+        setUnknown(code);
+        setStatus(
+          code.kind === "peso-variable"
+            ? "Es una etiqueta de la balanza del súper. Dinos qué es y la reconoceremos aunque cambie el precio."
+            : "No conocemos este código. Dinos qué producto es y lo recordaremos.",
+        );
+        return;
       }
       navigator.vibrate?.(45);
       setProduct(found);
@@ -63,13 +85,35 @@ export function BarcodeScanner({
     }
   }
 
+  /** Foto del código: más nítida que el vídeo para códigos pequeños, curvos o con poca luz. */
+  async function readPhoto(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    camera.stop();
+    setBusy(true);
+    setStatus("Buscando el código en la foto…");
+    try {
+      const reads = await readCodes(file, true);
+      const code = reads.map((read) => parseScannedCode(read.text, read.format)).find(Boolean);
+      setBusy(false);
+      if (code) return void lookup(code);
+      setStatus("No se ve ningún código en la foto. Acércate más, con luz y sin reflejos, o escríbelo.");
+    } catch (error) {
+      logError("leer foto de código")(error);
+      setBusy(false);
+      setStatus("No se ha podido leer la foto. Prueba otra vez o escribe el código.");
+    }
+  }
+
   async function saveUnknown(event: FormEvent) {
     event.preventDefault();
-    if (!unknownCode || !unknownName.trim() || busy) return;
+    if (!unknown || !unknownName.trim() || busy) return;
     setBusy(true);
     setStatus("Guardando el código para próximas veces…");
     try {
-      setProduct(await api.saveBarcode(unknownCode, unknownName));
+      setProduct(await api.saveBarcode(unknown, unknownName));
+      setUnknown(null);
       setStatus("Producto guardado e identificado.");
     } catch (error) {
       setStatus(error instanceof ApiError ? error.message : copy.errors.saveShort);
@@ -78,13 +122,22 @@ export function BarcodeScanner({
     }
   }
 
+  function correct() {
+    if (!parsed || !product) return;
+    setUnknown(parsed);
+    setUnknownName(product.name);
+    setProduct(null);
+    setStatus("Escribe el nombre correcto: lo recordaremos para este código.");
+  }
+
   function reset() {
     setProduct(null);
-    setUnknownCode("");
+    setParsed(null);
+    setUnknown(null);
     setUnknownName("");
     setManual("");
     lastCode.current = "";
-    setStatus("Acerca el código al recuadro y evita reflejos.");
+    setStatus(AIM);
     setAttempt((value) => value + 1);
   }
 
@@ -115,7 +168,7 @@ export function BarcodeScanner({
             <X className="size-4" />
           </button>
         </div>
-        {!product && !unknownCode && (
+        {!product && !unknown && (
           <div className="relative aspect-[4/3] overflow-hidden bg-black">
             <video key={attempt} ref={camera.video} muted playsInline className="size-full object-cover" />
             <div className="pointer-events-none absolute inset-[27%_7%] rounded-xl border-2 border-white/90 shadow-float">
@@ -135,71 +188,27 @@ export function BarcodeScanner({
         )}
         <div className="p-4">
           {product ? (
-            <>
-              <div className="flex gap-3">
-                {product.image ? (
-                  <img src={product.image} alt="" className="size-16 rounded-xl bg-card object-contain" />
-                ) : (
-                  <div className="flex size-16 items-center justify-center rounded-xl bg-muted">
-                    <Camera className="size-5 text-primary" />
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <h2 className="text-base font-semibold">{product.name}</h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {[product.brand, product.quantity].filter(Boolean).join(" · ")}
-                  </p>
-                  {product.source && (
-                    <p className="mt-1 text-xs font-semibold text-muted-foreground">{product.source}</p>
-                  )}
-                  {product.allergens.length > 0 && (
-                    <p className="mt-1 text-xs font-semibold text-danger">Alérgenos: {product.allergens.join(", ")}</p>
-                  )}
-                </div>
-              </div>
-              {Object.values(product.nutrients).some(Boolean) && (
-                <div className="mt-3 grid grid-cols-5 gap-1 rounded-xl bg-muted p-2 text-center">
-                  {(
-                    [
-                      ["kcal", product.nutrients.kcal],
-                      ["prot.", product.nutrients.protein],
-                      ["hidr.", product.nutrients.carbs],
-                      ["grasas", product.nutrients.fat],
-                      ["fibra", product.nutrients.fiber],
-                    ] as const
-                  ).map(([label, value]) => (
-                    <div key={label}>
-                      <p className="text-xs font-semibold">{Math.round(Number(value))}</p>
-                      <p className="text-xs uppercase text-muted-foreground">{label}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="mt-4 grid grid-cols-[1fr_2fr] gap-2">
-                <Button variant="outline" onClick={reset} className="h-12 rounded-xl">
-                  <RotateCcw className="size-4" /> Otro
-                </Button>
-                <Button
-                  onClick={() => {
-                    onUse(product);
-                    if (continuous) reset();
-                  }}
-                  className="h-12 rounded-xl"
-                >
-                  {continuous ? "Añadir y seguir" : "Usar este producto"}
-                </Button>
-              </div>
-            </>
+            <ScannedProduct
+              product={product}
+              parsed={parsed}
+              continuous={continuous}
+              onAnother={reset}
+              onCorrect={correct}
+              onUse={() => {
+                onUse(product);
+                if (continuous) reset();
+              }}
+            />
           ) : (
             <>
               <p className="text-center text-xs font-semibold text-muted-foreground" role="status">
                 {busy && <LoaderCircle className="mr-1 inline size-3.5 animate-spin" />}
                 {status}
               </p>
-              {unknownCode ? (
+              {unknown ? (
                 <form onSubmit={saveUnknown} className="mt-3 rounded-xl bg-warning-soft p-3">
                   <label htmlFor="unknown-product-name" className="text-xs font-semibold text-warning">
-                    ¿Qué producto es? · {unknownCode}
+                    ¿Qué producto es? · {unknown.code}
                   </label>
                   <Input
                     id="unknown-product-name"
@@ -223,26 +232,45 @@ export function BarcodeScanner({
                   </Button>
                 </form>
               ) : (
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void lookup(manual);
-                  }}
-                  className="mt-3 flex gap-2"
-                >
-                  <Input
-                    value={manual}
-                    onChange={(event) => setManual(event.target.value.replace(/\D/g, ""))}
-                    inputMode="numeric"
-                    enterKeyHint="search"
-                    placeholder="Código EAN"
-                    aria-label="Código EAN"
-                    className="h-11 rounded-xl text-base"
+                <>
+                  <form
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void lookup(manual);
+                    }}
+                    className="mt-3 flex gap-2"
+                  >
+                    <Input
+                      value={manual}
+                      onChange={(event) => setManual(event.target.value.replace(/\D/g, ""))}
+                      inputMode="numeric"
+                      enterKeyHint="search"
+                      placeholder="Código EAN"
+                      aria-label="Código EAN"
+                      className="h-11 rounded-xl text-base"
+                    />
+                    <Button type="submit" disabled={manual.length < 8 || busy} className="h-11 rounded-xl px-3 text-xs">
+                      Buscar
+                    </Button>
+                  </form>
+                  <input
+                    ref={photoInput}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={(event) => void readPhoto(event)}
+                    className="hidden"
+                    aria-label="Foto del código"
                   />
-                  <Button type="submit" disabled={manual.length < 8 || busy} className="h-11 rounded-xl px-3 text-xs">
-                    Buscar
+                  <Button
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => photoInput.current?.click()}
+                    className="mt-2 h-11 w-full rounded-xl text-xs"
+                  >
+                    <ImageUp className="size-4" /> Hacer una foto del código
                   </Button>
-                </form>
+                </>
               )}
             </>
           )}

@@ -275,14 +275,55 @@ describe("inventario rápido y códigos de barras", () => {
         }),
       ),
     );
-    const found = await api.lookupBarcode("8410000000000");
+    const found = await api.lookupBarcode("8410000000009");
     expect(found).toMatchObject({ name: "Galletas María", allergens: ["gluten"] });
     expect(found?.nutrients.kcal).toBe(440);
     fetchSpy.mockResolvedValue(new Response(JSON.stringify({ status: 0 })));
-    expect(await api.lookupBarcode("8410000000017")).toBeNull();
-    await api.saveBarcode("8410000000017", "Mi producto");
-    expect((await api.lookupBarcode("8410000000017"))?.name).toBe("Mi producto");
+    expect(await api.lookupBarcode("8410000000016")).toBeNull();
+    await api.saveBarcode("8410000000016", "Mi producto");
+    expect((await api.lookupBarcode("8410000000016"))?.name).toBe("Mi producto");
     await expect(api.lookupBarcode("123")).rejects.toThrow();
+    await expect(api.lookupBarcode("8410000000001")).rejects.toThrow(/último número no cuadra/);
+    fetchSpy.mockRestore();
+  });
+
+  it("si no es comida, busca en las bases de limpieza, cosmética y mascotas", async () => {
+    const hosts: string[] = [];
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const url = new URL(input instanceof Request ? input.url : input);
+      hosts.push(url.host);
+      const known = url.host === "world.openproductsfacts.org";
+      return Promise.resolve(
+        new Response(
+          JSON.stringify(
+            known
+              ? { status: 1, product: { product_name: "Lavavajillas a mano", brands: "Bosque Verde" } }
+              : { status: 0 },
+          ),
+        ),
+      );
+    });
+    const found = await api.lookupBarcode("8480000160270");
+    expect(found).toMatchObject({ code: "8480000160270", name: "Lavavajillas a mano", source: "Open Products Facts" });
+    expect(hosts[0]).toBe("world.openfoodfacts.org");
+    expect(hosts).toContain("world.openbeautyfacts.org");
+    fetchSpy.mockRestore();
+  });
+
+  it("las etiquetas de la balanza se recuerdan por el artículo, sin buscar fuera", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    expect(await api.lookupBarcode("2300540012500")).toBeNull();
+    await api.saveBarcode("2300540012500", "Pechuga de pollo al corte");
+    // Otra etiqueta del mismo artículo con otro precio.
+    expect(await api.lookupBarcode("2300540034502")).toMatchObject({
+      code: "2300540034502",
+      name: "Pechuga de pollo al corte",
+      source: "Guardado por tu hogar · al peso",
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    // Corregir el nombre de una etiqueta concreta cambia el del artículo.
+    await api.saveBarcode("2300540034502", "Contramuslo de pollo");
+    expect((await api.lookupBarcode("2300540012500"))?.name).toBe("Contramuslo de pollo");
     fetchSpy.mockRestore();
   });
 });
