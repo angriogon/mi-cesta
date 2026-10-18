@@ -18,7 +18,7 @@ const byName = async (name: string) => (await api.products()).find((product) => 
 describe("hogar nuevo", () => {
   it("empieza con el catálogo base vacío de existencias y sin datos", async () => {
     const products = await api.products();
-    expect(products.length).toBe(345);
+    expect(products.length).toBe(392);
     expect(products.every((product) => product.currentStock === 0 && product.minimumStock === 0)).toBe(true);
     expect(await api.lots()).toEqual([]);
     expect((await api.tickets()).tickets).toEqual([]);
@@ -98,7 +98,7 @@ describe("compra y ticket", () => {
       purchasedAt: "2026-10-17",
       totalCents: 199,
       rawText: "",
-      items: [{ description: "KMB JENGIBRE 330", quantity: 1, lineTotalCents: 199 }],
+      items: [{ description: "KMB JNG 330", quantity: 1, lineTotalCents: 199 }],
     });
     const [review] = (await api.tickets()).reviews;
     await api.resolveReview(review.id, "Kombucha de jengibre");
@@ -111,7 +111,7 @@ describe("compra y ticket", () => {
       purchasedAt: "2026-10-18",
       totalCents: 199,
       rawText: "",
-      items: [{ description: "KMB JENGIBRE 330", quantity: 1, lineTotalCents: 199 }],
+      items: [{ description: "KMB JNG 330", quantity: 1, lineTotalCents: 199 }],
     });
     expect((await api.tickets()).reviews).toEqual([]);
     expect((await byName("Kombucha de jengibre")).currentStock).toBe(2);
@@ -296,7 +296,7 @@ describe("restablecer", () => {
     await api.saveLists([{ id: "1", name: "Pan", quantity: 1, category: "Panadería", done: false }], [], 0, (r) => r);
     await api.resetHousehold();
     const products = await api.products();
-    expect(products.length).toBe(345);
+    expect(products.length).toBe(392);
     expect(products.every((product) => product.currentStock === 0 && product.minimumStock === 0)).toBe(true);
     expect((await api.dogItems()).items).toEqual([]);
     expect((await api.lists()).shopping).toEqual([]);
@@ -309,7 +309,7 @@ describe("privacidad", () => {
     const data = await api.exportHousehold();
     expect(data.format).toBe("cesta-export");
     expect(data.household).toMatchObject({ id: "hogar-test" });
-    expect(data.tables.products?.length).toBe(346);
+    expect(data.tables.products?.length).toBe(393);
     expect(Object.keys(data.tables)).toEqual(
       expect.arrayContaining(["inventory_lots", "tickets", "prices", "dog_items", "dog_reminders", "stock_events"]),
     );

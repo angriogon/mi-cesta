@@ -9,6 +9,7 @@ const migration = [
   "20261021000000_pet_push.sql",
   "20261021000001_pg_net_schema.sql",
   "20261022000000_catalog_duplicates.sql",
+  "20261023000000_catalog_more.sql",
 ]
   .map((file) => readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8"))
   .join("\n");

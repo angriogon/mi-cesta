@@ -256,7 +256,9 @@ export class TicketsApi extends PricesApi {
       const [products, aliases] = await Promise.all([this.db.list("products"), this.db.list("name_aliases")]);
       // Primero las equivalencias (del hogar y de serie): «PECHUGA FAMILIAR» va a Pechuga de pollo
       // en lugar de crear un producto nuevo con el texto del ticket.
-      const product = matchLine(name, products, aliases)?.product ?? (await this.ensureProduct(products, name));
+      // Lo escrito vale tal cual: nombre exacto o equivalencia; el parecido no (Kombucha de jengibre ≠ Jengibre).
+      const match = matchLine(name, products, aliases);
+      const product = match && match.source !== "similar" ? match.product : await this.ensureProduct(products, name);
       await this.rememberEquivalence(review.description, product.id, aliases);
       const units = Number.isInteger(review.quantity) && review.quantity > 0 ? review.quantity : 1;
       const inverse: InverseStep[] = [];
