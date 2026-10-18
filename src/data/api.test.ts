@@ -329,3 +329,17 @@ describe("alimentación especial", () => {
     expect(await api.preferences()).toMatchObject({ allergens: [], avoided: [], healthConsentAt: null });
   });
 });
+
+describe("primer uso", () => {
+  it("propone los básicos del catálogo y guarda sus mínimos de una vez", async () => {
+    const { needsStarter, starterChoices } = await import("../domain/starter");
+    const products = await api.products();
+    expect(needsStarter(products)).toBe(true);
+    const choices = starterChoices(products);
+    expect(choices.length).toBeGreaterThanOrEqual(15);
+    await api.setStarterMinimums(choices.map(({ product, minimum }) => ({ productId: product.id, minimum })));
+    const after = await api.products();
+    expect(needsStarter(after)).toBe(false);
+    expect(after.find((product) => product.name === "Leche semidesnatada")?.minimumStock).toBe(2);
+  });
+});

@@ -1,5 +1,5 @@
 import { Gauge, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { Overview } from "../domain/autocesta";
 import type { StockLike } from "../domain/lists";
 import type { Mode } from "../data/types";
@@ -17,6 +17,7 @@ function expiryText(lot: Overview["expiring"][number]): string {
 
 export function Home({
   data,
+  intro,
   stock,
   needs,
   onModeChange,
@@ -27,6 +28,8 @@ export function Home({
   onUndo,
 }: {
   data: Overview | null;
+  /** Tarjeta de primer uso (básicos), justo debajo de la cabecera. */
+  intro?: ReactNode;
   stock: StockLike[];
   needs: StockLike[];
   onModeChange: (mode: Mode) => void;
@@ -88,6 +91,8 @@ export function Home({
           </button>
         </div>
       </div>
+
+      {intro}
 
       <div className="flex flex-wrap gap-2">
         <div

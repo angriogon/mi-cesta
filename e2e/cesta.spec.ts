@@ -235,7 +235,7 @@ test("menú: código postal, perfil alimentario, novedades y restablecer", async
   await openMenu(page);
   await page.getByRole("button", { name: "Indicar código postal" }).click();
   await page.getByPlaceholder("41300").fill("41300");
-  await page.getByRole("button", { name: "Guardar" }).click();
+  await page.getByRole("button", { name: "Guardar", exact: true }).click();
   await expect(page.getByRole("button", { name: "CP 41300" })).toBeVisible();
   await page.getByRole("button", { name: "Alimentación especial" }).click();
   await page.getByLabel("Activar perfil").check();
@@ -284,4 +284,16 @@ test("los datos se conservan al cerrar y volver a abrir", async ({ page }) => {
   await expect(page.getByLabel("Iniciando Cesta")).toBeHidden({ timeout: 15_000 });
   await nav(page, "Compra").click();
   await expect(page.getByText("Café molido")).toBeVisible();
+});
+
+test("primer uso: marca los básicos y Necesidades ya sabe qué reponer", async ({ page }) => {
+  await openApp(page);
+  const starter = page.getByRole("region", { name: "Empieza por lo básico" });
+  await expect(starter).toBeVisible();
+  await starter.getByRole("button", { name: "Gel de ducha" }).click();
+  await expect(starter.getByRole("button", { name: "Gel de ducha" })).toHaveAttribute("aria-pressed", "false");
+  await starter.getByRole("button", { name: /^Guardar \d+ básicos$/ }).click();
+  await expect(starter).toBeHidden();
+  await nav(page, "Necesidades").click();
+  await expect(page.getByText("Leche semidesnatada").first()).toBeVisible();
 });

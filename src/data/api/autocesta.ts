@@ -39,6 +39,13 @@ export class AutoCestaApi extends ApiBase {
     return predictions(products, events);
   }
 
+  /** Primer uso: fija de una vez los mínimos de los básicos elegidos (todo o nada). */
+  async setStarterMinimums(choices: { productId: string; minimum: number }[]): Promise<void> {
+    await this.atomically(async (tx) => {
+      for (const choice of choices) await tx.updateProduct(choice.productId, { minimumStock: choice.minimum });
+    });
+  }
+
   async setMode(mode: Mode): Promise<void> {
     await this.db.updateHousehold({ mode });
   }
