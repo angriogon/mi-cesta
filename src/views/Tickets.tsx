@@ -118,6 +118,10 @@ export function TicketsView({
         items: lines,
       });
       clearForm();
+      if (result === "queued") {
+        setStatus("Sin conexión: el ticket se guardará y sumará al almacén en cuanto vuelva la red.");
+        return;
+      }
       setStatus(
         `Ticket guardado. ${result.added} ${result.added === 1 ? "unidad añadida" : "unidades añadidas"} al almacén${result.reviews ? ` · ${result.reviews} para revisar` : ""}.`,
       );

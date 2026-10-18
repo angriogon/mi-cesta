@@ -1,5 +1,16 @@
 import { copy } from "../../copy/es";
-import { Archive, Bell, Dog, House, LoaderCircle, PackageCheck, ReceiptText, ShoppingBasket, X } from "lucide-react";
+import {
+  CloudOff,
+  Archive,
+  Bell,
+  Dog,
+  House,
+  LoaderCircle,
+  PackageCheck,
+  ReceiptText,
+  ShoppingBasket,
+  X,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { useCesta } from "../CestaContext";
 
@@ -126,10 +137,29 @@ function Notice({
 
 /** Avisos encima de la pantalla: reposición, mascota y «guardado en el almacén». */
 export function Notices() {
-  const { ready, view, setView, needs, needsNotice, setNeedsNotice, petAlert, pet, savedCount, setSavedCount } =
-    useCesta();
+  const {
+    ready,
+    view,
+    setView,
+    needs,
+    needsNotice,
+    setNeedsNotice,
+    petAlert,
+    pet,
+    savedCount,
+    setSavedCount,
+    offlinePending,
+  } = useCesta();
   return (
     <>
+      {offlinePending > 0 && (
+        <output className="mb-3 flex items-center gap-2 rounded-xl bg-warning-soft px-3 py-2 text-xs font-semibold text-warning">
+          <CloudOff className="size-4 shrink-0" />
+          {offlinePending === 1
+            ? "1 cambio sin conexión: se guardará en cuanto vuelva la red."
+            : `${offlinePending} cambios sin conexión: se guardarán en cuanto vuelva la red.`}
+        </output>
+      )}
       {needsNotice && ready && needs.length > 0 && (view === "purchase" || view === "stock") && (
         <Notice
           label="Aviso de reposición"

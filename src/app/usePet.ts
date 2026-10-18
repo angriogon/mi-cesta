@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import type { CestaApi } from "../data/api";
 import type { DogItem, DogReminder } from "../data/types";
 import { LOAD_FAILED, reportError, traced } from "../lib/errors";
+import { isNetworkError, outboxFor } from "../data/outbox";
+import { OFFLINE_SAVED } from "./useOfflineQueue";
 
 type ReminderPatch = Partial<Pick<DogReminder, "title" | "reminderTime" | "enabled">>;
 
@@ -59,6 +61,11 @@ export function usePet(api: CestaApi, active: boolean): PetState {
       try {
         await traced("guardar artículo de mascota", () => api.updateDogItem(next));
       } catch (error) {
+        if (isNetworkError(error)) {
+          await outboxFor(api.db.householdId).enqueue({ kind: "pet-item", item: next });
+          reportError(error, "guardar artículo de mascota", OFFLINE_SAVED);
+          return;
+        }
         setItems((list) => list.map((item) => (item.id === previous.id ? previous : item)));
         throw error;
       }

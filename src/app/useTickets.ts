@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CestaApi } from "../data/api";
 import type { Ticket, TicketReview } from "../data/types";
 import { LOAD_FAILED, logError, notifyError, reportError, traced } from "../lib/errors";
+import { isNetworkError, outboxFor } from "../data/outbox";
 
 type NewTicket = Parameters<CestaApi["saveTicket"]>[0];
 type SavedTicket = Awaited<ReturnType<CestaApi["saveTicket"]>>;
@@ -14,7 +15,8 @@ export interface TicketsState {
   /** Gasto por mes (AAAA-MM → céntimos), del más reciente al más antiguo. */
   months: [string, number][];
   reload: () => Promise<void>;
-  save: (input: NewTicket) => Promise<SavedTicket>;
+  /** Sin conexión, el ticket queda en la cola y devuelve «queued». */
+  save: (input: NewTicket) => Promise<SavedTicket | "queued">;
   update: (ticket: Ticket) => Promise<void>;
   resolveReview: (review: TicketReview, correctedName: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
@@ -60,9 +62,17 @@ export function useTickets(api: CestaApi, onStockChanged: () => void): TicketsSt
     return [...totals.entries()].sort(([a], [b]) => b.localeCompare(a));
   }, [tickets]);
 
+  /** Guarda el ticket; sin conexión queda en la cola y devuelve «queued». */
   const save = useCallback(
-    async (input: NewTicket) => {
-      const result = await traced("guardar ticket", () => api.saveTicket(input));
+    async (input: NewTicket): Promise<SavedTicket | "queued"> => {
+      let result: SavedTicket;
+      try {
+        result = await traced("guardar ticket", () => api.saveTicket(input));
+      } catch (error) {
+        if (!isNetworkError(error)) throw error;
+        await outboxFor(api.db.householdId).enqueue({ kind: "ticket", ticket: input });
+        return "queued";
+      }
       // Los precios aprenden de cada ticket; si falla, se reintentará en la siguiente actualización.
       void api.refreshPrices().catch(logError("actualizar precios tras ticket"));
       onStockChanged();

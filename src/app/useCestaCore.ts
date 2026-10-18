@@ -9,6 +9,8 @@ import type { ExpiryItem } from "../views/ExpiryDialog";
 import type { Account } from "./account";
 import { usePetAlerts, usePreloadScreens, useSavedNotice, useSplash, useStorePresence } from "./useAppEffects";
 import { useHouseholdData } from "./useHouseholdData";
+import { useOfflineQueue } from "./useOfflineQueue";
+import { inventoryChanged } from "./events";
 import { useLists } from "./useLists";
 import { usePet } from "./usePet";
 
@@ -63,6 +65,10 @@ export function useCestaCore(api: CestaApi, account: Account) {
   // Carga inicial: listas y despensa antes de quitar la pantalla de bienvenida.
   const { pullLists } = lists;
   const { refreshProducts } = data;
+  const offlinePending = useOfflineQueue(api, () => {
+    void refreshProducts();
+    inventoryChanged.emit();
+  });
   useEffect(() => {
     void Promise.all([pullLists(), refreshProducts()]).then(() => setReady(true));
   }, [pullLists, refreshProducts]);
@@ -86,6 +92,7 @@ export function useCestaCore(api: CestaApi, account: Account) {
 
   return {
     api,
+    offlinePending,
     account,
     admin,
     toast,
