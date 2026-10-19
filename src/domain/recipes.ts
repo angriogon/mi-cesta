@@ -102,8 +102,12 @@ export function productForIngredient<T extends { name: string }>(ingredient: str
   return null;
 }
 
+/** Lo que sirve para cocinar: con existencias y sin limpieza, mascota ni bebidas. */
+export const foodStock = <T extends StockForRecipes>(stock: T[]): T[] =>
+  stock.filter((item) => item.quantity > 0 && !NON_FOOD.has(item.category));
+
 export function scoreRecipes(stock: StockForRecipes[], recipes: Recipe[] = RECIPES): ScoredRecipe[] {
-  const food = stock.filter((item) => item.quantity > 0 && !NON_FOOD.has(item.category));
+  const food = foodStock(stock);
   return recipes
     .map((recipe) => {
       const present = recipe.ingredients.filter((ingredient) => hasIngredient(ingredient, food));
@@ -161,7 +165,7 @@ export function filterRecipes(
     query: string;
     skipped: Set<string>;
     lots: InventoryLot[];
-    /** Las favoritas van siempre primero. */
+    /** Las favoritas van siempre primero; después, por orden alfabético. */
     favorites?: Set<string>;
     now?: Date;
   },
@@ -196,7 +200,11 @@ export function filterRecipes(
     const byQuery = !query || normalizeWords(`${recipe.title} ${recipe.ingredients.join(" ")}`).includes(query);
     return !options.skipped.has(recipe.id) && byFilter && byGoal && byQuery;
   });
-  return [...visible].sort((a, b) => Number(favorites.has(b.id)) - Number(favorites.has(a.id)));
+  return [...visible].sort(
+    (a, b) =>
+      Number(favorites.has(b.id)) - Number(favorites.has(a.id)) ||
+      a.title.localeCompare(b.title, "es", { sensitivity: "base" }),
+  );
 }
 
 /** Propone dos comidas que comparten ingrediente: se abre hoy y se termina mañana. */

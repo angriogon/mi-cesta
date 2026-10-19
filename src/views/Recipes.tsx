@@ -1,14 +1,12 @@
 import {
+  CalendarDays,
   Check,
   ChevronDown,
   Heart,
   Clock,
   CookingPot,
   Leaf,
-  Link2,
-  ListPlus,
   Search,
-  ThumbsDown,
   TriangleAlert,
   Utensils,
   X,
@@ -28,6 +26,8 @@ import {
 import { Input, NativeSelect } from "../ui/primitives";
 import { LOAD_FAILED, SAVE_FAILED, notifyError } from "../lib/errors";
 import { RecipeDetails } from "./recipes/RecipeDetails";
+import { WeekPlanner } from "./recipes/WeekPlanner";
+import { ChainedPlan } from "./recipes/ChainedPlan";
 
 export function RecipesView({
   api,
@@ -50,6 +50,7 @@ export function RecipesView({
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [lots, setLots] = useState<InventoryLot[]>([]);
+  const [planning, setPlanning] = useState(false);
   const [preferences, setPreferences] = useState<Preferences>({
     specialDietEnabled: false,
     allergens: [],
@@ -134,38 +135,27 @@ export function RecipesView({
         <option value="cheap">Completar gastando poco</option>
       </NativeSelect>
 
-      {plan && (
-        <section className="mb-2 rounded-lg bg-warning-soft p-3">
-          <div className="flex items-center gap-2 text-warning">
-            <Link2 className="size-3.5" />
-            <p className="text-xs font-semibold uppercase">Dos comidas, un mismo ingrediente</p>
-          </div>
-          <p className="mt-1.5 text-[0.75rem] font-semibold">Hoy · {plan.first.title}</p>
-          <p className="mt-1 text-[0.75rem] font-semibold">Mañana · {plan.second.title}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Abres {plan.shared.join(", ")} hoy y lo terminas mañana.
-            {plan.missing.length ? ` Solo comprar: ${plan.missing.join(", ")}.` : " No necesitas comprar nada."}
-          </p>
-          <div className="mt-2 flex gap-3">
-            {plan.missing.length > 0 && (
-              <button
-                type="button"
-                onClick={() => onAddMissing(plan.missing)}
-                className="flex items-center gap-1 py-1 text-xs font-semibold text-primary"
-              >
-                <ListPlus className="size-3" /> Añadir lo que falta
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => skip(plan.first.id)}
-              className="flex items-center gap-1 py-1 text-xs font-semibold text-warning"
-            >
-              <ThumbsDown className="size-3" /> No me apetece
-            </button>
-          </div>
-        </section>
+      {planning ? (
+        <WeekPlanner
+          householdId={api.db.householdId}
+          stock={stock}
+          lots={lots}
+          skipped={skipped}
+          preferences={preferences}
+          onAddMissing={onAddMissing}
+          onClose={() => setPlanning(false)}
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setPlanning(true)}
+          className="mb-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground"
+        >
+          <CalendarDays className="size-4" /> Planificar la semana
+        </button>
       )}
+
+      {plan && !planning && <ChainedPlan plan={plan} onAddMissing={onAddMissing} onSkip={skip} />}
 
       <div className="relative mb-2">
         <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
