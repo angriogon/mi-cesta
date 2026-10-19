@@ -16,6 +16,18 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "5.13.0",
+    date: "2026-10-19",
+    title: "Planificador de la semana",
+    changes: [
+      "Recetas → «Planificar la semana»: comida y cena de 7 días elegidas con lo que hay en casa, repartiendo el stock entre los días y adelantando lo que caduca antes.",
+      "Cada comida se puede cambiar por otra sin tocar las demás, y «Añadir lo que falta» pasa a la lista de la compra todo lo que haga falta para la semana.",
+      "El plan se queda guardado en el dispositivo durante la semana; «Rehacer el plan» propone otro con lo que haya entonces.",
+      "Las recetas se ordenan alfabéticamente, con tus favoritas primero.",
+      "En Novedades, al abrir una versión se pliega la que estaba abierta.",
+    ],
+  },
+  {
     version: "5.12.0",
     date: "2026-10-18",
     title: "Permisos del hogar, súper por defecto y avisos que se pueden probar",
