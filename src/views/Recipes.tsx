@@ -137,7 +137,7 @@ export function RecipesView({
 
       {planning ? (
         <WeekPlanner
-          householdId={api.db.householdId}
+          api={api}
           stock={stock}
           lots={lots}
           skipped={skipped}

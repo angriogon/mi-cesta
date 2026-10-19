@@ -195,10 +195,17 @@ export type InverseStep =
 export interface HouseholdEvent {
   id: string;
   householdId: string;
-  kind: "avoided" | "recipe-skip" | "recipe-favorite" | "substitution" | "question-skip";
+  kind: "avoided" | "recipe-skip" | "recipe-favorite" | "substitution" | "question-skip" | "week-plan";
   ref: string | null;
   data: Record<string, unknown>;
   createdAt: string;
+}
+
+/** Plan de la semana del hogar: el día en que empieza y la receta de cada hueco (comida y cena). */
+export interface WeekPlanRecord {
+  start: string;
+  ids: string[];
+  updatedAt: string;
 }
 
 export interface Activity {

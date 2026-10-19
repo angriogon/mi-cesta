@@ -16,6 +16,16 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "5.13.1",
+    date: "2026-10-19",
+    title: "Plan de la semana para toda la familia",
+    changes: [
+      "El plan de la semana es del hogar: todos los miembros ven el mismo y se mantiene toda la semana.",
+      "Si alguien cambia una comida o rehace el plan, los demás lo ven al abrirlo o al volver a la app.",
+      "El plan que tuvieras en este dispositivo pasa a ser el del hogar, si aún no había otro.",
+    ],
+  },
+  {
     version: "5.13.0",
     date: "2026-10-19",
     title: "Planificador de la semana",

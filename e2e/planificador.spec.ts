@@ -9,6 +9,7 @@ test("planificar la semana: 7 días, cambiar una comida, añadir lo que falta y 
 
   const planner = page.getByRole("region", { name: "Plan de la semana" });
   await expect(planner.getByText("Tu semana")).toBeVisible();
+  await expect(planner.getByText("Plan del hogar: lo ve igual toda la familia.")).toBeVisible();
   await expect(planner.getByRole("listitem")).toHaveCount(7);
   await expect(planner.getByText(/^Hoy · /)).toBeVisible();
   await expectNoHorizontalScroll(page);
@@ -33,8 +34,14 @@ test("planificar la semana: 7 días, cambiar una comida, añadir lo que falta y 
   await expect(firstDinner).toHaveText(dinner ?? "");
   const changed = await firstMeal.textContent();
 
-  // Al cerrar y volver, el plan sigue igual.
+  // Al cerrar y volver (y al recargar la app), el plan del hogar sigue igual.
   await planner.getByRole("button", { name: "Cerrar plan de la semana" }).click();
+  await page.getByRole("button", { name: "Planificar la semana" }).click();
+  await expect(firstMeal).toHaveText(changed ?? "");
+  await page.reload();
+  await page.getByLabel("Iniciando Cesta").waitFor({ state: "hidden" });
+  await openMenu(page);
+  await page.getByRole("button", { name: "Recetas con mi stock" }).click();
   await page.getByRole("button", { name: "Planificar la semana" }).click();
   await expect(firstMeal).toHaveText(changed ?? "");
 

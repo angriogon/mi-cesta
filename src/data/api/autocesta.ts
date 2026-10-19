@@ -1,6 +1,6 @@
 import { buildOverview, predictions, type Overview, type Prediction } from "../../domain/autocesta";
 import { addDaysIso, todayIso } from "../../lib/text";
-import type { InverseStep, ListItem, Mode } from "../types";
+import type { InverseStep, ListItem, Mode, WeekPlanRecord } from "../types";
 import { logError } from "../../lib/errors";
 
 import { ApiBase } from "./base";
@@ -116,6 +116,28 @@ export class AutoCestaApi extends ApiBase {
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     const latest = new Map(events.map((event) => [event.ref!, event.data.on === true]));
     return new Set([...latest].filter(([, on]) => on).map(([id]) => id));
+  }
+
+  /** Plan de la semana del hogar: el mismo para todos los miembros. Manda el último guardado. */
+  async weekPlan(): Promise<WeekPlanRecord | null> {
+    const last = (await this.db.list("household_events"))
+      .filter((event) => event.kind === "week-plan")
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      .at(-1);
+    const { start, ids } = last?.data ?? {};
+    if (!last || typeof start !== "string" || !Array.isArray(ids)) return null;
+    return { start, ids: ids.map((id) => (typeof id === "string" ? id : "")), updatedAt: last.createdAt };
+  }
+
+  /** Guarda el plan de la semana para todo el hogar (y quita los anteriores). */
+  async saveWeekPlan(start: string, ids: string[]): Promise<void> {
+    const previous = (await this.db.list("household_events")).filter((event) => event.kind === "week-plan");
+    await this.logEvent("week-plan", null, { start, ids });
+    if (previous.length)
+      await this.db.remove(
+        "household_events",
+        previous.map((event) => event.id),
+      );
   }
 
   async skippedRecipes(): Promise<Set<string>> {

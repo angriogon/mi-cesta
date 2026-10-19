@@ -235,6 +235,20 @@ describe("precios", () => {
   });
 });
 
+describe("plan de la semana del hogar", () => {
+  it("lo que guarda un miembro lo ve otro, y solo queda el último", async () => {
+    expect(await api.weekPlan()).toBeNull();
+    const ids = Array.from({ length: 14 }, (_, index) => `receta-${index}`);
+    await api.saveWeekPlan("2026-10-19", ids);
+    // Otro miembro: otra instancia de la API sobre los mismos datos del hogar.
+    const other = new CestaApi(db);
+    expect(await other.weekPlan()).toMatchObject({ start: "2026-10-19", ids });
+    await other.saveWeekPlan("2026-10-19", ["otra", ...ids.slice(1)]);
+    expect((await api.weekPlan())?.ids[0]).toBe("otra");
+    expect((await db.list("household_events")).filter((event) => event.kind === "week-plan")).toHaveLength(1);
+  });
+});
+
 describe("Serranito", () => {
   it("gestiona artículos, nombre y avisos", async () => {
     const item = await api.addDogItem("Snack dental");

@@ -1,28 +1,35 @@
-import { CalendarDays, Check, ListPlus, RefreshCw, Shuffle, X } from "lucide-react";
+import { CalendarDays, Check, ListPlus, LoaderCircle, RefreshCw, Shuffle, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { CestaApi } from "../../data/api";
 import type { InventoryLot, Preferences } from "../../data/types";
 import type { StockLike } from "../../domain/lists";
 import { dietConflicts } from "../../domain/recipes";
 import { planWeek } from "../../domain/week-plan";
-import { readJson, removeKey, writeJson } from "../../lib/storage";
+import { LOAD_FAILED, SAVE_FAILED, notifyError } from "../../lib/errors";
+import { readJson, removeKey } from "../../lib/storage";
 import { daysUntil, todayIso } from "../../lib/text";
 
-/** Plan guardado en el dispositivo: el día en que empieza y la receta de cada hueco. */
+/** Plan guardado: el día en que empieza y la receta de cada hueco. */
 interface SavedPlan {
   start: string;
   ids: string[];
 }
+
+/** Un plan sirve los 7 días desde que se hizo. */
+const current = (plan: SavedPlan | null | undefined): plan is SavedPlan =>
+  Boolean(plan && daysUntil(plan.start) > -7 && daysUntil(plan.start) <= 0);
 
 const weekday = new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric" });
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 /**
  * Planificador de la semana: comida y cena de 7 días elegidas con lo que hay en casa (ver planWeek).
- * El plan se guarda en el dispositivo hasta que se rehace o pasa la semana; cada comida se puede
- * cambiar por otra sin tocar las demás.
+ * El plan es del hogar: lo ven igual todos los miembros, se guarda en el servidor hasta que alguien
+ * lo rehace o pasa la semana, y se vuelve a leer al abrirlo o al volver a la app. Cada comida se
+ * puede cambiar por otra sin tocar las demás.
  */
 export function WeekPlanner({
-  householdId,
+  api,
   stock,
   lots,
   skipped,
@@ -30,7 +37,7 @@ export function WeekPlanner({
   onAddMissing,
   onClose,
 }: {
-  householdId: string;
+  api: CestaApi;
   stock: StockLike[];
   lots: InventoryLot[];
   skipped: Set<string>;
@@ -38,12 +45,34 @@ export function WeekPlanner({
   onAddMissing: (names: string[]) => void;
   onClose: () => void;
 }) {
-  const key = `cesta-week-plan:${householdId}`;
-  const [saved, setSaved] = useState<SavedPlan | null>(() => {
-    const stored = readJson<SavedPlan | null>(key, null);
-    // Un plan sirve los 7 días desde que se hizo.
-    return stored && daysUntil(stored.start) > -7 && daysUntil(stored.start) <= 0 ? stored : null;
-  });
+  // Plan que la versión anterior guardaba solo en este dispositivo: se sube al hogar si no hay otro.
+  const legacyKey = `cesta-week-plan:${api.db.householdId}`;
+  const [saved, setSaved] = useState<SavedPlan | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      const remote = await api.weekPlan();
+      if (!active) return;
+      const legacy = readJson<SavedPlan | null>(legacyKey, null);
+      removeKey(legacyKey);
+      setSaved(current(remote) ? remote : current(legacy) ? legacy : null);
+      setLoaded(true);
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") load().catch(notifyError("cargar el plan de la semana", LOAD_FAILED));
+    };
+    load().catch((error: unknown) => {
+      notifyError("cargar el plan de la semana", LOAD_FAILED)(error);
+      if (active) setLoaded(true);
+    });
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      active = false;
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [api, legacyKey]);
   const [changed, setChanged] = useState<Set<string>>(new Set());
   const [message, setMessage] = useState("");
 
@@ -65,18 +94,19 @@ export function WeekPlanner({
 
   const keep = useCallback(
     (ids: string[], start: string) => {
-      const next = { start, ids };
-      writeJson(key, next);
-      setSaved(next);
+      setSaved({ start, ids });
+      api.saveWeekPlan(start, ids).catch(notifyError("guardar el plan de la semana", SAVE_FAILED));
     },
-    [key],
+    [api],
   );
 
-  // Lo que se ve queda guardado (también la comida nueva tras «Cambiar»): así no cambia al volver.
+  // Lo que se ve queda guardado para todo el hogar (también la comida nueva tras «Cambiar»).
+  // Hasta haber leído el plan del hogar no se guarda nada, para no pisar el de otro miembro.
   useEffect(() => {
+    if (!loaded) return;
     const ids = plan.slots.map((slot) => slot.recipe?.id ?? "");
     if (!saved || ids.join() !== saved.ids.join()) keep(ids, saved?.start ?? todayIso());
-  }, [plan, saved, keep]);
+  }, [plan, saved, keep, loaded]);
 
   function change(index: number) {
     const current = plan.slots[index].recipe;
@@ -90,11 +120,20 @@ export function WeekPlanner({
   }
 
   function redo() {
-    removeKey(key);
     setChanged(new Set());
     setSaved(null);
     setMessage("Plan nuevo con lo que hay ahora en casa.");
   }
+
+  if (!loaded)
+    return (
+      <section
+        className="mb-3 flex items-center gap-2 rounded-xl bg-card p-3 text-xs font-semibold text-muted-foreground"
+        aria-label="Plan de la semana"
+      >
+        <LoaderCircle className="size-4 animate-spin text-primary" /> Cargando el plan del hogar…
+      </section>
+    );
 
   return (
     <section className="mb-3 rounded-xl bg-card p-3" aria-label="Plan de la semana">
@@ -102,6 +141,7 @@ export function WeekPlanner({
         <CalendarDays className="mt-0.5 size-4 shrink-0 text-primary" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">Tu semana</p>
+          <p className="text-xs text-muted-foreground">Plan del hogar: lo ve igual toda la familia.</p>
           <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
             {plan.ready} de {plan.slots.length} comidas sin comprar nada · aprovecha {plan.used}{" "}
             {plan.used === 1 ? "producto" : "productos"} de casa
