@@ -324,7 +324,9 @@ ok(
   "y sus dispositivos dejan de recibir los avisos del hogar",
 );
 await as(ANA, `select public.set_member_permissions($1, $2, '{}')`, [hid, LUIS]);
-await as(ANA, `delete from dog_reminders where household_id = $1 and id = 'rem-luis-2'`, [hid]);
+// Los recordatorios de estas pruebas (a las 09:00) se borran: si no, las de avisos de más abajo
+// los verían «pendientes» al ejecutarse entre las 09:00 y las 11:00.
+await as(ANA, `delete from dog_reminders where household_id = $1 and id like 'rem-%'`, [hid]);
 
 // ---- prune_history: límite al historial ----
 await db.query(
